@@ -14,7 +14,7 @@ const selectedTreeVariants = cva(
 )
 
 const dragOverVariants = cva(
-    'before:opacity-100 before:bg-primary/20 text-primary-foreground'
+    'before:opacity-100 before:bg-primary/25 ring-2 ring-primary/40 ring-inset'
 )
 
 interface TreeDataItem {
@@ -50,6 +50,8 @@ type TreeProps = React.HTMLAttributes<HTMLDivElement> & {
     defaultLeafIcon?: React.ComponentType<{ className?: string }>
     onDocumentDrag?: (sourceItem: TreeDataItem, targetItem: TreeDataItem) => void
     renderItem?: (params: TreeRenderItemParams) => React.ReactNode
+    /** Label for the root drop zone when dragging. Defaults to "Drop here to move to root". */
+    rootDropLabel?: string
 }
 
 const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
@@ -64,6 +66,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
             className,
             onDocumentDrag,
             renderItem,
+            rootDropLabel = 'Drop here to move to root',
             ...props
         },
         ref
@@ -86,6 +89,10 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
 
         const handleDragStart = React.useCallback((item: TreeDataItem) => {
             setDraggedItem(item)
+        }, [])
+
+        const handleDragEnd = React.useCallback(() => {
+            setDraggedItem(null)
         }, [])
 
         const handleDrop = React.useCallback((targetItem: TreeDataItem) => {
@@ -126,7 +133,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
         }, [data, expandAll, initialSelectedItemId])
 
         return (
-            <div className={cn('overflow-hidden relative p-2', className)}>
+            <div className={cn('overflow-hidden relative p-2', draggedItem && 'is-dragging', className)}>
                 <TreeItem
                     data={data}
                     ref={ref}
@@ -136,6 +143,7 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
                     defaultLeafIcon={defaultLeafIcon}
                     defaultNodeIcon={defaultNodeIcon}
                     handleDragStart={handleDragStart}
+                    handleDragEnd={handleDragEnd}
                     handleDrop={handleDrop}
                     draggedItem={draggedItem}
                     renderItem={renderItem}
@@ -143,8 +151,12 @@ const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
                     {...props}
                 />
                 <div
-                    className='w-full h-[48px]'
-                    onDrop={() => { handleDrop({ id: '', name: 'parent_div' }) }}>
+                    data-drop-target="root"
+                    className='min-h-12 w-full rounded border-2 border-dashed border-transparent bg-transparent px-2 py-3 text-center text-xs text-muted-foreground transition-colors [.is-dragging_&]:border-primary [.is-dragging_&]:bg-primary/15 [.is-dragging_&]:text-foreground [.is-dragging_&]:border-primary/50'
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; }}
+                    onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleDrop({ id: '__root_drop__', name: 'Move to root' }); }}
+                >
+                    {draggedItem ? rootDropLabel : null}
                 </div>
             </div>
         )
@@ -159,6 +171,7 @@ type TreeItemProps = TreeProps & {
     defaultNodeIcon?: React.ComponentType<{ className?: string }>
     defaultLeafIcon?: React.ComponentType<{ className?: string }>
     handleDragStart?: (item: TreeDataItem) => void
+    handleDragEnd?: () => void
     handleDrop?: (item: TreeDataItem) => void
     draggedItem: TreeDataItem | null
     level?: number
@@ -175,6 +188,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
             defaultNodeIcon,
             defaultLeafIcon,
             handleDragStart,
+            handleDragEnd,
             handleDrop,
             draggedItem,
             renderItem,
@@ -205,6 +219,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
                                     defaultNodeIcon={defaultNodeIcon}
                                     defaultLeafIcon={defaultLeafIcon}
                                     handleDragStart={handleDragStart}
+                                    handleDragEnd={handleDragEnd}
                                     handleDrop={handleDrop}
                                     draggedItem={draggedItem}
                                     renderItem={renderItem}
@@ -217,6 +232,7 @@ const TreeItem = React.forwardRef<HTMLDivElement, TreeItemProps>(
                                     handleSelectChange={handleSelectChange}
                                     defaultLeafIcon={defaultLeafIcon}
                                     handleDragStart={handleDragStart}
+                                    handleDragEnd={handleDragEnd}
                                     handleDrop={handleDrop}
                                     draggedItem={draggedItem}
                                     renderItem={renderItem}
@@ -239,6 +255,7 @@ const TreeNode = ({
     defaultNodeIcon,
     defaultLeafIcon,
     handleDragStart,
+    handleDragEnd,
     handleDrop,
     draggedItem,
     renderItem,
@@ -251,6 +268,7 @@ const TreeNode = ({
     defaultNodeIcon?: React.ComponentType<{ className?: string }>
     defaultLeafIcon?: React.ComponentType<{ className?: string }>
     handleDragStart?: (item: TreeDataItem) => void
+    handleDragEnd?: () => void
     handleDrop?: (item: TreeDataItem) => void
     draggedItem: TreeDataItem | null
     renderItem?: (params: TreeRenderItemParams) => React.ReactNode
@@ -310,6 +328,7 @@ const TreeNode = ({
                     }}
                     draggable={!!item.draggable}
                     onDragStart={onDragStart}
+                    onDragEnd={handleDragEnd}
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
@@ -332,7 +351,7 @@ const TreeNode = ({
                                 default={defaultNodeIcon}
                             />
                             <span className="text-sm truncate">{item.name}</span>
-                            <TreeActions isSelected={isSelected}>
+                            <TreeActions>
                                 {item.actions}
                             </TreeActions>
                         </>
@@ -347,6 +366,7 @@ const TreeNode = ({
                         defaultLeafIcon={defaultLeafIcon}
                         defaultNodeIcon={defaultNodeIcon}
                         handleDragStart={handleDragStart}
+                        handleDragEnd={handleDragEnd}
                         handleDrop={handleDrop}
                         draggedItem={draggedItem}
                         renderItem={renderItem}
@@ -367,6 +387,7 @@ const TreeLeaf = React.forwardRef<
         handleSelectChange: (item: TreeDataItem | undefined) => void
         defaultLeafIcon?: React.ComponentType<{ className?: string }>
         handleDragStart?: (item: TreeDataItem) => void
+        handleDragEnd?: () => void
         handleDrop?: (item: TreeDataItem) => void
         draggedItem: TreeDataItem | null
         renderItem?: (params: TreeRenderItemParams) => React.ReactNode
@@ -381,6 +402,7 @@ const TreeLeaf = React.forwardRef<
             handleSelectChange,
             defaultLeafIcon,
             handleDragStart,
+            handleDragEnd,
             handleDrop,
             draggedItem,
             renderItem,
@@ -437,6 +459,7 @@ const TreeLeaf = React.forwardRef<
                 }}
                 draggable={!!item.draggable && !item.disabled}
                 onDragStart={onDragStart}
+                onDragEnd={handleDragEnd}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
                 onDrop={onDrop}
@@ -461,7 +484,7 @@ const TreeLeaf = React.forwardRef<
                             default={defaultLeafIcon}
                         />
                         <span className="flex-grow text-sm truncate">{item.name}</span>
-                        <TreeActions isSelected={isSelected && !item.disabled}>
+                        <TreeActions>
                             {item.actions}
                         </TreeActions>
                     </>
@@ -535,20 +558,9 @@ const TreeIcon = ({
     )
 }
 
-const TreeActions = ({
-    children,
-    isSelected
-}: {
-    children: React.ReactNode
-    isSelected: boolean
-}) => {
+const TreeActions = ({ children }: { children: React.ReactNode }) => {
     return (
-        <div
-            className={cn(
-                isSelected ? 'block' : 'hidden',
-                'absolute right-3 group-hover:block'
-            )}
-        >
+        <div className="absolute right-3 hidden group-hover:block">
             {children}
         </div>
     )

@@ -1,0 +1,16 @@
+.git
+.next
+node_modules
+.pnpm-store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+pnpm-debug.log*
+README.md
+tests/
+stories/
+storybook-static/
+.storybook/

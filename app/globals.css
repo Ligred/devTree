@@ -123,3 +123,47 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ─── Tiptap / ProseMirror rich text styles ──────────────────────────────── */
+.ProseMirror {
+  outline: none;
+  min-height: 8rem;
+}
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  pointer-events: none;
+  height: 0;
+  @apply text-muted-foreground;
+}
+.ProseMirror h1 { @apply text-2xl font-bold mt-4 mb-2; }
+.ProseMirror h2 { @apply text-xl font-semibold mt-3 mb-2; }
+.ProseMirror h3 { @apply text-lg font-semibold mt-2 mb-1; }
+.ProseMirror p  { @apply leading-relaxed; }
+.ProseMirror strong { @apply font-bold; }
+.ProseMirror em { @apply italic; }
+.ProseMirror s { @apply line-through; }
+.ProseMirror ul { @apply list-disc pl-6 my-2; }
+.ProseMirror ol { @apply list-decimal pl-6 my-2; }
+.ProseMirror li { @apply mb-1; }
+.ProseMirror blockquote {
+  @apply border-l-4 border-border pl-4 italic text-muted-foreground my-3;
+}
+.ProseMirror code {
+  @apply rounded bg-muted px-1 py-0.5 font-mono text-sm text-foreground;
+}
+.ProseMirror pre {
+  @apply rounded-lg bg-muted p-4 font-mono text-sm my-3 overflow-x-auto;
+}
+.ProseMirror pre code {
+  @apply bg-transparent p-0;
+}
+.ProseMirror hr { @apply my-4 border-border; }
+
+/* Task list (checklist) */
+.ProseMirror ul[data-type="taskList"] { @apply list-none pl-0; }
+.ProseMirror ul[data-type="taskList"] li {
+  @apply flex items-start gap-2 mb-1;
+}
+.ProseMirror ul[data-type="taskList"] li > label { @apply mt-1; }
+.ProseMirror ul[data-type="taskList"] li > div { @apply flex-1; }

@@ -9,15 +9,31 @@ const dirname =
     ? path.dirname(fileURLToPath(import.meta.url))
     : __dirname;
 
-// More info at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon
 export default defineConfig({
+  resolve: {
+    alias: { '@': path.join(dirname) },
+  },
   test: {
     projects: [
       {
         extends: true,
+        test: {
+          name: 'unit',
+          environment: 'happy-dom',
+          include: ['**/*.test.{ts,tsx}'],
+          exclude: [
+            '**/node_modules/**',
+            '**/.next/**',
+            '**/stories/**',
+            '**/*.stories.*',
+          ],
+          setupFiles: ['vitest.setup.ts'],
+          globals: true,
+        },
+      },
+      {
+        extends: true,
         plugins: [
-          // The plugin will run tests for the stories defined in your Storybook config
-          // See options at: https://storybook.js.org/docs/next/writing-tests/integrations/vitest-addon#storybooktest
           storybookTest({ configDir: path.join(dirname, '.storybook') }),
         ],
         test: {

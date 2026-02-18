@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <TestRunParameters>
+    <!-- Override with: dotnet test -- TestRunParameters.Parameter(name="DEVTREE_BASE_URL", value="http://...") -->
+    <Parameter name="DEVTREE_BASE_URL" value="http://localhost:3000" />
+  </TestRunParameters>
+
+  <Playwright>
+    <BrowserName>chromium</BrowserName>
+    <LaunchOptions>
+      <Headless>true</Headless>
+      <SlowMo>0</SlowMo>
+    </LaunchOptions>
+  </Playwright>
+
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <DEVTREE_BASE_URL>http://localhost:3000</DEVTREE_BASE_URL>
+      <!-- Set HEADED=true for visual debugging -->
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

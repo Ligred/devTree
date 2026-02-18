@@ -1,6 +1,10 @@
 import type { Preview } from '@storybook/nextjs-vite';
-import '../app/globals.css'; // or './globals.css' — your Tailwind/shadcn CSS
-// If shadcn theme: import { ThemeProvider } from '@/components/theme-provider';
+import React from 'react';
+import { ThemeProvider } from 'next-themes';
+
+import { I18nProvider } from '@/lib/i18n';
+
+import '../app/globals.css';
 
 const preview: Preview = {
   parameters: {
@@ -14,13 +18,13 @@ const preview: Preview = {
       test: 'todo',
     },
   },
-  // Optional: shadcn dark mode decorator
   decorators: [
-    // (Story) => (
-    //   <ThemeProvider defaultTheme="dark">
-    //     <Story />
-    //   </ThemeProvider>
-    // ),
+    (Story) =>
+      React.createElement(
+        ThemeProvider,
+        { attribute: 'class', defaultTheme: 'system', enableSystem: true },
+        React.createElement(I18nProvider, null, React.createElement(Story)),
+      ),
   ],
 };
 
