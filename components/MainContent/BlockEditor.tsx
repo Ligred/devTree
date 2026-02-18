@@ -75,7 +75,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { useCallback, useId } from 'react';
+import { useCallback, useId, useState } from 'react';
 
 import { BlockPicker } from './BlockPicker';
 import { BlockWrapper } from './BlockWrapper';
@@ -206,6 +206,14 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
   );
 
   /**
+   * When any block is being dragged, we pass isDragActive to all blocks so
+   * CodeBlock can unmount Monaco. Reordering moves DOM nodes; if Monaco is
+   * mounted in a block that gets moved (even when dragging a different block),
+   * it can throw "domNode" / "InstantiationService disposed" errors.
+   */
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  /**
    * Reorder blocks after a successful drag.
    *
    * WHY useCallback?
@@ -215,6 +223,7 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
    */
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      setIsDragActive(false);
       const { active, over } = event;
       if (!over || active.id === over.id) return;
       const oldIndex = blocks.findIndex((b) => b.id === active.id);
@@ -298,7 +307,9 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
       id={dndId}
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={() => setIsDragActive(true)}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => setIsDragActive(false)}
       modifiers={[restrictToVerticalAxis]}
     >
       <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
@@ -335,11 +346,12 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
                 onToggleColSpan={() => toggleColSpan(block.id)}
                 onTagsChange={(tags) => updateBlockTags(block.id, tags)}
                 showBlockTags={showBlockTags}
-                renderContent={(isEditing) => (
+                renderContent={(isEditing, isDragging) => (
                   <BlockContent
                     block={block}
                     onChange={(content) => updateBlock(block.id, content)}
                     isEditing={isEditing}
+                    isDragging={isDragging || isDragActive}
                   />
                 )}
               />
@@ -450,10 +462,13 @@ function BlockContent({
   block,
   onChange,
   isEditing,
+  isDragging = false,
 }: Readonly<{
   block: Block;
   onChange: (content: BlockContent) => void;
   isEditing: boolean;
+  /** When true, the block is being dragged; heavy editors (Monaco) should unmount to avoid disposed/domNode errors. */
+  isDragging?: boolean;
 }>) {
   const { type, content } = block;
 
@@ -461,7 +476,14 @@ function BlockContent({
     case 'text':
       return <TextBlock content={content as TextBlockContent} onChange={onChange} isEditing={isEditing} />;
     case 'code':
-      return <CodeBlock content={content as CodeBlockContent} onChange={onChange} isEditing={isEditing} />;
+      return (
+        <CodeBlock
+          content={content as CodeBlockContent}
+          onChange={onChange}
+          isEditing={isEditing}
+          isDragging={isDragging}
+        />
+      );
     case 'link':
       return <LinkBlock content={content as LinkBlockContent} onChange={onChange} />;
     case 'table':

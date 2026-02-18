@@ -44,6 +44,7 @@
  *     schema migration and programmatic manipulation.
  */
 
+import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -147,13 +148,16 @@ export function TextBlock({ content, onChange, isEditing = false }: TextBlockPro
   /**
    * Sync Tiptap's editable flag whenever the parent toggles the mode.
    *
-   * WHY useEffect instead of re-creating the editor?
-   *   Re-creating via a key prop or by changing `useEditor` options would
-   *   unmount the editor and lose the current selection/cursor position.
-   *   `setEditable()` is the intended Tiptap API for runtime editability changes.
+   * WHY useEffect instead of doing this during render?
+   *   Calling setEditable() during render can cause Tiptap to fire onUpdate
+   *   synchronously, which calls onChange → setState in a parent (Workspace).
+   *   That triggers "Cannot update a component while rendering a different
+   *   component". Running in useEffect runs after commit, so the state update
+   *   is safe.
    */
-   
-  if (editor && editor.isEditable !== isEditing) editor.setEditable(isEditing);
+  useEffect(() => {
+    if (editor && editor.isEditable !== isEditing) editor.setEditable(isEditing);
+  }, [editor, isEditing]);
 
   if (!editor) return null;
 

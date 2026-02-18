@@ -29,7 +29,7 @@
  */
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Copy } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
@@ -90,12 +90,32 @@ type CodeBlockProps = Readonly<{
    * The Copy button is kept in both modes since copying code is useful while reading.
    */
   isEditing?: boolean;
+  /**
+   * When true, the block is being dragged. We render a placeholder instead of
+   * Monaco so the editor unmounts immediately and never runs against detached DOM,
+   * avoiding "domNode" / "InstantiationService disposed" errors during reorder.
+   */
+  isDragging?: boolean;
 }>;
 
-export function CodeBlock({ content, onChange, isEditing = false }: CodeBlockProps) {
+export function CodeBlock({ content, onChange, isEditing = false, isDragging = false }: CodeBlockProps) {
   const { code, language = 'javascript' } = content;
   const [langOpen, setLangOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const editorRef = useRef<{ dispose: () => void } | null>(null);
+
+  /**
+   * Dispose Monaco when the block unmounts (e.g. during drag-and-drop reorder).
+   * Without this, React can unmount the component while Monaco has pending work
+   * (e.g. renderText), leading to "InstantiationService has been disposed" and
+   * "Cannot read properties of undefined (reading 'domNode')" after the DOM is gone.
+   */
+  useEffect(() => {
+    return () => {
+      editorRef.current?.dispose();
+      editorRef.current = null;
+    };
+  }, []);
 
   /**
    * Resolve the current theme for Monaco.
@@ -193,27 +213,39 @@ export function CodeBlock({ content, onChange, isEditing = false }: CodeBlockPro
         </div>
       </div>
 
-      {/* Monaco editor area */}
+      {/* Monaco editor area — placeholder during drag so Monaco unmounts and never touches detached DOM */}
       <div className="min-h-[180px]">
-        <MonacoEditor
-          height="240px"
-          language={language}
-          defaultValue={code}
-          theme={editorTheme}
-          onChange={(value) => { if (isEditing) onChange({ ...content, code: value ?? '' }); }}
-          options={{
-            minimap: { enabled: false },
-            padding: { top: 12, bottom: 12 },
-            scrollBeyondLastLine: false,
-            fontSize: 13,
-            lineNumbers: 'on',
-            renderLineHighlight: 'line',
-            // Read-only in view mode; Monaco shows a "read-only" cursor
-            readOnly: !isEditing,
-            scrollbar: { vertical: 'auto', horizontal: 'auto' },
-            fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
-          }}
-        />
+        {isDragging ? (
+          <pre
+            className="overflow-auto px-4 py-3 text-[13px] leading-relaxed text-foreground"
+            style={{ fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace", minHeight: 240 }}
+          >
+            <code>{code || ' '}</code>
+          </pre>
+        ) : (
+          <MonacoEditor
+            height="240px"
+            language={language}
+            defaultValue={code}
+            theme={editorTheme}
+            onMount={(editor) => {
+              editorRef.current = editor;
+            }}
+            onChange={(value) => { if (isEditing) onChange({ ...content, code: value ?? '' }); }}
+            options={{
+              minimap: { enabled: false },
+              padding: { top: 12, bottom: 12 },
+              scrollBeyondLastLine: false,
+              fontSize: 13,
+              lineNumbers: 'on',
+              renderLineHighlight: 'line',
+              // Read-only in view mode; Monaco shows a "read-only" cursor
+              readOnly: !isEditing,
+              scrollbar: { vertical: 'auto', horizontal: 'auto' },
+              fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
+            }}
+          />
+        )}
       </div>
     </div>
   );
