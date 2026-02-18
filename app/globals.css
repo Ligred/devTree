@@ -160,6 +160,29 @@
 }
 .ProseMirror hr { @apply my-4 border-border; }
 
+/* Links (open in new tab when added via editor) */
+.ProseMirror a {
+  @apply text-primary underline underline-offset-2 hover:opacity-80;
+}
+
+/* Highlight mark (multicolor) — default yellow, overridden by inline style */
+.ProseMirror mark {
+  @apply rounded px-0.5;
+}
+
+/* Text alignment (from TextAlign extension) */
+.ProseMirror [style*="text-align: left"] { text-align: left; }
+.ProseMirror [style*="text-align: center"] { text-align: center; }
+.ProseMirror [style*="text-align: right"] { text-align: right; }
+.ProseMirror [style*="text-align: justify"] { text-align: justify; }
+
+/* Inline comments (custom mark; hover shows tooltip elsewhere) */
+.ProseMirror .tiptap-comment,
+.ProseMirror [data-comment-id] {
+  @apply border-b-2 border-dashed border-amber-400/80 bg-amber-500/10 dark:border-amber-500/60 dark:bg-amber-500/20;
+  @apply cursor-help rounded px-0.5;
+}
+
 /* Task list (checklist) */
 .ProseMirror ul[data-type="taskList"] { @apply list-none pl-0; }
 .ProseMirror ul[data-type="taskList"] li {
