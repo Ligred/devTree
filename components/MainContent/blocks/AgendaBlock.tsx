@@ -30,13 +30,16 @@ function AgendaRow({
   onTextChange,
   onDelete,
   onEnter,
-}: {
+  isEditing,
+}: Readonly<{
   item: AgendaItem;
   onToggle: () => void;
   onTextChange: (text: string) => void;
   onDelete: () => void;
   onEnter: () => void;
-}) {
+  /** Drag handle, text editing, and delete are only available in edit mode. */
+  isEditing: boolean;
+}>) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: item.id });
 
@@ -48,18 +51,20 @@ function AgendaRow({
       style={style}
       className={`group/item flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-muted/50 ${isDragging ? 'opacity-50' : ''}`}
     >
-      {/* Drag handle */}
-      <button
-        type="button"
-        className="shrink-0 cursor-grab text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 active:cursor-grabbing"
-        aria-label="Drag item"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical size={14} />
-      </button>
+      {/* Drag handle — only visible in edit mode */}
+      {isEditing && (
+        <button
+          type="button"
+          className="shrink-0 cursor-grab text-muted-foreground opacity-0 transition-opacity group-hover/item:opacity-100 active:cursor-grabbing"
+          aria-label="Drag item"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical size={14} />
+        </button>
+      )}
 
-      {/* Checkbox */}
+      {/* Checkbox — always interactive even in view mode */}
       <input
         type="checkbox"
         checked={item.checked}
@@ -68,34 +73,36 @@ function AgendaRow({
         aria-label={item.text || 'Checklist item'}
       />
 
-      {/* Text */}
-      <input
-        type="text"
-        className={`flex-1 bg-transparent text-sm outline-none placeholder-muted-foreground ${item.checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}
-        value={item.text}
-        placeholder="To-do item…"
-        onChange={(e) => onTextChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            onEnter();
-          }
-          if (e.key === 'Backspace' && item.text === '') {
-            e.preventDefault();
-            onDelete();
-          }
-        }}
-      />
+      {/* Text — editable input in edit mode, plain span in view mode */}
+      {isEditing ? (
+        <input
+          type="text"
+          className={`flex-1 bg-transparent text-sm outline-none placeholder-muted-foreground ${item.checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}
+          value={item.text}
+          placeholder="To-do item…"
+          onChange={(e) => onTextChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); onEnter(); }
+            if (e.key === 'Backspace' && item.text === '') { e.preventDefault(); onDelete(); }
+          }}
+        />
+      ) : (
+        <span className={`flex-1 select-text text-sm ${item.checked ? 'text-muted-foreground line-through' : 'text-foreground'}`}>
+          {item.text || <span className="text-muted-foreground/50">—</span>}
+        </span>
+      )}
 
-      {/* Delete */}
-      <button
-        type="button"
-        className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-500 group-hover/item:opacity-100"
-        onClick={onDelete}
-        aria-label="Remove item"
-      >
-        <Trash2 size={13} />
-      </button>
+      {/* Delete — only in edit mode */}
+      {isEditing && (
+        <button
+          type="button"
+          className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-red-500 group-hover/item:opacity-100"
+          onClick={onDelete}
+          aria-label="Remove item"
+        >
+          <Trash2 size={13} />
+        </button>
+      )}
     </div>
   );
 }
@@ -105,9 +112,16 @@ function AgendaRow({
 type AgendaBlockProps = Readonly<{
   content: AgendaBlockContent;
   onChange: (content: AgendaBlockContent) => void;
+  /**
+   * Checkboxes remain interactive in both modes — checking an item is
+   * intentionally allowed without entering edit mode (it's the primary
+   * action on a checklist). Edit mode adds drag-handles, text editing,
+   * item deletion, and the "Add item" footer button.
+   */
+  isEditing?: boolean;
 }>;
 
-export function AgendaBlock({ content, onChange }: AgendaBlockProps) {
+export function AgendaBlock({ content, onChange, isEditing = false }: AgendaBlockProps) {
   const { title = '', items } = content;
   const dndId = useId();
   const addBtnRef = useRef<HTMLButtonElement>(null);
@@ -180,9 +194,10 @@ export function AgendaBlock({ content, onChange }: AgendaBlockProps) {
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <input
           type="text"
-          className="flex-1 bg-transparent text-sm font-semibold text-foreground outline-none placeholder-muted-foreground"
+          className="flex-1 bg-transparent text-sm font-semibold text-foreground outline-none placeholder-muted-foreground disabled:cursor-default"
           value={title}
           placeholder="Checklist title…"
+          readOnly={!isEditing}
           onChange={(e) => onChange({ ...content, title: e.target.value })}
         />
         {items.length > 0 && (
@@ -215,6 +230,7 @@ export function AgendaBlock({ content, onChange }: AgendaBlockProps) {
               <AgendaRow
                 key={item.id}
                 item={item}
+                isEditing={isEditing}
                 onToggle={() => toggleItem(item.id)}
                 onTextChange={(text) => updateText(item.id, text)}
                 onDelete={() => removeItem(item.id)}
@@ -225,16 +241,18 @@ export function AgendaBlock({ content, onChange }: AgendaBlockProps) {
         </SortableContext>
       </DndContext>
 
-      {/* Add item */}
-      <button
-        ref={addBtnRef}
-        type="button"
-        className="flex w-full items-center gap-2 border-t border-border px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-        onClick={() => updateItems([...items, newItem()])}
-      >
-        <Plus size={12} />
-        Add item
-      </button>
+      {/* Add item — only in edit mode */}
+      {isEditing && (
+        <button
+          ref={addBtnRef}
+          type="button"
+          className="flex w-full items-center gap-2 border-t border-border px-4 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          onClick={() => updateItems([...items, newItem()])}
+        >
+          <Plus size={12} />
+          Add item
+        </button>
+      )}
     </div>
   );
 }

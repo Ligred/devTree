@@ -99,11 +99,12 @@ function nodeToTreeDataItem(
   // Determine which visual highlight class (if any) to apply
   const isSelectedFile = selectedPageId !== null && node.id === selectedPageId;
   const isAncestorOfSelected = ancestorPathIds.includes(node.id);
-  const rowClassName = isSelectedFile
-    ? 'bg-accent text-accent-foreground'
-    : isAncestorOfSelected
-      ? 'bg-muted/50 text-foreground'
-      : undefined;
+  let rowClassName: string | undefined;
+  if (isSelectedFile) {
+    rowClassName = 'bg-accent text-accent-foreground';
+  } else if (isAncestorOfSelected) {
+    rowClassName = 'bg-muted/50 text-foreground';
+  }
 
   /**
    * Activate an action when the user presses Enter or Space on a keyboard-

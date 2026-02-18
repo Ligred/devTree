@@ -35,8 +35,6 @@
  *   - Add a `duplicateNode` function for copying pages.
  */
 
-import type { TreeDataItem } from '@/components/ui/tree-view';
-
 import type { TreeRoot, TreeNode } from './treeTypes';
 import { ROOT_DROP_TARGET_ID } from './treeTypes';
 
@@ -48,27 +46,6 @@ export function newFolderId(): string {
 /** Generate a unique id for pages */
 export function newPageId(): string {
   return `page-${crypto.randomUUID?.() ?? Date.now()}`;
-}
-
-/**
- * Convert a TreeNode to TreeDataItem (no actions). Used for display.
- */
-function nodeToTreeDataItem(node: TreeNode): TreeDataItem {
-  const isFolder = Array.isArray(node.children);
-  return {
-    id: node.id,
-    name: node.name,
-    ...(isFolder && node.children!.length > 0
-      ? { children: node.children!.map(nodeToTreeDataItem) }
-      : {}),
-  };
-}
-
-/**
- * Build TreeDataItem[] from the root's children (one level, root itself is not a tree node we pass).
- */
-export function rootToTreeDataItems(root: TreeRoot): TreeDataItem[] {
-  return root.children.map(nodeToTreeDataItem);
 }
 
 /**

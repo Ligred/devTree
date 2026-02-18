@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DevTree.E2E")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+86b6cfdc11ba70b5a1554b0332dfae30e9d0ca99")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a15c5b60a648a07cff0f3b74724340f05dd47c0")]
 [assembly: System.Reflection.AssemblyProductAttribute("DevTree.E2E")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DevTree.E2E")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

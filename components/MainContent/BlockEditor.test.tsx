@@ -14,7 +14,7 @@ function Wrapper({ children }: { children: React.ReactNode }) {
 
 const wrap = (ui: React.ReactElement) => render(<Wrapper>{ui}</Wrapper>);
 
-const textBlock: Block = { id: 'b1', type: 'text', content: '<p>Hello</p>', colSpan: 2 };
+const _textBlock: Block = { id: 'b1', type: 'text', content: '<p>Hello</p>', colSpan: 2 };
 const linkBlock: Block = {
   id: 'b2',
   type: 'link',
@@ -46,9 +46,9 @@ describe('BlockEditor', () => {
     wrap(<BlockEditor blocks={[linkBlock, tableBlock]} onChange={vi.fn()} />);
     // Link block renders the href
     expect(screen.getByRole('link', { name: /example/i })).toBeInTheDocument();
-    // Table block renders headers
-    expect(screen.getByDisplayValue('A')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('B')).toBeInTheDocument();
+    // Table block in view mode renders <th> cells, not inputs
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByText('B')).toBeInTheDocument();
   });
 
   it('renders delete button for each block', () => {
@@ -174,11 +174,16 @@ describe('BlockEditor', () => {
     expect(agendaContent?.items.at(0)?.checked).toBe(true);
   });
 
-  it('calls onChange when a table cell is edited', () => {
+  it('calls onChange when a table cell is edited (after entering edit mode)', async () => {
     const onChange = vi.fn();
+    const user = userEvent.setup();
     wrap(<BlockEditor blocks={[tableBlock]} onChange={onChange} />);
 
-    // Use fireEvent.change for controlled inputs (mock doesn't update props)
+    // Blocks start in view mode; click the edit-toggle (pencil) to enter edit mode
+    const editBtn = screen.getByRole('button', { name: /edit block/i });
+    await user.click(editBtn);
+
+    // Now the table renders inputs — change a cell value
     const cell = screen.getByDisplayValue('1');
     fireEvent.change(cell, { target: { value: 'updated' } });
 

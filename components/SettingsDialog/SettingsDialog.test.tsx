@@ -2,8 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 import { I18nProvider } from '@/lib/i18n';
 

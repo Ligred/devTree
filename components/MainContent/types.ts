@@ -56,7 +56,8 @@ export type BlockType =
   | 'table'
   | 'agenda'
   | 'image'
-  | 'diagram';
+  | 'diagram'
+  | 'whiteboard';
 
 // ─── Content shapes ───────────────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ export type BlockType =
  *   representation (`editor.getJSON()`) for easier migration between editor
  *   versions.
  */
+// eslint-disable-next-line sonarjs/redundant-type-aliases -- named alias improves readability at call sites
 export type TextBlockContent = string;
 
 /**
@@ -159,6 +161,25 @@ export type DiagramBlockContent = {
 };
 
 /**
+ * WhiteboardBlockContent — freehand drawing canvas.
+ *
+ * The canvas is serialized to a base64 PNG data URL after each stroke.
+ * Storing PNG is simple and universally renderable (via <img> or <canvas>).
+ *
+ * WHY not store SVG path data?
+ *   PNG is trivial to implement and works well for sketchy notes.
+ *   Migrating to path data in the future would allow undo/redo and re-theming;
+ *   the `dataUrl` field can be replaced with a `strokes` array without breaking
+ *   the rest of the data model since we only add a new type to the union.
+ *
+ * `dataUrl` is `''` when the canvas is blank (never undefined, to simplify
+ * null-checks in the component).
+ */
+export type WhiteboardBlockContent = {
+  dataUrl: string;
+};
+
+/**
  * The full union of all possible block content types.
  *
  * WHY a union instead of `Record<string, unknown>`?
@@ -173,7 +194,8 @@ export type BlockContent =
   | TableBlockContent
   | AgendaBlockContent
   | ImageBlockContent
-  | DiagramBlockContent;
+  | DiagramBlockContent
+  | WhiteboardBlockContent;
 
 /**
  * A single content block on a page.
@@ -183,6 +205,12 @@ export type BlockContent =
  *   1 = half-width, 2 = full-width (default). Using `1 | 2` instead of
  *   `boolean` maps directly to the CSS `grid-column: span <n>` value, making
  *   the rendering logic straightforward.
+ *
+ * `tags?: string[]`
+ *   Optional labels attached to an individual block (e.g. "important", "task",
+ *   "review"). Block tags complement page-level tags: page tags categorise the
+ *   whole page, while block tags annotate specific sections within a page.
+ *   Stored as lowercase, deduplicated strings (same constraints as page tags).
  */
 export type Block = {
   id: string;
@@ -190,6 +218,8 @@ export type Block = {
   content: BlockContent;
   /** 1 = half width, 2 = full width (default) */
   colSpan?: 1 | 2;
+  /** Optional labels annotating this block */
+  tags?: string[];
 };
 
 /**
@@ -199,11 +229,18 @@ export type Block = {
  *   Drag-and-drop reordering relies on index-based operations (arrayMove).
  *   An unordered map (id → Block) would require an explicit `order` field
  *   and more complex reordering logic.
+ *
+ * `tags?: string[]`
+ *   Optional free-form labels for a page (e.g. "react", "algorithms").
+ *   Used to filter pages in the sidebar tag cloud and in search.
+ *   Stored as lowercase, deduplicated strings.
+ *   Optional (not required) so existing pages without tags are valid.
  */
 export type Page = {
   id: string;
   title: string;
   blocks: Block[];
+  tags?: string[];
 };
 
 // ─── Type guards ─────────────────────────────────────────────────────────────
@@ -337,3 +374,4 @@ export function isDiagramBlockContent(
     !('language' in content)
   );
 }
+

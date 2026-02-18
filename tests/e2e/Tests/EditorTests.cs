@@ -71,9 +71,10 @@ public class EditorTests : E2ETestBase
     {
         await App.Editor.AddBlockAsync("Table");
 
-        // Default table has "Column 1" and "Column 2" headers
-        await Expect(Page.GetByDisplayValue("Column 1")).ToBeVisibleAsync();
-        await Expect(Page.GetByDisplayValue("Column 2")).ToBeVisibleAsync();
+        // In edit mode the headers render as inputs — verify their values
+        var headers = Page.Locator("table thead input");
+        await Expect(headers.First).ToHaveValueAsync("Column 1");
+        await Expect(headers.Nth(1)).ToHaveValueAsync("Column 2");
     }
 
     [Test]
@@ -83,7 +84,9 @@ public class EditorTests : E2ETestBase
         await App.Editor.FillTableHeaderAsync(0, "Name");
         await App.Editor.FillTableCellAsync(0, 0, "Alice");
 
-        await Expect(Page.GetByDisplayValue("Alice")).ToBeVisibleAsync();
+        // Verify via ToHaveValueAsync rather than display-value selector
+        var firstCell = Page.Locator("table tbody tr").First.Locator("input").First;
+        await Expect(firstCell).ToHaveValueAsync("Alice");
     }
 
     [Test]
@@ -125,11 +128,12 @@ public class EditorTests : E2ETestBase
         await App.Editor.AddBlockAsync("Checklist");
         await App.Editor.TypeAgendaItemAsync("Learn Playwright");
 
-        var itemInput = Page.GetByDisplayValue("Learn Playwright");
-        await Expect(itemInput).ToBeVisibleAsync();
+        // Verify the text input has the expected value
+        var agendaInputs = Page.Locator("input[placeholder='To-do item…']");
+        await Expect(agendaInputs.Last).ToHaveValueAsync("Learn Playwright");
 
-        // Toggle the checkbox
-        var checkbox = itemInput.Locator("xpath=../preceding-sibling::input[@type='checkbox']");
+        // Checkbox is a sibling of the text input inside the same flex row
+        var checkbox = agendaInputs.Last.Locator("xpath=../input[@type='checkbox']");
         await checkbox.ClickAsync();
         await Expect(checkbox).ToBeCheckedAsync();
     }

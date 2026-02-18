@@ -84,6 +84,8 @@ function countWordsInBlock(block: Block): number {
      * IMPROVEMENT: Use DOMParser for more accurate HTML stripping in the browser
      * (e.g. `document.createElement('div').textContent`).
      */
+    // `[^>]+` is bounded by `>` so cannot backtrack super-linearly.
+    // eslint-disable-next-line sonarjs/slow-regex -- bounded pattern, safe
     const plainText = content.replaceAll(/<[^>]+>/g, ' ');
     return plainText.split(/\s+/).filter(Boolean).length;
   }
@@ -134,6 +136,13 @@ function countWordsInBlock(block: Block): number {
  */
 export function exportPageToMarkdown(page: Page): string {
   const sections: string[] = [`# ${page.title}`, ''];
+
+  // Include tags as YAML-like front-matter comment so they are searchable
+  // in the exported file while keeping the Markdown valid and renderable.
+  if (page.tags && page.tags.length > 0) {
+    const tagList = page.tags.map((t) => '`' + t + '`').join(' · ');
+    sections.push(`> **Tags:** ${tagList}`, '');
+  }
 
   for (const block of page.blocks) {
     const md = blockToMarkdown(block);
@@ -235,10 +244,11 @@ function htmlToMarkdown(html: string): string {
       // List items (simplified — no nesting depth)
       .replaceAll(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1')
       .replaceAll(/<\/?[ou]l[^>]*>/gi, '')
-      // Paragraphs and line breaks
+      // Paragraphs and line breaks. Regexes are bounded (safe from backtracking).
       .replaceAll(/<br[^>]*\/?>/gi, '\n')
       .replaceAll(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n')
       // Strip remaining tags
+      // eslint-disable-next-line sonarjs/slow-regex -- bounded patterns, safe
       .replaceAll(/<[^>]+>/g, '')
       // Decode common HTML entities
       .replaceAll('&nbsp;', ' ')

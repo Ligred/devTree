@@ -86,17 +86,19 @@ import { ImageBlock } from './blocks/ImageBlock';
 import { LinkBlock } from './blocks/LinkBlock';
 import { TableBlock } from './blocks/TableBlock';
 import { TextBlock } from './blocks/TextBlock';
+import { WhiteboardBlock } from './blocks/WhiteboardBlock';
 import {
+  type AgendaBlockContent,
   type Block,
   type BlockContent,
   type BlockType,
-  isAgendaBlockContent,
-  isCodeBlockContent,
-  isDiagramBlockContent,
-  isImageBlockContent,
-  isLinkBlockContent,
-  isTableBlockContent,
-  isTextBlockContent,
+  type CodeBlockContent,
+  type DiagramBlockContent,
+  type ImageBlockContent,
+  type LinkBlockContent,
+  type TableBlockContent,
+  type TextBlockContent,
+  type WhiteboardBlockContent,
 } from './types';
 
 /**
@@ -152,15 +154,32 @@ function createBlock(type: BlockType): Block {
       return { id, type, content: { url: '', alt: '', caption: '' }, colSpan: 2 };
     case 'diagram':
       return { id, type, content: { code: '' }, colSpan: 2 };
+    case 'whiteboard':
+      return { id, type, content: { dataUrl: '' }, colSpan: 2 };
   }
 }
 
 type BlockEditorProps = Readonly<{
   blocks: Block[];
   onChange: (blocks: Block[]) => void;
+  /**
+   * When provided, only blocks that carry at least one tag from this list are
+   * rendered (OR logic). Blocks without any tags are hidden while the filter is
+   * active. When undefined or empty all blocks are shown.
+   *
+   * WHY filter here and not in MainContent?
+   *   Filtering here keeps the drag-and-drop context intact: the full `blocks`
+   *   array (with all ids) is always passed to SortableContext, preventing DnD
+   *   from losing track of block positions. We simply skip rendering BlockWrapper
+   *   for hidden blocks, which is safe because the SortableContext still knows
+   *   about them via the `items` array.
+   */
+  filterTags?: string[];
+  /** When false, block-level tag rows are hidden (controlled by settings store). */
+  showBlockTags?: boolean;
 }>;
 
-export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
+export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true }: BlockEditorProps) {
   /**
    * Stable DnD context id to avoid SSR/client hydration mismatch.
    *
@@ -251,6 +270,22 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
   );
 
   /**
+   * Update the tags array on a single block (immutable map).
+   *
+   * WHY a dedicated handler instead of re-using updateBlock?
+   *   `updateBlock` replaces `content` — the block's visible data.
+   *   `tags` is metadata stored alongside content, not inside it. A separate
+   *   handler makes the intent explicit and avoids accidentally conflating
+   *   content updates with metadata updates.
+   */
+  const updateBlockTags = useCallback(
+    (id: string, tags: string[]) => {
+      onChange(blocks.map((b) => (b.id === id ? { ...b, tags } : b)));
+    },
+    [blocks, onChange],
+  );
+
+  /**
    * Determine which grid column each block occupies.
    *
    * Used to position block controls (drag handle, add button) on the outer edge,
@@ -282,21 +317,34 @@ export function BlockEditor({ blocks, onChange }: BlockEditorProps) {
          *   is needed, and removing it maximises the available screen width.
          */}
         <div className="grid grid-cols-1 gap-3 pl-0 sm:grid-cols-2 sm:gap-4 sm:pl-12">
-          {blocks.map((block) => (
-            <BlockWrapper
-              key={block.id}
-              block={block}
-              controlsSide={columnMap[block.id] === 1 ? 'right' : 'left'}
-              onDelete={() => deleteBlock(block.id)}
-              onAddAfter={(type) => addBlockAfter(block.id, type)}
-              onToggleColSpan={() => toggleColSpan(block.id)}
-            >
-              <BlockContent
+          {blocks.map((block) => {
+            const isHidden =
+              filterTags !== undefined &&
+              filterTags.length > 0 &&
+              !filterTags.some((t) => (block.tags ?? []).includes(t));
+
+            if (isHidden) return null;
+
+            return (
+              <BlockWrapper
+                key={block.id}
                 block={block}
-                onChange={(content) => updateBlock(block.id, content)}
+                controlsSide={columnMap[block.id] === 1 ? 'right' : 'left'}
+                onDelete={() => deleteBlock(block.id)}
+                onAddAfter={(type) => addBlockAfter(block.id, type)}
+                onToggleColSpan={() => toggleColSpan(block.id)}
+                onTagsChange={(tags) => updateBlockTags(block.id, tags)}
+                showBlockTags={showBlockTags}
+                renderContent={(isEditing) => (
+                  <BlockContent
+                    block={block}
+                    onChange={(content) => updateBlock(block.id, content)}
+                    isEditing={isEditing}
+                  />
+                )}
               />
-            </BlockWrapper>
-          ))}
+            );
+          })}
         </div>
       </SortableContext>
 
@@ -362,41 +410,72 @@ function computeColumnMap(blocks: Block[]): Record<string, 0 | 1> {
  *   const BLOCK_REGISTRY: Record<BlockType, Component> = { text: TextBlock, ... }
  *   This would make adding a new block type a single-line change.
  */
+/**
+ * Warn about unrecognised block types in development only.
+ *
+ * Extracted to a top-level function so it doesn't add cognitive complexity
+ * to BlockContent (SonarJS counts every `if` statement).
+ */
+function warnUnknownBlockType(type: BlockType) {
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn(`[BlockEditor] Unknown block type: "${type}"`); // dev-only diagnostic
+  }
+}
+
+/**
+ * BlockContent renders the appropriate block component for a given block.
+ *
+ * ─── DESIGN: SWITCH + TYPE ASSERTIONS ────────────────────────────────────────
+ *
+ * The original implementation used `if (type === 'X' && isXBlockContent(content))`.
+ * Each `&&` counts as +1 cognitive complexity in SonarJS. With 8+ block types
+ * this pushes the function over the allowed limit of 15.
+ *
+ * The refactored switch reduces complexity because:
+ *   - `switch` itself counts as 1 (not 1 per case).
+ *   - Each `case` counts as 1 (same as before).
+ *   - No `&&` per branch — `type` alone is the discriminant.
+ *   Total: 1 (switch) + N (cases) vs. N × 2 (if + &&).
+ *
+ * The `as` assertions are safe here because `createBlock()` guarantees that
+ * `block.content` always matches `block.type`. Runtime type-guard functions
+ * (isTextBlockContent, etc.) were previously used for TypeScript narrowing only;
+ * they did not provide meaningful runtime safety beyond what `type` already gives.
+ *
+ * WHY keep type guards in types.ts then?
+ *   They are still useful when consuming data from an external source (API,
+ *   database) where the content shape cannot be guaranteed by our own code.
+ */
 function BlockContent({
   block,
   onChange,
+  isEditing,
 }: Readonly<{
   block: Block;
   onChange: (content: BlockContent) => void;
+  isEditing: boolean;
 }>) {
   const { type, content } = block;
 
-  if (type === 'text' && isTextBlockContent(content, type)) {
-    return <TextBlock content={content} onChange={onChange} />;
+  switch (type) {
+    case 'text':
+      return <TextBlock content={content as TextBlockContent} onChange={onChange} isEditing={isEditing} />;
+    case 'code':
+      return <CodeBlock content={content as CodeBlockContent} onChange={onChange} isEditing={isEditing} />;
+    case 'link':
+      return <LinkBlock content={content as LinkBlockContent} onChange={onChange} />;
+    case 'table':
+      return <TableBlock content={content as TableBlockContent} onChange={onChange} isEditing={isEditing} />;
+    case 'agenda':
+      return <AgendaBlock content={content as AgendaBlockContent} onChange={onChange} isEditing={isEditing} />;
+    case 'image':
+      return <ImageBlock content={content as ImageBlockContent} onChange={onChange} />;
+    case 'diagram':
+      return <DiagramBlock content={content as DiagramBlockContent} onChange={onChange} isEditing={isEditing} />;
+    case 'whiteboard':
+      return <WhiteboardBlock content={content as WhiteboardBlockContent} onChange={onChange} isEditing={isEditing} />;
+    default:
+      warnUnknownBlockType(type);
+      return null;
   }
-  if (type === 'code' && isCodeBlockContent(content, type)) {
-    return <CodeBlock content={content} onChange={onChange} />;
-  }
-  if (type === 'link' && isLinkBlockContent(content, type)) {
-    return <LinkBlock content={content} onChange={onChange} />;
-  }
-  if (type === 'table' && isTableBlockContent(content, type)) {
-    return <TableBlock content={content} onChange={onChange} />;
-  }
-  if (type === 'agenda' && isAgendaBlockContent(content, type)) {
-    return <AgendaBlock content={content} onChange={onChange} />;
-  }
-  if (type === 'image' && isImageBlockContent(content, type)) {
-    return <ImageBlock content={content} onChange={onChange} />;
-  }
-  if (type === 'diagram' && isDiagramBlockContent(content, type)) {
-    return <DiagramBlock content={content} onChange={onChange} />;
-  }
-
-  // Warn in development if an unknown block type slips through.
-  // In production this would silently render nothing, which is safe.
-  if (process.env.NODE_ENV !== 'production') {
-    console.warn(`[BlockEditor] Unknown block type: "${type}"`);
-  }
-  return null;
 }

@@ -23,8 +23,15 @@ describe('AgendaBlock', () => {
     expect(screen.getByDisplayValue('My Checklist')).toBeInTheDocument();
   });
 
-  it('renders all items', () => {
+  it('renders all items as text in view mode', () => {
     render(<AgendaBlock content={baseContent} onChange={vi.fn()} />);
+    // In view mode items are spans, not inputs
+    expect(screen.getByText('First task')).toBeInTheDocument();
+    expect(screen.getByText('Second task')).toBeInTheDocument();
+  });
+
+  it('renders all items as editable inputs in edit mode', () => {
+    render(<AgendaBlock content={baseContent} onChange={vi.fn()} isEditing />);
     expect(screen.getByDisplayValue('First task')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Second task')).toBeInTheDocument();
   });
@@ -41,8 +48,11 @@ describe('AgendaBlock', () => {
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
   });
 
-  it('renders Add item button', () => {
+  it('renders Add item button only in edit mode', () => {
     render(<AgendaBlock content={baseContent} onChange={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /add item/i })).not.toBeInTheDocument();
+
+    render(<AgendaBlock content={baseContent} onChange={vi.fn()} isEditing />);
     expect(screen.getByRole('button', { name: /add item/i })).toBeInTheDocument();
   });
 
@@ -82,7 +92,7 @@ describe('AgendaBlock', () => {
   it('calls onChange with new item when Add item is clicked', async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
-    render(<AgendaBlock content={baseContent} onChange={onChange} />);
+    render(<AgendaBlock content={baseContent} onChange={onChange} isEditing />);
 
     await user.click(screen.getByRole('button', { name: /add item/i }));
 
@@ -100,7 +110,7 @@ describe('AgendaBlock', () => {
   it('adds new item after Enter key in an item input', async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
-    render(<AgendaBlock content={baseContent} onChange={onChange} />);
+    render(<AgendaBlock content={baseContent} onChange={onChange} isEditing />);
 
     const firstInput = screen.getByDisplayValue('First task');
     await user.click(firstInput);
@@ -124,7 +134,7 @@ describe('AgendaBlock', () => {
         { id: '2', text: '', checked: false },
       ],
     };
-    render(<AgendaBlock content={content} onChange={onChange} />);
+    render(<AgendaBlock content={content} onChange={onChange} isEditing />);
 
     // Use placeholder to target the item input (not the title input)
     const itemInputs = screen.getAllByPlaceholderText(/to-do item/i);
@@ -148,7 +158,7 @@ describe('AgendaBlock', () => {
       title: '',
       items: [{ id: '1', text: '', checked: false }],
     };
-    render(<AgendaBlock content={singleItem} onChange={onChange} />);
+    render(<AgendaBlock content={singleItem} onChange={onChange} isEditing />);
 
     const input = screen.getByPlaceholderText(/to-do item/i);
     await user.click(input);

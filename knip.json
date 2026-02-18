@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+
+  "project": [
+    "app/**/*.{ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "lib/**/*.{ts,tsx}"
+  ],
+
+  "ignoreExportsUsedInFile": true,
+
+  "ignoreDependencies": [
+    "@vitest/coverage-v8",
+    "postcss",
+    "tailwindcss",
+    "tw-animate-css",
+    "vitest-environment-happy-dom"
+  ]
+}

@@ -21,6 +21,14 @@ public abstract class E2ETestBase : PageTest
     {
         App = new AppPage(Page);
         await App.GotoAsync();
+        // The Next.js dev-mode overlay (nextjs-portal) can intercept pointer events
+        // and cause clicks to time out. Disable it via JS before each test runs.
+        await Page.EvaluateAsync(@"
+            document.querySelectorAll('nextjs-portal').forEach(el => {
+                el.style.pointerEvents = 'none';
+                el.style.display = 'none';
+            });
+        ");
     }
 
     // ── Playwright browser options ──────────────────────────────────────────

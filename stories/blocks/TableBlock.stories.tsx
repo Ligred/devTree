@@ -48,3 +48,16 @@ export const Wide: Story = {
     },
   },
 };
+
+export const EditMode: Story = {
+  args: {
+    isEditing: true,
+    content: {
+      headers: ['Hook', 'Purpose'],
+      rows: [
+        ['useState', 'Manage local state'],
+        ['useEffect', 'Side effects and subscriptions'],
+      ],
+    },
+  },
+};

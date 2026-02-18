@@ -43,6 +43,7 @@ import { FileExplorer } from '@/components/FileExplorer/FileExplorer';
 import { MainContent, type Page, type Block } from '@/components/MainContent';
 import type { TreeDataItem } from '@/components/ui/tree-view';
 import { useI18n } from '@/lib/i18n';
+import { useSettingsStore } from '@/lib/settingsStore';
 import { cn } from '@/lib/utils';
 
 import { buildTreeDataWithActions } from './buildTreeData';
@@ -89,6 +90,8 @@ const emptyPage = (id: string, title: string): Page => ({
   title,
   blocks: [],
 });
+
+const I18N_CLEAR_TAG_FILTER = 'sidebar.clearTagFilter';
 
 export function Workspace() {
   // ─── Core data state ────────────────────────────────────────────────────────
@@ -150,9 +153,28 @@ export function Workspace() {
   /** Search query for filtering pages in the sidebar. */
   const [searchQuery, setSearchQuery] = useState('');
 
+  /**
+   * Active tag filters — pages must include ALL selected tags (AND logic).
+   *
+   * WHY a string[] (multi-tag) instead of a single string?
+   *   AND-logic multi-tag filtering lets users drill down precisely:
+   *   selecting "react" + "hooks" shows only pages tagged with both.
+   *   Toggling a tag on/off (if already selected it is removed) makes it
+   *   easy to explore combinations without a separate "clear" flow per tag.
+   *
+   *   OR-logic (any tag) would show too many results and reduce usefulness.
+   */
+  const [activeTags, setActiveTags] = useState<string[]>([]);
+
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { t } = useI18n();
+  const tagsPerPageEnabled = useSettingsStore((s) => s.tagsPerPageEnabled);
+
+  // When page tags are disabled, clear the sidebar tag filter so we don't filter by tags invisibly.
+  useEffect(() => {
+    if (!tagsPerPageEnabled) setActiveTags([]);
+  }, [tagsPerPageEnabled]);
 
   // ─── Derived values ──────────────────────────────────────────────────────────
 
@@ -194,21 +216,69 @@ export function Workspace() {
    * IMPROVEMENT: Debounce the query to avoid re-filtering on every keystroke.
    * Use a library like `fuse.js` for fuzzy / ranked search results.
    */
+  /**
+   * All unique tags across all pages, sorted alphabetically.
+   *
+   * Shown as a tag cloud in the sidebar so users can click to filter.
+   * Computed from the live `pages` array so new tags appear immediately.
+   */
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    for (const page of pages) {
+      for (const tag of page.tags ?? []) tagSet.add(tag);
+    }
+    return [...tagSet].sort((a, b) => a.localeCompare(b));
+  }, [pages]);
+
+  /**
+   * Toggle a tag in the active filter set.
+   *
+   * WHY useCallback?
+   *   This function is passed to JSX onClick handlers inside a .map() loop.
+   *   Without memoisation every render would create new function instances,
+   *   causing unnecessary re-renders of all tag buttons.
+   *
+   *   Extracting it also flattens the nesting depth inside the JSX, which
+   *   satisfies SonarQube's "no functions nested more than 4 levels" rule.
+   */
+  const toggleTag = useCallback(
+    (tag: string) =>
+      setActiveTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag])),
+    [],
+  );
+
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return null; // no active filter
+    const hasQuery = q.length > 0;
+    const hasTagFilter = activeTags.length > 0;
+
+    // No active filters → show the full tree unchanged
+    if (!hasQuery && !hasTagFilter) return null;
 
     return pages.filter((page) => {
-      if (page.title.toLowerCase().includes(q)) return true;
-      return page.blocks.some((block) => {
-        if (typeof block.content === 'string') {
-          // Strip HTML tags before searching (text blocks store HTML)
-          return block.content.replaceAll(/<[^>]+>/g, '').toLowerCase().includes(q);
-        }
-        return JSON.stringify(block.content).toLowerCase().includes(q);
-      });
+      // AND-logic tag filter: page must carry every selected tag
+      if (hasTagFilter) {
+        const pageTags = page.tags ?? [];
+        if (!activeTags.every((t) => pageTags.includes(t))) return false;
+      }
+
+      // Text filter: title or any block's content must contain the query
+      if (hasQuery) {
+        if (page.title.toLowerCase().includes(q)) return true;
+        return page.blocks.some((block) => {
+          if (typeof block.content === 'string') {
+            // Strip HTML tags before matching. The regex is bounded by `>` so
+            // it cannot backtrack super-linearly.
+            // eslint-disable-next-line sonarjs/slow-regex -- bounded by `>`, safe for this input size
+            return block.content.replaceAll(/<[^>]+>/g, '').toLowerCase().includes(q);
+          }
+          return JSON.stringify(block.content).toLowerCase().includes(q);
+        });
+      }
+
+      return true; // tag filter(s) matched, no text filter required
     });
-  }, [pages, searchQuery]);
+  }, [pages, searchQuery, activeTags]);
 
   // ─── Callbacks ───────────────────────────────────────────────────────────────
   // IMPORTANT: createFile, createFolder, handleDeleteNode must be defined
@@ -309,23 +379,16 @@ export function Workspace() {
     if (!deleteDialog) return;
     const { nodeId } = deleteDialog;
 
-    setTreeRoot((prevRoot) => {
-      const { root: nextRoot, removed } = removeNode(prevRoot, nodeId);
-      if (!removed) return prevRoot;
+    // Compute outside the setter to avoid deeply nested callbacks (sonarjs)
+    const { root: nextRoot, removed } = removeNode(treeRoot, nodeId);
+    if (!removed) return;
+    const pageIdsToRemove = collectPageIdsInSubtree(removed);
 
-      const pageIdsToRemove = collectPageIdsInSubtree(removed);
-      setPages((prevPages) =>
-        prevPages.filter((p) => !pageIdsToRemove.includes(p.id)),
-      );
-      // Deselect if the active page was deleted
-      setActivePageId((current) =>
-        pageIdsToRemove.includes(current ?? '') ? null : current,
-      );
-
-      return nextRoot;
-    });
+    setTreeRoot(nextRoot);
+    setPages((prevPages) => prevPages.filter((p) => !pageIdsToRemove.includes(p.id)));
+    setActivePageId((current) => (pageIdsToRemove.includes(current ?? '') ? null : current));
     setDeleteDialog(null);
-  }, [deleteDialog]);
+  }, [deleteDialog, treeRoot]);
 
   /**
    * Handle a drag-and-drop of one tree node onto another.
@@ -419,6 +482,17 @@ export function Workspace() {
       if (!activePageId) return;
       setPages((prev) =>
         prev.map((p) => (p.id === activePageId ? { ...p, blocks } : p)),
+      );
+    },
+    [activePageId],
+  );
+
+  /** Update the tags for the active page. */
+  const handleTagsChange = useCallback(
+    (tags: string[]) => {
+      if (!activePageId) return;
+      setPages((prev) =>
+        prev.map((p) => (p.id === activePageId ? { ...p, tags } : p)),
       );
     },
     [activePageId],
@@ -608,6 +682,65 @@ export function Workspace() {
             </div>
           </div>
 
+          {/**
+           * Tag cloud — shows all unique tags as clickable chips.
+           *
+           * WHY in the sidebar?
+           *   Tags are a navigation tool, just like the file tree. Placing them
+           *   in the sidebar keeps all navigation in one place.
+           *
+           * Clicking a chip toggles it in `activeTags`; AND logic requires all
+           * (toggle behaviour). The active tag is highlighted with indigo.
+           *
+           * Hidden when there are no tags yet (freshly created workspace).
+           */}
+          {/**
+           * Tag cloud — every unique tag across all pages.
+           *
+           * Active tags (highlighted indigo) can be toggled off by clicking again.
+           * Inactive tags can be toggled on. Multiple tags can be active at once;
+           * the filter uses AND logic (page must have all selected tags).
+           *
+           * "Clear all" button appears only when at least one tag is active.
+           */}
+          {tagsPerPageEnabled && allTags.length > 0 && (
+            <div className="border-b border-border px-3 py-2">
+              <div className="flex flex-wrap gap-1">
+                {activeTags.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTags([])}
+                    className="flex items-center gap-1 rounded-full border border-indigo-300 px-2 py-0.5 text-xs text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                    title={t(I18N_CLEAR_TAG_FILTER)}
+                  >
+                    <X size={9} />
+                    {t(I18N_CLEAR_TAG_FILTER)}
+                  </button>
+                )}
+                {allTags.map((tag) => {
+                  const isActive = activeTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={cn(
+                        'rounded-full border px-2 py-0.5 text-xs font-medium transition-colors',
+                        isActive
+                          ? 'border-indigo-400 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500'
+                          : 'border-border bg-muted/40 text-muted-foreground hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300',
+                      )}
+                      title={isActive ? t(I18N_CLEAR_TAG_FILTER) : t('sidebar.filterByTag')}
+                      aria-pressed={isActive}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Tree / search results */}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {searchResults === null ? (
@@ -644,7 +777,7 @@ export function Workspace() {
                       key={page.id}
                       type="button"
                       className={cn(
-                        'flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors',
+                        'flex w-full flex-col items-start rounded-md px-3 py-2 text-left text-sm transition-colors',
                         page.id === activePageId
                           ? 'bg-accent text-accent-foreground'
                           : 'text-foreground hover:bg-accent/50',
@@ -653,9 +786,22 @@ export function Workspace() {
                         setActivePageId(page.id);
                         setMobileSidebarOpen(false);
                         setSearchQuery('');
+                        setActiveTags([]);
                       }}
                     >
-                      <span className="truncate">{page.title}</span>
+                      <span className="truncate font-medium">{page.title}</span>
+                      {(page.tags ?? []).length > 0 && (
+                        <span className="mt-0.5 flex flex-wrap gap-1">
+                          {(page.tags ?? []).map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </span>
+                      )}
                     </button>
                   ))
                 )}
@@ -672,6 +818,7 @@ export function Workspace() {
         saved={saveFeedback}
         onTitleChange={handleTitleChange}
         onBlocksChange={handleBlocksChange}
+        onTagsChange={handleTagsChange}
         onMobileSidebarToggle={() => setMobileSidebarOpen((v) => !v)}
       />
 

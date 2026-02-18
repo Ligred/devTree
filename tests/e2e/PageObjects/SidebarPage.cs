@@ -45,7 +45,7 @@ public class SidebarPage(IPage page)
     public async Task RenameLastItemAsync(string newName)
     {
         // The last row in the accordion (newly created) gets an inline rename input on double-click
-        var items = _page.Locator('[data-radix-accordion-item]');
+        var items = _page.Locator("[data-radix-accordion-item]");
         var count = await items.CountAsync();
         if (count == 0) return;
 

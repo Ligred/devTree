@@ -9,50 +9,53 @@
  *   3. Renders editing controls that appear on hover (or always on mobile).
  *   4. Positions controls on the correct side (left or right) so they don't
  *      overlap the adjacent block in a two-column layout.
+ *   5. Manages the per-block edit/view mode via `isEditing` state.
+ *   6. Shows block-level tags at the top of the block.
+ *
+ * ─── EDIT / VIEW MODE ─────────────────────────────────────────────────────────
+ *
+ * Blocks start in VIEW mode (read-only). Clicking the pencil icon enters EDIT
+ * mode; clicking the check icon (or the pencil again) exits it.
+ *
+ * WHY per-block rather than page-level edit mode?
+ *   Per-block mode lets users read most of the page while editing one section.
+ *   Page-level mode would force a full read/write context switch which feels
+ *   heavy for note-taking where edits are typically isolated.
+ *
+ * The `isEditing` flag is passed to block components via a render prop
+ * `renderContent(isEditing)` so each block can adapt its own UI without
+ * needing a shared global state or context.
  *
  * ─── CONTROLS LAYOUT ──────────────────────────────────────────────────────────
  *
- * Two groups of controls:
- *
  *   Side controls (drag handle + "add block after" button):
- *     - Desktop: absolutely positioned left (-10) or right (-10) of the block,
- *       inside the `pl-12` gutter of the grid container.
- *     - Mobile: hidden (sm:hidden) — the gutter doesn't exist on small screens
- *       and touch users can tap the top-corner buttons instead.
+ *     - Desktop: absolutely positioned outside the block in the grid gutter.
+ *     - Mobile: hidden — no gutter exists and touch doesn't support hover.
  *
- *   Top-corner controls (width toggle + delete):
- *     - Desktop: opacity-0 by default, fade in on group-hover.
- *     - Mobile: always visible (opacity-100 sm:opacity-0) so touch users can
- *       reach them without needing a hover state that doesn't exist on touchscreens.
+ *   Top-corner controls (edit toggle + width toggle + delete):
+ *     - VIEW mode, desktop: opacity-0 by default, fade in on group-hover.
+ *     - EDIT mode: always visible so users know which block is being edited.
+ *     - Mobile: always visible (opacity-100).
  *
- * WHY CSS opacity transitions over show/hide (display: none)?
- *   Opacity changes are GPU-composited and don't trigger layout reflow.
- *   They also allow smooth fade-in/out animations via `transition-opacity`.
+ * WHY CSS opacity transitions over display:none?
+ *   Opacity changes are GPU-composited (no layout reflow) and allow smooth
+ *   fade animations. Switching display triggers reflow and causes layout shift.
  *
- * ─── USESORTABLE ──────────────────────────────────────────────────────────────
+ * ─── BLOCK TAGS (at top) ──────────────────────────────────────────────────────
  *
- * `useSortable` returns:
- *   setNodeRef   — ref to attach to the DOM node (registers with DnD engine)
- *   transform    — CSS transform to apply during drag (moves the ghost element)
- *   transition   — CSS transition string for smooth drop animation
- *   isDragging   — true while this item is being dragged
- *   attributes   — ARIA attributes for accessibility
- *   listeners    — pointer/keyboard event handlers for the drag handle
+ * WHY tags at the top rather than the bottom?
+ *   Tags are metadata that DESCRIBE the block ("important", "review"). Showing
+ *   them before the content follows the "label first" principle — you know what
+ *   a block is before you read it, just like a sticky note label.
  *
- * WHY apply transform/transition via `style` instead of className?
- *   The transform values are dynamic (different every animation frame during
- *   drag). Inline styles are more efficient than generating unique Tailwind
- *   classes for every possible transform value.
- *
- * ─── IMPROVEMENT IDEAS ────────────────────────────────────────────────────────
- *   - Add a long-press gesture on mobile to enter "reorder mode".
- *   - Show a "Block type" badge in the corner (e.g. "Code", "Table").
- *   - Add keyboard shortcut (e.g. Backspace on empty block → delete).
+ *   In view mode: tags are displayed read-only.
+ *   In edit mode: tags are editable (add / remove).
  */
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Columns2, Maximize2 } from 'lucide-react';
+import { Check, Columns2, GripVertical, Maximize2, Pencil, Plus, Tag, Trash2, X } from 'lucide-react';
+import { useRef, useState } from 'react';
 
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -60,106 +63,201 @@ import { cn } from '@/lib/utils';
 import { BlockPicker } from './BlockPicker';
 import type { Block, BlockType } from './types';
 
+// ─── Block-level tag colours (deterministic, same palette as page-level) ──────
+
+const BLOCK_TAG_COLOURS = [
+  'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
+  'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
+  'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+  'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+  'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300',
+  'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300',
+  'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
+];
+
+function blockTagColour(tag: string): string {
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) hash = Math.trunc(hash * 31 + (tag.codePointAt(i) ?? 0));
+  return BLOCK_TAG_COLOURS[Math.abs(hash) % BLOCK_TAG_COLOURS.length];
+}
+
+const I18N_ADD_TAG = 'block.addTag';
+
+type BlockTagRowProps = Readonly<{
+  tags: string[];
+  onChange: (tags: string[]) => void;
+  /** In view mode tags are display-only; edit controls appear only when editing. */
+  isEditing: boolean;
+}>;
+
+/**
+ * BlockTagRow — tag strip shown at the TOP of every block.
+ *
+ * View mode:  tags are coloured chips with no interactive controls.
+ *             Nothing is rendered if the block has no tags.
+ * Edit mode:  tags show a "×" remove button; an "Add tag" input appears.
+ *             Rendered even when there are no tags so users can add the first one.
+ *
+ * WHY separate from page-level TagBar?
+ *   Block tags annotate a single block (e.g. "important", "review"); page tags
+ *   categorise the whole page. Different sizes and interaction patterns suit
+ *   a distinct component better than a one-size-fits-all shared component.
+ */
+function BlockTagRow({ tags, onChange, isEditing }: BlockTagRowProps) {
+  const { t } = useI18n();
+  const [isAdding, setIsAdding] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const hasTags = tags.length > 0;
+
+  // In view mode with no tags, render nothing (no empty space above block)
+  if (!isEditing && !hasTags) return null;
+
+  const addTag = (raw: string) => {
+    const candidates = raw
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s.length > 0 && !tags.includes(s));
+    if (candidates.length > 0) onChange([...tags, ...candidates]);
+    setInputValue('');
+    setIsAdding(false);
+  };
+
+  const removeTag = (tag: string) => onChange(tags.filter((t) => t !== tag));
+
+  const startAdding = () => {
+    setIsAdding(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const cancel = () => { setIsAdding(false); setInputValue(''); };
+
+  return (
+    <div className="mb-1.5 flex flex-wrap items-center gap-1.5 px-1">
+      <Tag
+        size={12}
+        className={cn('shrink-0', hasTags ? 'text-muted-foreground/60' : 'text-muted-foreground/30')}
+        aria-hidden
+      />
+
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          className={cn(
+            'flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
+            blockTagColour(tag),
+          )}
+        >
+          {tag}
+          {/* Remove button only in edit mode */}
+          {isEditing && (
+            <button
+              type="button"
+              aria-label={`${t('block.removeTag')} ${tag}`}
+              className="rounded-full opacity-60 transition-opacity hover:opacity-100"
+              onClick={() => removeTag(tag)}
+            >
+              <X size={10} />
+            </button>
+          )}
+        </span>
+      ))}
+
+      {/* Add tag input/button — only in edit mode */}
+      {isEditing && (
+        isAdding ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={inputValue}
+            placeholder={t('block.addTagPlaceholder')}
+            aria-label={t(I18N_ADD_TAG)}
+            className="h-6 w-28 rounded-md border border-border bg-background px-2 text-xs text-foreground outline-none placeholder:text-muted-foreground/50 focus:ring-1 focus:ring-ring"
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(inputValue); }
+              if (e.key === 'Escape') cancel();
+            }}
+            onBlur={() => { if (inputValue.trim()) addTag(inputValue); else cancel(); }}
+          />
+        ) : (
+          <button
+            type="button"
+            aria-label={t(I18N_ADD_TAG)}
+            title={t(I18N_ADD_TAG)}
+            className="flex items-center gap-1 rounded-full border border-dashed border-muted-foreground/25 px-2 py-0.5 text-xs text-muted-foreground/40 transition-all hover:border-indigo-400 hover:text-indigo-500 dark:hover:border-indigo-500 dark:hover:text-indigo-400"
+            onClick={startAdding}
+          >
+            <Plus size={10} />
+            {t(I18N_ADD_TAG)}
+          </button>
+        )
+      )}
+    </div>
+  );
+}
+
+// ─── BlockWrapper ─────────────────────────────────────────────────────────────
+
 type BlockWrapperProps = Readonly<{
   block: Block;
-  children: React.ReactNode;
+  /**
+   * WHY a render prop instead of `children: React.ReactNode`?
+   *   `isEditing` lives in BlockWrapper's state. Passing it to the block
+   *   content requires either cloneElement (fragile) or a render prop (clean).
+   *   `renderContent(isEditing)` gives the caller full control over what
+   *   to render in each mode without leaking internal state upward.
+   */
+  renderContent: (isEditing: boolean) => React.ReactNode;
   onDelete: () => void;
   onAddAfter: (type: BlockType) => void;
   onToggleColSpan: () => void;
-  /**
-   * Which side to render the drag/add controls on.
-   *
-   * WHY this prop instead of computing it here?
-   *   Determining the correct side requires knowing the block's position in the
-   *   grid — information that exists in BlockEditor (which tracks all blocks and
-   *   simulates grid placement). Passing it as a prop keeps BlockWrapper pure
-   *   and avoids duplicating the grid-simulation logic.
-   *
-   * Defaults to 'left' (the standard position for single-column or first blocks).
-   */
+  onTagsChange: (tags: string[]) => void;
   controlsSide?: 'left' | 'right';
+  /** When false, the BlockTagRow is hidden (controlled by global settings). */
+  showBlockTags?: boolean;
 }>;
 
 export function BlockWrapper({
   block,
-  children,
+  renderContent,
   onDelete,
   onAddAfter,
   onToggleColSpan,
+  onTagsChange,
   controlsSide = 'left',
+  showBlockTags = true,
 }: BlockWrapperProps) {
-  /**
-   * useSortable registers this block with the parent DndContext.
-   *
-   * The `id` must match the id used in SortableContext's `items` array.
-   * During drag: transform positions this element as the "ghost".
-   * After drop: transition animates the element back or to its new position.
-   */
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: block.id });
 
-  /**
-   * Apply DnD transform and transition as inline styles.
-   *
-   * CSS.Transform.toString converts the DnD kit's internal Transform object
-   * (x, y, scaleX, scaleY) into a CSS transform string like
-   * "translate3d(0px, -80px, 0) scaleX(1) scaleY(1)".
-   */
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+  const style = { transform: CSS.Transform.toString(transform), transition };
 
   const { t } = useI18n();
+  const [isEditing, setIsEditing] = useState(false);
   const isHalf = block.colSpan === 1;
   const isRight = controlsSide === 'right';
+  // Desktop side placement for the controls badge (avoids nested ternary at call site)
+  const sideViewCls = isRight ? 'sm:left-0 sm:-translate-x-1' : 'sm:right-0 sm:translate-x-1';
 
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={cn(
-        // `group/block` creates a scoped Tailwind group so `group-hover/block:`
-        // selectors only activate when THIS wrapper is hovered, not any ancestor.
         'group/block relative',
-        // Mobile: always full-width (col-span-full = 1/-1, spans all columns).
-        //   `col-span-1` or `col-span-2` on a 1-column grid can create implicit
-        //   extra columns, breaking the layout. col-span-full is always safe.
-        // Desktop (sm+): apply the actual half/full span.
         isHalf ? 'col-span-full sm:col-span-1' : 'col-span-full sm:col-span-2',
-        // Raise z-index and dim the block while it's being dragged
         isDragging && 'z-50 opacity-50',
       )}
     >
-      {/**
-       * Side controls: drag handle + "add block after" picker.
-       *
-       * `hidden sm:flex` — invisible on mobile (< 640 px) where:
-       *   a) There is no gutter (the grid is single-column with pl-0).
-       *   b) Touch devices don't support hover, so the controls would
-       *      never appear anyway.
-       *
-       * The `-left-10` / `-right-10` positioning places the controls
-       * inside the pl-12 gutter of the parent grid, just outside the block.
-       */}
+      {/* Side controls: drag handle + "add block after" picker */}
       <div
         className={cn(
           'absolute top-0 hidden h-full flex-col items-center gap-1 pt-1 opacity-0 transition-opacity group-hover/block:opacity-100 sm:flex',
           isRight ? '-right-10' : '-left-10',
         )}
       >
-        {/**
-         * Drag handle button.
-         *
-         * WHY spread {...attributes} and {...listeners} on the handle instead
-         * of the wrapper div?
-         *   Spreading on the wrapper would make the entire block a drag target,
-         *   preventing normal click/type interactions inside the block. Isolating
-         *   DnD to the handle gives users a clear affordance for dragging.
-         *
-         * `cursor-grab` / `active:cursor-grabbing` gives visual feedback that
-         * this is the drag initiator.
-         */}
         <button
           type="button"
           className="flex h-7 w-7 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground active:cursor-grabbing"
@@ -169,53 +267,52 @@ export function BlockWrapper({
         >
           <GripVertical size={14} />
         </button>
-
-        {/* "Add block below" — opens the BlockPicker in compact mode */}
         <BlockPicker onSelect={onAddAfter} compact />
       </div>
 
       {/**
-       * Top-corner controls: width toggle + delete.
+       * Top-corner controls: edit toggle + width toggle + delete.
        *
-       * MOBILE POSITIONING (< sm, 640 px)
-       *   Always inside the block at the top-right corner (`top-1 right-1`).
-       *   No translation — controls stay within block bounds so they never
-       *   overlap the block above or below in the single-column stack.
-       *   Always visible (`opacity-100`) because touch devices don't support hover.
+       * EDIT MODE: always visible at top-right so users know which block is active.
+       * VIEW MODE: hover-only on desktop, always visible on mobile (touch devices).
        *
-       *   We intentionally ignore `isRight` on mobile because:
-       *   - All blocks are full-width (single column), so "left column" vs
-       *     "right column" is meaningless.
-       *   - Placing some controls on the left and some on the right (based on
-       *     desktop column assignment) looks inconsistent on mobile.
-       *
-       * DESKTOP POSITIONING (sm+)
-       *   Positioned at the block's top edge, half outside (`-translate-y-1/2`),
-       *   giving a clean "badge" appearance that doesn't steal content space.
-       *   isRight=false → `right-0 translate-x-1`  (top-right, badge outside)
-       *   isRight=true  → `left-0 -translate-x-1`  (top-left, badge outside)
-       *   Hidden until hover (`sm:opacity-0 sm:group-hover/block:opacity-100`).
+       * The edit toggle button is styled differently based on mode:
+       *   - View mode: subtle outline, pencil icon → click to edit
+       *   - Edit mode: indigo filled, check icon → click to confirm/exit
        */}
       <div
         className={cn(
           'absolute z-10 flex items-center gap-1',
-          // Mobile: inside block, always at top-right, always visible
-          'top-1 right-1 opacity-100',
-          // Desktop: at block edge, position depends on column, hover-only
-          'sm:top-0 sm:right-auto sm:-translate-y-1/2',
-          'sm:opacity-0 sm:transition-opacity sm:group-hover/block:opacity-100',
-          isRight ? 'sm:left-0 sm:-translate-x-1' : 'sm:right-0 sm:translate-x-1',
+          // Mobile: always at top-right inside block
+          'top-1 right-1',
+          // Edit mode: always visible on desktop too
+          isEditing
+            ? 'opacity-100'
+            : cn(
+                'opacity-100',
+                'sm:top-0 sm:right-auto sm:-translate-y-1/2',
+                'sm:opacity-0 sm:transition-opacity sm:group-hover/block:opacity-100',
+                sideViewCls,
+              ),
         )}
       >
-        {/**
-         * Width toggle button.
-         *
-         * Columns2 icon → currently full-width, click to make half-width.
-         * Maximize2 icon → currently half-width, click to expand to full-width.
-         *
-         * On mobile this button is always visible but only has a visible effect
-         * on desktop (single-column grids treat half and full width identically).
-         */}
+        {/* Edit / Done toggle */}
+        <button
+          type="button"
+          className={cn(
+            'flex h-6 w-6 items-center justify-center rounded-md border shadow-sm transition-colors',
+            isEditing
+              ? 'border-indigo-400 bg-indigo-600 text-white hover:bg-indigo-700 dark:border-indigo-500 dark:bg-indigo-500 dark:hover:bg-indigo-600'
+              : 'border-border bg-card text-muted-foreground hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:border-indigo-700 dark:hover:bg-indigo-900/30',
+          )}
+          aria-label={isEditing ? t('block.exitEditMode') : t('block.enterEditMode')}
+          title={isEditing ? t('block.exitEditMode') : t('block.enterEditMode')}
+          onClick={() => setIsEditing((v) => !v)}
+        >
+          {isEditing ? <Check size={11} /> : <Pencil size={11} />}
+        </button>
+
+        {/* Width toggle */}
         <button
           type="button"
           className="flex h-6 w-6 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm hover:bg-accent hover:text-accent-foreground"
@@ -226,7 +323,7 @@ export function BlockWrapper({
           {isHalf ? <Maximize2 size={11} /> : <Columns2 size={11} />}
         </button>
 
-        {/* Delete button — red hover state reinforces the destructive action */}
+        {/* Delete */}
         <button
           type="button"
           className="flex h-6 w-6 items-center justify-center rounded-md border border-border bg-card text-muted-foreground shadow-sm hover:border-red-300 hover:bg-red-50 hover:text-red-600 dark:hover:border-red-700 dark:hover:bg-red-950 dark:hover:text-red-400"
@@ -238,15 +335,21 @@ export function BlockWrapper({
       </div>
 
       {/**
-       * Block content.
+       * Block-level tag row — rendered ABOVE the block content.
        *
-       * On mobile the corner controls sit at `top-1 right-1` inside the block.
-       * Most block components have their own internal padding (toolbar, header
-       * bar, etc.) that provides enough clearance. If a future block type has
-       * no internal top padding, add `pt-8 sm:pt-0` here to push content below
-       * the floating controls.
+       * View mode: shows tags as read-only chips; hidden entirely if no tags exist.
+       * Edit mode: shows tags with remove buttons + "Add tag" input.
+       *
+       * WHY tags at the top?
+       *   Labels/annotations are most useful BEFORE the content so the reader
+       *   knows the block's context before reading it (like a sticky note header).
        */}
-      {children}
+      {showBlockTags && (
+        <BlockTagRow tags={block.tags ?? []} onChange={onTagsChange} isEditing={isEditing} />
+      )}
+
+      {/* Block content — rendered via render prop so isEditing can be threaded in */}
+      {renderContent(isEditing)}
     </div>
   );
 }

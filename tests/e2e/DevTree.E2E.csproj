@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <Nullable>enable</Nullable>
@@ -26,7 +26,7 @@
 
   <!-- After build, install Playwright browsers if not already present -->
   <Target Name="InstallPlaywrightBrowsers" AfterTargets="Build">
-    <Exec Command="pwsh bin/Debug/net9.0/playwright.ps1 install --with-deps chromium"
+    <Exec Command="pwsh bin/Debug/net10.0/playwright.ps1 install --with-deps chromium"
           ContinueOnError="true" />
   </Target>
 

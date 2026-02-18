@@ -84,9 +84,15 @@ const LANGUAGES = [
 type CodeBlockProps = Readonly<{
   content: CodeBlockContent;
   onChange: (content: CodeBlockContent) => void;
+  /**
+   * View mode (false, default): language selector is hidden, Monaco is read-only.
+   * Edit mode (true): full toolbar + editable Monaco editor.
+   * The Copy button is kept in both modes since copying code is useful while reading.
+   */
+  isEditing?: boolean;
 }>;
 
-export function CodeBlock({ content, onChange }: CodeBlockProps) {
+export function CodeBlock({ content, onChange, isEditing = false }: CodeBlockProps) {
   const { code, language = 'javascript' } = content;
   const [langOpen, setLangOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -130,56 +136,50 @@ export function CodeBlock({ content, onChange }: CodeBlockProps) {
      *   the CSS `dark` class set by next-themes before React hydrates.
      */
     <div className="overflow-hidden rounded-xl border border-border shadow-sm bg-white dark:bg-[#1e1e1e]">
-      {/* Header bar — language selector, label, copy button */}
+      {/* Header bar */}
       <div className="flex items-center justify-between border-b border-border bg-gray-100 px-3 py-1.5 dark:border-[#3e3e3e] dark:bg-[#2d2d2d]">
-        {/* Language selector dropdown */}
-        <div className="relative">
-          <button
-            type="button"
-            className="flex items-center gap-1.5 rounded px-2 py-1 font-mono text-xs text-zinc-700 transition-colors hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
-            onClick={() => setLangOpen((v) => !v)}
-            aria-haspopup="listbox"
-            aria-expanded={langOpen}
-          >
-            {language}
-            <ChevronDown
-              size={11}
-              className={cn('transition-transform', langOpen && 'rotate-180')}
-            />
-          </button>
 
-          {/**
-           * Language dropdown list.
-           *
-           * WHY max-h + overflow-y-auto?
-           *   Without a height cap the list would extend off-screen on small
-           *   viewports or when many languages are shown. The scroll constraint
-           *   keeps it contained without requiring a portal.
-           */}
-          {langOpen && (
-            <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-40 overflow-y-auto rounded-lg border border-border bg-white py-1 shadow-xl dark:border-[#3e3e3e] dark:bg-[#252526]">
-              {LANGUAGES.map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  className="flex w-full items-center justify-between px-3 py-1.5 font-mono text-xs text-zinc-700 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
-                  onClick={() => {
-                    onChange({ ...content, language: lang });
-                    setLangOpen(false);
-                  }}
-                >
-                  {lang}
-                  {lang === language && (
-                    <Check size={11} className="text-indigo-400" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Language selector — only in edit mode; plain label in view mode */}
+        {isEditing ? (
+          <div className="relative">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 rounded px-2 py-1 font-mono text-xs text-zinc-700 transition-colors hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+              onClick={() => setLangOpen((v) => !v)}
+              aria-haspopup="listbox"
+              aria-expanded={langOpen}
+            >
+              {language}
+              <ChevronDown
+                size={11}
+                className={cn('transition-transform', langOpen && 'rotate-180')}
+              />
+            </button>
+            {langOpen && (
+              <div className="absolute left-0 top-full z-20 mt-1 max-h-56 w-40 overflow-y-auto rounded-lg border border-border bg-white py-1 shadow-xl dark:border-[#3e3e3e] dark:bg-[#252526]">
+                {LANGUAGES.map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    className="flex w-full items-center justify-between px-3 py-1.5 font-mono text-xs text-zinc-700 hover:bg-black/5 dark:text-zinc-300 dark:hover:bg-white/10"
+                    onClick={() => { onChange({ ...content, language: lang }); setLangOpen(false); }}
+                  >
+                    {lang}
+                    {lang === language && <Check size={11} className="text-indigo-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          // View mode: non-interactive language badge
+          <span className="px-2 py-1 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+            {language}
+          </span>
+        )}
 
         <div className="flex items-center gap-2">
-          {/* Copy button */}
+          {/* Copy button — useful in both view and edit mode */}
           <button
             type="button"
             onClick={handleCopy}
@@ -195,24 +195,12 @@ export function CodeBlock({ content, onChange }: CodeBlockProps) {
 
       {/* Monaco editor area */}
       <div className="min-h-[180px]">
-        {/**
-         * WHY defaultValue instead of value?
-         *   Monaco manages its own internal document model. Passing `value` as a
-         *   controlled prop would re-create the editor on every keystroke (expensive
-         *   and causes caret jumps). `defaultValue` initialises the model once;
-         *   subsequent edits are captured via the `onChange` callback which fires
-         *   at the Monaco document level — much more efficient.
-         *
-         * IMPROVEMENT: To support external content updates (e.g. syncing via a
-         * server), use the `onMount` callback to get the editor instance and call
-         * `editor.setValue()` imperatively only when the prop changes.
-         */}
         <MonacoEditor
           height="240px"
           language={language}
           defaultValue={code}
           theme={editorTheme}
-          onChange={(value) => onChange({ ...content, code: value ?? '' })}
+          onChange={(value) => { if (isEditing) onChange({ ...content, code: value ?? '' }); }}
           options={{
             minimap: { enabled: false },
             padding: { top: 12, bottom: 12 },
@@ -220,8 +208,9 @@ export function CodeBlock({ content, onChange }: CodeBlockProps) {
             fontSize: 13,
             lineNumbers: 'on',
             renderLineHighlight: 'line',
+            // Read-only in view mode; Monaco shows a "read-only" cursor
+            readOnly: !isEditing,
             scrollbar: { vertical: 'auto', horizontal: 'auto' },
-            // fontFamily keeps code legible on all platforms
             fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace",
           }}
         />

@@ -69,12 +69,12 @@ import { cn } from '@/lib/utils';
  * Extracted into its own component to DRY up the repetitive button pattern
  * and isolate the `onMouseDown` focus-preservation trick in one place.
  */
-type ToolbarButtonProps = {
+type ToolbarButtonProps = Readonly<{
   onClick: () => void;
   active?: boolean;
   title: string;
   children: React.ReactNode;
-};
+}>;
 
 function ToolbarButton({ onClick, active, title, children }: ToolbarButtonProps) {
   return (
@@ -107,162 +107,154 @@ function ToolbarButton({ onClick, active, title, children }: ToolbarButtonProps)
 type TextBlockProps = Readonly<{
   content: string;
   onChange: (content: string) => void;
+  /**
+   * When false (default) the block is rendered in VIEW mode:
+   *   - The toolbar is hidden.
+   *   - The Tiptap editor is set to non-editable (cursor: default, no focus ring).
+   * When true the block is in EDIT mode with the full formatting toolbar.
+   *
+   * WHY keep Tiptap alive in view mode instead of swapping to a plain div?
+   *   `editor.setEditable(false)` makes Tiptap render a read-only view without
+   *   unmounting/remounting the editor. This preserves the document state and
+   *   avoids a flash when toggling modes. It also means we don't need two
+   *   separate rendering paths for the same content.
+   */
+  isEditing?: boolean;
 }>;
 
-export function TextBlock({ content, onChange }: TextBlockProps) {
-  /**
-   * Initialise the Tiptap editor instance.
-   *
-   * `immediatelyRender: false` — tells Tiptap not to render on the server.
-   *   Without this, Next.js server-side rendering produces different HTML from
-   *   the client (because the editor generates dynamic element ids), causing a
-   *   React hydration mismatch warning.
-   *
-   * `extensions` — the feature set:
-   *   StarterKit bundles ~15 common extensions (bold, italic, headings, lists,
-   *   blockquote, horizontal rule, undo/redo, etc.). We disable `codeBlock`
-   *   because DevTree has a dedicated CodeBlock with Monaco for that use case.
-   *   heading.levels: [1, 2, 3] limits heading choices to H1–H3.
-   *
-   * `content` — initialises the internal document from the stored HTML.
-   *   WHY not update this prop reactively?
-   *   Tiptap owns the document state internally. Updating `content` on every
-   *   keystroke would reset the editor (losing the cursor position). The
-   *   `onUpdate` callback is the correct way to sync changes outward.
-   *
-   * `onUpdate` — fires whenever the document changes. We serialise to HTML and
-   *   call `onChange` to propagate the update to the parent block state.
-   */
+export function TextBlock({ content, onChange, isEditing = false }: TextBlockProps) {
   const editor = useEditor({
     immediatelyRender: false,
+    // Start non-editable; updated below when isEditing changes
+    editable: isEditing,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-        // Disabled: DevTree has a dedicated CodeBlock for code snippets
         codeBlock: false,
       }),
       Placeholder.configure({ placeholder: 'Write your notes…' }),
     ],
     content,
     onUpdate: ({ editor: e }) => {
-      onChange(e.getHTML());
+      // Only propagate changes when in edit mode to avoid spurious saves
+      if (isEditing) onChange(e.getHTML());
     },
     editorProps: {
-      attributes: {
-        // Remove the default browser focus ring; we rely on the card border
-        class: 'focus:outline-none',
-      },
+      attributes: { class: 'focus:outline-none' },
     },
   });
 
-  // Editor is null on the first render (SSR) — render nothing until it's ready
+  /**
+   * Sync Tiptap's editable flag whenever the parent toggles the mode.
+   *
+   * WHY useEffect instead of re-creating the editor?
+   *   Re-creating via a key prop or by changing `useEditor` options would
+   *   unmount the editor and lose the current selection/cursor position.
+   *   `setEditable()` is the intended Tiptap API for runtime editability changes.
+   */
+   
+  if (editor && editor.isEditable !== isEditing) editor.setEditable(isEditing);
+
   if (!editor) return null;
 
   return (
     <div className="rounded-xl border border-border bg-card">
-      {/* Toolbar — formatting actions */}
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-border px-2 py-1.5">
-        {/* Heading buttons */}
-        <ToolbarButton
-          title="Heading 1 (H1)"
-          active={editor.isActive('heading', { level: 1 })}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        >
-          <Heading1 size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          title="Heading 2 (H2)"
-          active={editor.isActive('heading', { level: 2 })}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        >
-          <Heading2 size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          title="Heading 3 (H3)"
-          active={editor.isActive('heading', { level: 3 })}
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        >
-          <Heading3 size={14} />
-        </ToolbarButton>
+      {/* Toolbar — only rendered in edit mode */}
+      {isEditing && (
+        <div className="flex flex-wrap items-center gap-0.5 border-b border-border px-2 py-1.5">
+          <ToolbarButton
+            title="Heading 1 (H1)"
+            active={editor.isActive('heading', { level: 1 })}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          >
+            <Heading1 size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            title="Heading 2 (H2)"
+            active={editor.isActive('heading', { level: 2 })}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          >
+            <Heading2 size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            title="Heading 3 (H3)"
+            active={editor.isActive('heading', { level: 3 })}
+            onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          >
+            <Heading3 size={14} />
+          </ToolbarButton>
 
-        {/* Visual divider */}
-        <span className="mx-1 h-5 w-px bg-border" />
+          <span className="mx-1 h-5 w-px bg-border" />
 
-        {/* Inline formatting */}
-        <ToolbarButton
-          title="Bold (Ctrl+B)"
-          active={editor.isActive('bold')}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        >
-          <Bold size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          title="Italic (Ctrl+I)"
-          active={editor.isActive('italic')}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        >
-          <Italic size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          title="Strikethrough"
-          active={editor.isActive('strike')}
-          onClick={() => editor.chain().focus().toggleStrike().run()}
-        >
-          <Strikethrough size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          title="Inline code"
-          active={editor.isActive('code')}
-          onClick={() => editor.chain().focus().toggleCode().run()}
-        >
-          <Code size={14} />
-        </ToolbarButton>
+          <ToolbarButton
+            title="Bold (Ctrl+B)"
+            active={editor.isActive('bold')}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <Bold size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            title="Italic (Ctrl+I)"
+            active={editor.isActive('italic')}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <Italic size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            title="Strikethrough"
+            active={editor.isActive('strike')}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+          >
+            <Strikethrough size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            title="Inline code"
+            active={editor.isActive('code')}
+            onClick={() => editor.chain().focus().toggleCode().run()}
+          >
+            <Code size={14} />
+          </ToolbarButton>
 
-        <span className="mx-1 h-5 w-px bg-border" />
+          <span className="mx-1 h-5 w-px bg-border" />
 
-        {/* Block-level formatting */}
-        <ToolbarButton
-          title="Bullet list"
-          active={editor.isActive('bulletList')}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-        >
-          <List size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          title="Ordered list"
-          active={editor.isActive('orderedList')}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        >
-          <ListOrdered size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          title="Blockquote"
-          active={editor.isActive('blockquote')}
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        >
-          <Quote size={14} />
-        </ToolbarButton>
-        <ToolbarButton
-          title="Horizontal rule"
-          onClick={() => editor.chain().focus().setHorizontalRule().run()}
-        >
-          <Minus size={14} />
-        </ToolbarButton>
-      </div>
+          <ToolbarButton
+            title="Bullet list"
+            active={editor.isActive('bulletList')}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
+            <List size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            title="Ordered list"
+            active={editor.isActive('orderedList')}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
+            <ListOrdered size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            title="Blockquote"
+            active={editor.isActive('blockquote')}
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          >
+            <Quote size={14} />
+          </ToolbarButton>
+          <ToolbarButton
+            title="Horizontal rule"
+            onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          >
+            <Minus size={14} />
+          </ToolbarButton>
+        </div>
+      )}
 
-      {/**
-       * Editor content area.
-       *
-       * `EditorContent` renders the ProseMirror editable div. Tiptap applies
-       * its own class `.tiptap` to this element; we use `prose`-style spacing
-       * via global CSS in globals.css (`.tiptap p`, `.tiptap h1`, etc.).
-       *
-       * `px-4 py-3` gives comfortable padding. `text-sm` ensures the note
-       * text doesn't overwhelm other block types visually.
-       */}
       <EditorContent
         editor={editor}
-        className="px-4 py-3 text-sm text-foreground"
+        className={cn(
+          'px-4 py-3 text-sm text-foreground',
+          // In view mode suppress the text cursor so the block doesn't look
+          // interactive and confuse users into trying to type.
+          !isEditing && 'cursor-default select-text',
+        )}
       />
     </div>
   );

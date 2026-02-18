@@ -8,6 +8,7 @@ export { TableBlock } from './blocks/TableBlock';
 export { AgendaBlock } from './blocks/AgendaBlock';
 export { ImageBlock } from './blocks/ImageBlock';
 export { DiagramBlock } from './blocks/DiagramBlock';
+export { WhiteboardBlock } from './blocks/WhiteboardBlock';
 export type {
   Block,
   Page,
@@ -17,6 +18,7 @@ export type {
   AgendaItem,
   ImageBlockContent,
   DiagramBlockContent,
+  WhiteboardBlockContent,
   CodeBlockContent,
   LinkBlockContent,
   TableBlockContent,

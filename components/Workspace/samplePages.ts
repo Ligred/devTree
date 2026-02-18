@@ -36,6 +36,7 @@ export const samplePages: Page[] = [
   {
     id: 'react-hooks',
     title: 'React Hooks',
+    tags: ['react', 'hooks', 'frontend'],
     blocks: [
       {
         id: 'intro',
@@ -117,6 +118,7 @@ function Counter() {
   {
     id: 'typescript-tips',
     title: 'TypeScript Tips',
+    tags: ['typescript', 'types', 'frontend'],
     blocks: [
       {
         id: 'ts-intro',

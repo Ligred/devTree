@@ -1,0 +1,22 @@
+# Build outputs
+.next/
+out/
+build/
+storybook-static/
+coverage/
+
+# Generated files
+next-env.d.ts
+prisma/migrations/
+
+# Lockfiles (managed by the package manager, not by Prettier)
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Binary / data files
+*.png
+*.jpg
+*.jpeg
+*.ico
+*.svg

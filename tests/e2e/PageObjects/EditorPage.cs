@@ -17,13 +17,29 @@ public class EditorPage(IPage page)
 
     // ── Block picker ───────────────────────────────────────────────────────
 
-    /// <summary>Opens the block-picker and selects a block type by label.</summary>
+    /// <summary>Opens the block-picker, selects a block type, and activates edit mode.</summary>
     public async Task AddBlockAsync(string blockLabel)
     {
         await AddBlockBtn.ClickAsync();
         await BlockPickerPopover.WaitForAsync();
         await _page.GetByRole(AriaRole.Button, new() { Name = blockLabel }).ClickAsync();
         await _page.WaitForTimeoutAsync(200);
+        // New blocks start in view mode — activate edit mode so tests can interact with content.
+        await EnterEditModeForLastBlockAsync();
+    }
+
+    /// <summary>
+    /// Hovers the last block and clicks its "Edit block" button to enter edit mode.
+    /// </summary>
+    public async Task EnterEditModeForLastBlockAsync()
+    {
+        var wrappers = _page.Locator(".group\\/block");
+        var count = await wrappers.CountAsync();
+        if (count == 0) return;
+        var lastBlock = wrappers.Nth(count - 1);
+        await lastBlock.HoverAsync();
+        await _page.GetByRole(AriaRole.Button, new() { Name = "Edit block" }).Last.ClickAsync();
+        await _page.WaitForTimeoutAsync(150);
     }
 
     // ── Text block ─────────────────────────────────────────────────────────

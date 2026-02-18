@@ -8,9 +8,14 @@ import type { TableBlockContent } from '../types';
 type TableBlockProps = Readonly<{
   content: TableBlockContent;
   onChange: (content: TableBlockContent) => void;
+  /**
+   * View mode: renders a clean read-only HTML table (no inputs, no add/remove
+   * buttons). Edit mode: renders the full editable grid with column/row controls.
+   */
+  isEditing?: boolean;
 }>;
 
-export function TableBlock({ content, onChange }: TableBlockProps) {
+export function TableBlock({ content, onChange, isEditing = false }: TableBlockProps) {
   const { headers, rows } = content;
 
   const updateHeader = useCallback(
@@ -37,7 +42,7 @@ export function TableBlock({ content, onChange }: TableBlockProps) {
       headers: [...headers, `Column ${headers.length + 1}`],
       rows: rows.map((r) => [...r, '']),
     });
-  }, [content, headers, rows, onChange]);
+  }, [headers, rows, onChange]);
 
   const removeColumn = useCallback(
     (colIndex: number) => {
@@ -47,13 +52,13 @@ export function TableBlock({ content, onChange }: TableBlockProps) {
         rows: rows.map((r) => r.filter((_, i) => i !== colIndex)),
       });
     },
-    [content, headers, rows, onChange],
+    [headers, rows, onChange],
   );
 
   const addRow = useCallback(() => {
     onChange({
       ...content,
-      rows: [...rows, Array(headers.length).fill('')],
+      rows: [...rows, new Array(headers.length).fill('')],
     });
   }, [content, headers, rows, onChange]);
 
@@ -63,6 +68,47 @@ export function TableBlock({ content, onChange }: TableBlockProps) {
     },
     [content, rows, onChange],
   );
+
+  // ─── View mode: clean read-only HTML table ─────────────────────────────────
+
+  if (!isEditing) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted">
+                {headers.map((header, ci) => (
+                  <th
+                    key={`h-${ci}`}
+                    className="px-4 py-3 text-left font-semibold text-foreground"
+                  >
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, ri) => (
+                <tr
+                  key={`r-${ri}`}
+                  className="border-b border-border last:border-0 transition-colors hover:bg-muted/30"
+                >
+                  {row.map((cell, ci) => (
+                    <td key={`c-${ri}-${ci}`} className="px-4 py-2.5 text-sm text-foreground">
+                      {cell || <span className="text-muted-foreground/40">—</span>}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Edit mode: full editable grid ──────────────────────────────────────────
 
   return (
     <div className="overflow-hidden rounded-xl border border-border">
@@ -98,7 +144,6 @@ export function TableBlock({ content, onChange }: TableBlockProps) {
                   </div>
                 </th>
               ))}
-              {/* Add column */}
               <th className="w-10 p-0">
                 <button
                   type="button"
@@ -113,7 +158,6 @@ export function TableBlock({ content, onChange }: TableBlockProps) {
             </tr>
           </thead>
 
-          {/* Body rows */}
           <tbody>
             {rows.map((row, ri) => (
               <tr
@@ -131,7 +175,6 @@ export function TableBlock({ content, onChange }: TableBlockProps) {
                     />
                   </td>
                 ))}
-                {/* Row delete */}
                 <td className="w-10 p-0">
                   <button
                     type="button"
@@ -149,7 +192,6 @@ export function TableBlock({ content, onChange }: TableBlockProps) {
         </table>
       </div>
 
-      {/* Add row */}
       <button
         type="button"
         className="flex w-full items-center justify-center gap-1.5 border-t border-border py-2 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

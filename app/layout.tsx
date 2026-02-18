@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'DevTree – Learning Workspace',
-  description: 'A Notion-like space for structured learning with code, notes, and more.',
+  title: 'Learning Tree',
+  description: 'A structured learning workspace with notes, code, diagrams, and more.',
 };
 
 export default function RootLayout({

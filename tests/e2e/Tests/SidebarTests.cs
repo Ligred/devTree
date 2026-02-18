@@ -25,6 +25,37 @@ public class SidebarTests : E2ETestBase
         await Expect(heading).ToBeVisibleAsync();
     }
 
+    [Test]
+    public async Task App_Title_IsLearningTree()
+    {
+        // The sidebar header shows the rebranded app name
+        await Expect(Page.Locator("h1").First).ToContainTextAsync("Learning Tree");
+    }
+
+    // ── Search ────────────────────────────────────────────────────────────────
+
+    [Test]
+    public async Task SearchBox_FiltersPagesByTitle()
+    {
+        var searchInput = Page.GetByPlaceholder("Search pages…");
+        await searchInput.FillAsync("TypeScript");
+
+        await Expect(Page.GetByText("TypeScript Tips").First).ToBeVisibleAsync();
+    }
+
+    [Test]
+    public async Task SearchBox_ClearButton_RestoresFullTree()
+    {
+        var searchInput = Page.GetByPlaceholder("Search pages…");
+        await searchInput.FillAsync("React");
+
+        var clearBtn = Page.GetByRole(AriaRole.Button, new() { Name = "Clear search" });
+        await Expect(clearBtn).ToBeVisibleAsync();
+        await clearBtn.ClickAsync();
+
+        await Expect(searchInput).ToBeEmptyAsync();
+    }
+
     // ── Page creation ────────────────────────────────────────────────────────
 
     [Test]

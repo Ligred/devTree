@@ -91,17 +91,3 @@ export const ROOT_ID = 'root';
  */
 export const ROOT_DROP_TARGET_ID = '__root_drop__';
 
-/**
- * Type guard: is this node a folder (has an array of children)?
- *
- * The return type `node is TreeNode & { children: TreeNode[] }` narrows the
- * type so TypeScript knows `node.children` is defined after the check.
- */
-export function isFolder(node: TreeNode): node is TreeNode & { children: TreeNode[] } {
-  return Array.isArray(node.children);
-}
-
-/** Type guard: is this node a file (linked to a page)? */
-export function isFile(node: TreeNode): boolean {
-  return node.pageId != null;
-}

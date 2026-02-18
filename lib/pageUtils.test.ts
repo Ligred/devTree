@@ -194,4 +194,29 @@ describe('exportPageToMarkdown', () => {
     const md = exportPageToMarkdown(emptyPage);
     expect(md.trim()).toBe('# Empty Page');
   });
+
+  it('includes tags in the Markdown export when present', () => {
+    const pageWithTags: Page = {
+      id: 'tagged',
+      title: 'Tagged Page',
+      blocks: [],
+      tags: ['react', 'hooks'],
+    };
+    const md = exportPageToMarkdown(pageWithTags);
+    // Tags should appear as a YAML-like front-matter line or inline labels
+    expect(md).toContain('react');
+    expect(md).toContain('hooks');
+  });
+
+  it('computePageStats handles pages with tags gracefully', () => {
+    const pageWithTags: Page = {
+      id: 'tagged',
+      title: 'Tagged Page',
+      blocks: [{ id: 'b1', type: 'text', content: 'Hello world', colSpan: 2 }],
+      tags: ['react', 'hooks'],
+    };
+    const stats = computePageStats(pageWithTags);
+    expect(stats.blockCount).toBe(1);
+    expect(stats.wordCount).toBeGreaterThan(0);
+  });
 });

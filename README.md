@@ -10,7 +10,7 @@ A **personal knowledge base** built as a learning project to explore modern full
 
 | Feature | Description |
 |---------|-------------|
-| 📝 **Block editor** | 7 block types: Text (rich text), Code (Monaco), Table, Checklist, Link, Image, Diagram |
+| 📝 **Block editor** | 8 block types: Text (rich text), Code (Monaco), Table, Checklist, Link, Image, Diagram, Whiteboard |
 | 🗂️ **File explorer** | Sidebar tree with folders, drag-and-drop reordering, rename, delete |
 | 🎨 **Themes** | Light / Dark / System via `next-themes` |
 | 🌍 **Internationalisation** | English and Ukrainian; persisted in `localStorage` |
@@ -44,6 +44,10 @@ A **personal knowledge base** built as a learning project to explore modern full
 | Component dev | [Storybook 10](https://storybook.js.org) | Isolated component development and visual testing |
 | E2E tests | [C# .NET 9 + Playwright](https://playwright.dev) | Cross-browser E2E with Page Object Model |
 | Package manager | [pnpm](https://pnpm.io) | Fast, disk-efficient, strict dependency resolution |
+| Linting | [ESLint 9](https://eslint.org) (flat config) + SonarJS + jsx-a11y + storybook | Catch bugs, enforce patterns, accessibility |
+| Dead-code detection | [knip](https://knip.dev) | Find unused files, exports, and dependencies |
+| Formatting | [Prettier 3](https://prettier.io) + import-sort + tailwindcss | Consistent style, auto-sorted imports |
+| State management | [Zustand](https://zustand-demo.pmnd.rs) | Minimal global state with `localStorage` persistence |
 
 ---
 
@@ -136,6 +140,13 @@ pnpm dev              # Start Next.js dev server with Turbopack
 pnpm build            # Create production build
 pnpm start            # Serve the production build
 
+# Code quality
+pnpm lint             # ESLint — check all source files
+pnpm lint:fix         # ESLint — auto-fix fixable issues
+pnpm format           # Prettier — format all files
+pnpm format:check     # Prettier — verify formatting without writing
+pnpm knip             # knip — find unused files, exports, dependencies
+
 # Testing
 pnpm test             # Run all Vitest unit tests (once)
 pnpm test:unit        # Run unit tests only
@@ -193,12 +204,11 @@ devTree/
 │   ├── layout.tsx               # Root layout (fonts, providers)
 │   ├── page.tsx                 # Entry point → renders <Workspace>
 │   ├── globals.css              # Global CSS (Tailwind + Tiptap styles)
-│   └── Providers.tsx            # ThemeProvider + I18nProvider
 │
 ├── components/
 │   ├── FileExplorer/            # Sidebar file tree
 │   ├── MainContent/             # Right panel: header, editor, stats
-│   │   └── blocks/              # 7 block type components
+│   │   └── blocks/              # 8 block type components
 │   ├── SettingsDialog/          # Theme + language settings modal
 │   ├── UserMenu/                # Avatar dropdown menu
 │   ├── Workspace/               # App shell (layout + state)
@@ -246,15 +256,14 @@ devTree/
 
 ## How to Add a New Block Type
 
-Adding a new block type involves 7 steps:
+Adding a new block type involves 6 steps:
 
 1. **Add the type name** to `BlockType` in `components/MainContent/types.ts`
 2. **Define the content shape** — add a `XXXBlockContent` type and add it to the `BlockContent` union
-3. **Write a type guard** — add `isXXXBlockContent(content, type)` function
-4. **Create the component** — `components/MainContent/blocks/XXXBlock.tsx`
-5. **Register in the factory** — add a `case 'xxx':` in `createBlock()` in `BlockEditor.tsx`
-6. **Register the renderer** — add an `if` branch in the `BlockContent` function in `BlockEditor.tsx`
-7. **Add to the picker** — add an entry in `BLOCK_DEFS` in `BlockPicker.tsx` with label/description i18n keys
+3. **Create the component** — `components/MainContent/blocks/XXXBlock.tsx`
+4. **Register in the factory** — add a `case 'xxx':` in `createBlock()` in `BlockEditor.tsx`
+5. **Register the renderer** — add a `case 'xxx':` in the `BlockContent` `switch` in `BlockEditor.tsx`
+6. **Add to the picker** — add an entry in `BLOCK_DEFS` in `BlockPicker.tsx` with label/description i18n keys
 
 Don't forget to:
 - Add i18n keys to `messages/en.json` and `messages/uk.json`
