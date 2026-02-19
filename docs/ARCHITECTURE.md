@@ -145,6 +145,7 @@ classDiagram
         table
         agenda
         image
+        audio
         diagram
     }
 
@@ -168,6 +169,10 @@ classDiagram
         +string alt?
         +string caption?
     }
+    class AudioBlockContent {
+        +string url
+        +string caption?
+    }
     class DiagramBlockContent {
         +string code "Mermaid syntax"
     }
@@ -182,6 +187,7 @@ classDiagram
     Block --> TableBlockContent : "type=table"
     Block --> AgendaBlockContent : "type=agenda"
     Block --> ImageBlockContent : "type=image"
+    Block --> AudioBlockContent : "type=audio"
     Block --> DiagramBlockContent : "type=diagram"
     Block --> LinkBlockContent : "type=link"
 ```

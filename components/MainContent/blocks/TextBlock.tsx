@@ -124,8 +124,11 @@ export function TextBlock({ content, onChange, isEditing = false }: TextBlockPro
     editable: isEditing,
     extensions: [
       // StarterKit includes codeBlock (fenced <pre><code>); we use it for the Code block toolbar button.
+      // Disable built-in link/underline so we can configure our own instances below (avoids duplicate extension name warnings).
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        link: false,
+        underline: false,
       }),
       Placeholder.configure({ placeholder: 'Write your notes…' }),
       Underline,

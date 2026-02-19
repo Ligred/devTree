@@ -11,8 +11,10 @@ public class EditorTests : E2ETestBase
     [SetUp]
     public async Task NavigateToPageAsync()
     {
-        // Start from a known page
-        await App.Sidebar.SelectPageAsync("React Hooks");
+        // Start each test on a fresh page created by the test itself
+        var title = $"Editor test {DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}";
+        await App.Sidebar.CreatePageAsync(title);
+        await App.Sidebar.SelectPageAsync(title);
     }
 
     // ── Block count baseline ─────────────────────────────────────────────────
@@ -158,6 +160,27 @@ public class EditorTests : E2ETestBase
         // After saving, the image element should appear
         var img = Page.Locator("img[src*='Typescript']");
         await Expect(img).ToBeVisibleAsync(new() { Timeout = 10_000 });
+    }
+
+    [Test]
+    public async Task AddAudioBlock_ShowsEmptyForm()
+    {
+        await App.Editor.AddBlockAsync("Audio");
+
+        await Expect(Page.GetByPlaceholder("https://example.com/audio.mp3")).ToBeVisibleAsync();
+    }
+
+    [Test]
+    public async Task AddAudioBlock_CanSetUrl()
+    {
+        // Short public audio URL (WAV sample)
+        const string audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+
+        await App.Editor.AddBlockAsync("Audio");
+        await App.Editor.SetAudioUrlAsync(audioUrl);
+
+        var audio = Page.Locator("audio[src*='SoundHelix']");
+        await Expect(audio).ToBeVisibleAsync(new() { Timeout = 10_000 });
     }
 
     // ── Delete blocks ────────────────────────────────────────────────────────

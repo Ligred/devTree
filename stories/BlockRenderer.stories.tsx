@@ -55,6 +55,15 @@ const blocks: Block[] = [
     },
     colSpan: 2,
   },
+  {
+    id: 'aud1',
+    type: 'audio',
+    content: {
+      url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      caption: 'Sample audio note',
+    },
+    colSpan: 2,
+  },
 ];
 
 const meta: Meta<typeof BlockEditor> = {

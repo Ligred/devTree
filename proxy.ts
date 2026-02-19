@@ -18,7 +18,7 @@ function getLocaleFromRequest(req: NextRequest): 'en' | 'uk' {
   return 'en';
 }
 
-/** Add locale to request headers so root layout can read it (layout runs after middleware; header is reliable). */
+/** Add locale to request headers so root layout can read it (layout runs after proxy; header is reliable). */
 function nextWithLocale(req: NextRequest, locale: 'en' | 'uk') {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set(LOCALE_HEADER, locale);
@@ -30,7 +30,7 @@ const publicPaths = ['/login', '/register', '/forgot-password', '/api/auth'];
 const isPublic = (path: string) =>
   publicPaths.some((p) => path === p || path.startsWith(`${p}/`));
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const locale = getLocaleFromRequest(req);
   const { pathname } = req.nextUrl;
 
@@ -62,3 +62,4 @@ export const config = {
     '/((?!_next|api/auth|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
   ],
 };
+

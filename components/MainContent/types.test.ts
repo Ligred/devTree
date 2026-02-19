@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   isAgendaBlockContent,
+  isAudioBlockContent,
   isCodeBlockContent,
   isImageBlockContent,
   isLinkBlockContent,
@@ -95,6 +96,18 @@ describe('MainContent type guards', () => {
     it('returns false for wrong type or wrong shape', () => {
       expect(isImageBlockContent(as({ url: 'x' }), 'link')).toBe(false);
       expect(isImageBlockContent(as({ url: 'x', code: 'y' }), type('image'))).toBe(false);
+    });
+  });
+
+  describe('isAudioBlockContent', () => {
+    it('returns true for object with url and type "audio"', () => {
+      expect(isAudioBlockContent(as({ url: '/uploads/audio/abc.webm' }), 'audio')).toBe(true);
+      expect(isAudioBlockContent(as({ url: 'https://example.com/sound.mp3' }), 'audio')).toBe(true);
+    });
+
+    it('returns false for wrong type', () => {
+      expect(isAudioBlockContent(as({ url: 'x' }), 'link')).toBe(false);
+      expect(isAudioBlockContent(as({ url: 'x' }), 'image')).toBe(false);
     });
   });
 });

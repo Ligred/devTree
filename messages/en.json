@@ -158,6 +158,8 @@
   "block.checklist.description": "Todo list with checkboxes",
   "block.image.label": "Image",
   "block.image.description": "Embed an image by URL",
+  "block.audio.label": "Audio",
+  "block.audio.description": "Record or upload audio notes (max 5MB)",
   "block.diagram.label": "Diagram",
   "block.diagram.description": "Flowcharts and diagrams",
   "block.whiteboard.label": "Whiteboard",
@@ -175,5 +177,13 @@
   "whiteboard.pen": "Pen",
   "whiteboard.eraser": "Eraser",
   "whiteboard.clear": "Clear",
-  "whiteboard.empty": "Empty whiteboard — enter edit mode to draw"
+  "whiteboard.empty": "Empty whiteboard — enter edit mode to draw",
+  "audio.blockTitle": "Audio block",
+  "audio.record": "Record",
+  "audio.stopRecording": "Stop recording",
+  "audio.uploadFile": "Upload file",
+  "audio.pasteUrl": "or paste URL:",
+  "audio.captionPlaceholder": "Caption (optional)",
+  "audio.noAudio": "No audio recorded yet",
+  "audio.recordOrUpload": "Record or upload audio"
 }

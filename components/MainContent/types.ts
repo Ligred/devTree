@@ -56,6 +56,7 @@ export type BlockType =
   | 'table'
   | 'agenda'
   | 'image'
+  | 'audio'
   | 'diagram'
   | 'whiteboard';
 
@@ -149,6 +150,18 @@ export type ImageBlockContent = {
 };
 
 /**
+ * AudioBlockContent — recorded or uploaded audio note.
+ *
+ * Max 5MB per record (enforced on upload). Supports recording via MediaRecorder
+ * or file upload. URL is either a data URL (inline) or a path from the upload API.
+ */
+export type AudioBlockContent = {
+  url: string;
+  /** Caption shown below the audio player. */
+  caption?: string;
+};
+
+/**
  * DiagramBlockContent — Mermaid.js diagram source code.
  *
  * WHY store raw Mermaid syntax instead of a rendered SVG?
@@ -194,6 +207,7 @@ export type BlockContent =
   | TableBlockContent
   | AgendaBlockContent
   | ImageBlockContent
+  | AudioBlockContent
   | DiagramBlockContent
   | WhiteboardBlockContent;
 
@@ -347,6 +361,19 @@ export function isImageBlockContent(
     !('code' in content) &&
     !('headers' in content) &&
     !('items' in content)
+  );
+}
+
+/** Audio blocks have `url`; distinguished from link/image by type. */
+export function isAudioBlockContent(
+  content: BlockContent,
+  type: BlockType,
+): content is AudioBlockContent {
+  return (
+    type === 'audio' &&
+    typeof content === 'object' &&
+    content !== null &&
+    'url' in content
   );
 }
 

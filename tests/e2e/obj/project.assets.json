@@ -1313,7 +1313,7 @@
     ]
   },
   "packageFolders": {
-    "/Users/taras/.nuget/packages/": {}
+    "/var/folders/0t/r1my9b3x3tb39swckl8p_s6h0000gn/T/cursor-sandbox-cache/121c23b07c6d30dc59c0a3967646a0e5/nuget": {}
   },
   "project": {
     "version": "1.0.0",
@@ -1321,7 +1321,7 @@
       "projectUniqueName": "/Users/taras/Projects/devTree/tests/e2e/DevTree.E2E.csproj",
       "projectName": "DevTree.E2E",
       "projectPath": "/Users/taras/Projects/devTree/tests/e2e/DevTree.E2E.csproj",
-      "packagesPath": "/Users/taras/.nuget/packages/",
+      "packagesPath": "/var/folders/0t/r1my9b3x3tb39swckl8p_s6h0000gn/T/cursor-sandbox-cache/121c23b07c6d30dc59c0a3967646a0e5/nuget",
       "outputPath": "/Users/taras/Projects/devTree/tests/e2e/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [

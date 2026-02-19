@@ -16,6 +16,7 @@ Notes on security measures, safe patterns, and performance considerations.
 ## 2. Input and output
 
 - **Avatar upload:** Allowed types (JPEG, PNG, GIF, WebP) and max size (2MB) are enforced. Filename is `${userId}${ext}` (no user-controlled path). Files stored under `public/uploads/avatars/`.
+- **Audio block upload (POST /api/block/audio):** Allowed types (WebM, MP4/M4A, MP3, WAV, OGG, FLAC) and max size (5MB per record) are enforced. Filename is `${uuid}${ext}` (no user-controlled path). Files stored under `public/uploads/audio/`.
 - **Diagram block:** User diagram source is rendered by **Mermaid**; we set `securityLevel: 'strict'` so script/link in labels are disabled. The SVG assigned to `innerHTML` is Mermaid-generated only, not raw user HTML.
 - **Locale script (layout):** The inline script in the root layout is a fixed string (no user input). It only reads `localStorage` and `document.cookie` and sets the locale cookie then optionally reloads.
 

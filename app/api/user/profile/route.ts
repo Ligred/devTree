@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const updates: { name?: string; image?: string | null } = {};
+  const updates: { name?: string | null; image?: string | null } = {};
   if (typeof body.name === 'string') {
     const trimmed = body.name.trim();
     updates.name = trimmed || null;

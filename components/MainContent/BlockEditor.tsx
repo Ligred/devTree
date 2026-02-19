@@ -81,6 +81,7 @@ import { BlockPicker } from './BlockPicker';
 import { BlockWrapper } from './BlockWrapper';
 import { AgendaBlock } from './blocks/AgendaBlock';
 import { CodeBlock } from './blocks/CodeBlock';
+import { AudioBlock } from './blocks/AudioBlock';
 import { DiagramBlock } from './blocks/DiagramBlock';
 import { ImageBlock } from './blocks/ImageBlock';
 import { LinkBlock } from './blocks/LinkBlock';
@@ -94,6 +95,7 @@ import {
   type BlockType,
   type CodeBlockContent,
   type DiagramBlockContent,
+  type AudioBlockContent,
   type ImageBlockContent,
   type LinkBlockContent,
   type TableBlockContent,
@@ -152,6 +154,8 @@ function createBlock(type: BlockType): Block {
       };
     case 'image':
       return { id, type, content: { url: '', alt: '', caption: '' }, colSpan: 2 };
+    case 'audio':
+      return { id, type, content: { url: '', caption: '' }, colSpan: 2 };
     case 'diagram':
       return { id, type, content: { code: '' }, colSpan: 2 };
     case 'whiteboard':
@@ -346,12 +350,13 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
                 onToggleColSpan={() => toggleColSpan(block.id)}
                 onTagsChange={(tags) => updateBlockTags(block.id, tags)}
                 showBlockTags={showBlockTags}
-                renderContent={(isEditing, isDragging) => (
+                renderContent={(isEditing, isDragging, enterEdit) => (
                   <BlockContent
                     block={block}
                     onChange={(content) => updateBlock(block.id, content)}
                     isEditing={isEditing}
                     isDragging={isDragging || isDragActive}
+                    enterEdit={enterEdit}
                   />
                 )}
               />
@@ -463,12 +468,15 @@ function BlockContent({
   onChange,
   isEditing,
   isDragging = false,
+  enterEdit,
 }: Readonly<{
   block: Block;
   onChange: (content: BlockContent) => void;
   isEditing: boolean;
   /** When true, the block is being dragged; heavy editors (Monaco) should unmount to avoid disposed/domNode errors. */
   isDragging?: boolean;
+  /** Callback to force the block into edit mode (from inside the block). */
+  enterEdit: () => void;
 }>) {
   const { type, content } = block;
 
@@ -492,6 +500,15 @@ function BlockContent({
       return <AgendaBlock content={content as AgendaBlockContent} onChange={onChange} isEditing={isEditing} />;
     case 'image':
       return <ImageBlock content={content as ImageBlockContent} onChange={onChange} />;
+    case 'audio':
+      return (
+        <AudioBlock
+          content={content as AudioBlockContent}
+          onChange={onChange}
+          isEditing={isEditing}
+          enterEdit={enterEdit}
+        />
+      );
     case 'diagram':
       return <DiagramBlock content={content as DiagramBlockContent} onChange={onChange} isEditing={isEditing} />;
     case 'whiteboard':

@@ -83,7 +83,7 @@ function validatePasswordRegister(value: string): string | null {
 
 const LOCALE_OPTIONS: { id: Locale; label: string }[] = [
   { id: 'en', label: 'EN' },
-  { id: 'uk', label: 'UK' },
+  { id: 'uk', label: 'UA' },
 ];
 
 export default function LoginPage() {

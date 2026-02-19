@@ -75,10 +75,10 @@ public class LoginPage(IPage page)
         await _page.WaitForTimeoutAsync(200);
     }
 
-    /// <summary>Click language toggle: "EN" or "UK" (button text on the left panel; aria-label is "Language").</summary>
-    public async Task SetLanguageAsync(string enOrUk)
+    /// <summary>Click language toggle: "EN" or "UA" (button text on the left panel; aria-label is "Language").</summary>
+    public async Task SetLanguageAsync(string enOrUa)
     {
-        await _page.GetByRole(AriaRole.Button).Filter(new() { HasText = enOrUk }).ClickAsync();
+        await _page.GetByRole(AriaRole.Button).Filter(new() { HasText = enOrUa }).ClickAsync();
     }
 
     // ── Queries ─────────────────────────────────────────────────────────────

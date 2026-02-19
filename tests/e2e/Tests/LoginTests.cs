@@ -74,7 +74,7 @@ public class LoginTests : E2ETestBase
     [Test]
     public async Task LoginPage_SwitchToUkrainian_UpdatesUI()
     {
-        await Login.SetLanguageAsync("UK");
+        await Login.SetLanguageAsync("UA");
         await Page.WaitForTimeoutAsync(500);
         // After switching to UK, the Sign in button should show Ukrainian label
         var signInBtn = Page.GetByRole(AriaRole.Button, new() { Name = "Увійти" });
@@ -82,10 +82,10 @@ public class LoginTests : E2ETestBase
     }
 
     [Test]
-    public async Task LoginPage_LanguageToggle_EN_And_UK_Visible()
+    public async Task LoginPage_LanguageToggle_EN_And_UA_Visible()
     {
         await Expect(Page.GetByRole(AriaRole.Button).Filter(new() { HasText = "EN" })).ToBeVisibleAsync();
-        await Expect(Page.GetByRole(AriaRole.Button).Filter(new() { HasText = "UK" })).ToBeVisibleAsync();
+        await Expect(Page.GetByRole(AriaRole.Button).Filter(new() { HasText = "UA" })).ToBeVisibleAsync();
     }
 
     // ── Valid login (requires DEVTREE_E2E_EMAIL and DEVTREE_E2E_PASSWORD) ───

@@ -14,6 +14,7 @@
 
 import type {
   AgendaBlockContent,
+  AudioBlockContent,
   Block,
   CodeBlockContent,
   DiagramBlockContent,
@@ -196,6 +197,12 @@ function blockToMarkdown(block: Block): string {
       const c = content as ImageBlockContent;
       const img = `![${c.alt ?? ''}](${c.url})`;
       return c.caption ? `${img}\n\n*${c.caption}*` : img;
+    }
+
+    case 'audio': {
+      const c = content as AudioBlockContent;
+      const link = `[Audio](${c.url})`;
+      return c.caption ? `${link}\n\n*${c.caption}*` : link;
     }
 
     case 'diagram': {

@@ -16,7 +16,7 @@ function TestConsumer() {
       <span data-testid="main.save">{t('main.save')}</span>
       <span data-testid="locale">{locale}</span>
       <button type="button" onClick={() => setLocale('uk')}>
-        Set UK
+        Set UA
       </button>
       <button type="button" onClick={() => setLocale('en')}>
         Set EN
@@ -68,7 +68,7 @@ describe('I18n', () => {
     const getByRole = (name: string) =>
       Array.from(container.querySelectorAll('button')).find((el) => el.textContent === name);
     expect(getByTestId('locale')).toHaveTextContent('en');
-    await user.click(getByRole('Set UK')!);
+    await user.click(getByRole('Set UA')!);
     expect(getByTestId('locale')).toHaveTextContent('uk');
     expect(getByTestId('main.selectPage')).toHaveTextContent(
       'Виберіть або створіть сторінку',

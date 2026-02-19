@@ -17,7 +17,7 @@
  * ├─────────────────────────────────┤
  * │  Theme    [Light] [Dark] [Sys]  │  ← Inline segment controls
  * ├─────────────────────────────────┤
- * │  Language   [EN]  [UK]          │
+ * │  Language   [EN]  [UA]          │
  * ├─────────────────────────────────┤
  * │  ⚙  Settings                    │  ← Opens full SettingsDialog
  * └─────────────────────────────────┘
@@ -79,7 +79,7 @@ type ThemeOption = (typeof THEME_OPTIONS)[number];
 
 const LOCALE_OPTIONS: { id: Locale; label: string }[] = [
   { id: 'en', label: 'EN' },
-  { id: 'uk', label: 'UK' },
+  { id: 'uk', label: 'UA' },
 ];
 
 // Theme option -> translation key (use t() when rendering)

@@ -124,6 +124,16 @@ public class EditorPage(IPage page)
         await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
     }
 
+    // ── Audio block ────────────────────────────────────────────────────────
+
+    /// <summary>Sets the URL and saves the audio block form (paste-URL flow).</summary>
+    public async Task SetAudioUrlAsync(string url)
+    {
+        var urlInput = _page.GetByPlaceholder("https://example.com/audio.mp3");
+        await urlInput.FillAsync(url);
+        await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
+    }
+
     // ── Block controls ─────────────────────────────────────────────────────
 
     /// <summary>Deletes a block by index (0-based).</summary>
