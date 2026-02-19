@@ -83,13 +83,14 @@ const messages: Record<Locale, Record<string, string>> = {
 
 const LOCALE_STORAGE_KEY = 'devtree-locale';
 
+/** Cookie name for locale so the server can read it and avoid hydration mismatch. */
+export const LOCALE_COOKIE_NAME = 'devtree-locale';
+
+const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year in seconds
+
 /**
- * Read the persisted locale from localStorage.
- *
- * WHY check `typeof window === 'undefined'`?
- *   This function is called during the `useEffect` (client only), so the check
- *   is technically redundant. It is kept as a guard against accidental server-
- *   side calls and to make the function self-documenting.
+ * Read the persisted locale from localStorage (client-only).
+ * Used when syncing cookie from localStorage via the layout script.
  */
 function getStoredLocale(): Locale {
   if (typeof window === 'undefined') return 'en';
@@ -117,35 +118,24 @@ const I18nContext = React.createContext<I18nContextValue | null>(null);
  *
  * Placed in `app/Providers.tsx` so it covers the entire application.
  */
-export function I18nProvider({ children }: { children: React.ReactNode }) {
+export function I18nProvider({
+  children,
+  initialLocale = 'en',
+}: Readonly<{ children: React.ReactNode; initialLocale?: Locale }>) {
   /**
-   * Initialise to 'en' to match server rendering.
-   *
-   * WHY not read localStorage here directly?
-   *   State initialisers run on the server during SSR. localStorage doesn't
-   *   exist on the server, so reading it here would throw. The useEffect below
-   *   syncs the value client-side after hydration, which is the safe pattern.
+   * Use the locale from the server (cookie or Accept-Language) so server and
+   * client render the same HTML and hydration does not fail.
    */
-  const [locale, setLocaleState] = useState<Locale>('en');
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
 
-  /** Persist locale change to localStorage and update React state. */
+  /** Persist locale to state, localStorage, and cookie (cookie ensures next full page load matches). */
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
     if (typeof window !== 'undefined') {
       localStorage.setItem(LOCALE_STORAGE_KEY, next);
+      document.documentElement.dataset.locale = next;
+      document.cookie = `${LOCALE_COOKIE_NAME}=${next}; path=/; max-age=${LOCALE_COOKIE_MAX_AGE}; SameSite=Lax`;
     }
-  }, []);
-
-  /**
-   * Sync locale from localStorage after first render.
-   *
-   * This runs once, client-side only. The empty dependency array ensures it
-   * doesn't re-run. Because this is a useEffect, it fires after React has
-   * committed the initial render and hydration is complete — avoiding any
-   * server/client HTML mismatch.
-   */
-  React.useEffect(() => {
-    setLocaleState(getStoredLocale());
   }, []);
 
   /**

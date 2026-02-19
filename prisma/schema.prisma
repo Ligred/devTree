@@ -10,12 +10,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  image     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String?  // Hashed; null for OAuth-only users
+  name        String?
+  image       String?
+  preferences Json?    // { theme?, locale?, tagsPerPageEnabled?, tagsPerBlockEnabled? }
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   accounts Account[]
   sessions Session[]

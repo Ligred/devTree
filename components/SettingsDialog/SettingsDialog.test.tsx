@@ -2,6 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
 
 import { I18nProvider } from '@/lib/i18n';
@@ -12,18 +13,36 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ theme: 'light', setTheme: vi.fn() }),
 }));
 
-function Wrapper({ children }: { children: React.ReactNode }) {
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: null, update: vi.fn() }),
+}));
+
+function Wrapper({ children }: Readonly<{ children: React.ReactNode }>) {
   return <I18nProvider>{children}</I18nProvider>;
 }
 
 describe('SettingsDialog', () => {
-  it('renders when open with theme and language options', () => {
+  it('renders when open with tabbed layout and Account section', () => {
     render(
       <Wrapper>
         <SettingsDialog open onOpenChange={() => {}} />
       </Wrapper>,
     );
     expect(screen.getByRole('dialog', { name: /settings/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /account/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /appearance/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /features/i })).toBeInTheDocument();
+    expect(screen.getByText(/profile/i)).toBeInTheDocument();
+  });
+
+  it('shows theme and language when Appearance tab is selected', async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <SettingsDialog open onOpenChange={() => {}} />
+      </Wrapper>,
+    );
+    await user.click(screen.getByRole('button', { name: /appearance/i }));
     expect(screen.getByText('Theme')).toBeInTheDocument();
     expect(screen.getByText('Light')).toBeInTheDocument();
     expect(screen.getByText('Dark')).toBeInTheDocument();

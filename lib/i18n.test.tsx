@@ -76,4 +76,16 @@ describe('I18n', () => {
     await user.click(getByRole('Set EN')!);
     expect(getByTestId('locale')).toHaveTextContent('en');
   });
+
+  it('uses initialLocale so server-passed locale is applied on first paint (e.g. after refresh)', () => {
+    const { container } = render(
+      <I18nProvider initialLocale="uk">
+        <TestConsumer />
+      </I18nProvider>,
+    );
+    const localeEl = container.querySelector('[data-testid="locale"]');
+    const mainSelectEl = container.querySelector('[data-testid="main.selectPage"]');
+    expect(localeEl).toHaveTextContent('uk');
+    expect(mainSelectEl).toHaveTextContent('Виберіть або створіть сторінку');
+  });
 });

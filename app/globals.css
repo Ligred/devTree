@@ -1,6 +1,12 @@
 @import 'tailwindcss';
 @import "tw-animate-css";
 
+/* Tell Tailwind v4 which files to scan for class names (relative to this file) */
+@source "../app/**/*.{ts,tsx,js,jsx}";
+@source "../components/**/*.{ts,tsx,js,jsx}";
+@source "../lib/**/*.{ts,tsx,js,jsx}";
+@source "../stories/**/*.{ts,tsx,js,jsx}";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -121,6 +127,7 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   }
 }
 

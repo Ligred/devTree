@@ -1,22 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Headed mode: visible browser. Use settings file .runsettings.headed when running dotnet test. -->
 <RunSettings>
   <TestRunParameters>
-    <!-- Override base URL via env: DEVTREE_BASE_URL=http://... -->
     <Parameter name="DEVTREE_BASE_URL" value="http://localhost:3000" />
   </TestRunParameters>
 
   <Playwright>
     <BrowserName>chromium</BrowserName>
     <LaunchOptions>
-      <Headless>true</Headless>
-      <SlowMo>0</SlowMo>
+      <Headless>false</Headless>
+      <SlowMo>100</SlowMo>
     </LaunchOptions>
   </Playwright>
 
   <RunConfiguration>
     <EnvironmentVariables>
       <DEVTREE_BASE_URL>http://localhost:3000</DEVTREE_BASE_URL>
-      <!-- Set HEADED=true for visual debugging -->
     </EnvironmentVariables>
   </RunConfiguration>
 </RunSettings>

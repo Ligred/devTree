@@ -40,9 +40,13 @@ DEVTREE_BASE_URL=http://staging.example.com dotnet test --settings .runsettings
 
 ## Run tests with visible browser (headed mode)
 
+Use the headed runsettings so Chromium opens a visible window (useful to see what’s wrong when tests fail):
+
 ```bash
-HEADED=true dotnet test --settings .runsettings
+dotnet test --settings .runsettings.headed
 ```
+
+This uses `Headless=false` and `SlowMo=100`. Run from a normal terminal (not inside a restricted sandbox) so the browser can access its profile and display correctly.
 
 ## Project structure
 
@@ -50,7 +54,8 @@ HEADED=true dotnet test --settings .runsettings
 tests/e2e/
 ├── DevTree.E2E.csproj          # .NET project file
 ├── GlobalUsings.cs             # global using directives
-├── .runsettings                # Playwright + test run configuration
+├── .runsettings                # Playwright + test run configuration (headless)
+├── .runsettings.headed         # Same but Headless=false for visible browser
 ├── Setup/
 │   └── PlaywrightSetup.cs      # base class for all tests
 ├── PageObjects/

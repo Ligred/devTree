@@ -1,5 +1,6 @@
 import type { Preview } from '@storybook/nextjs-vite';
 import React from 'react';
+import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from 'next-themes';
 
 import { I18nProvider } from '@/lib/i18n';
@@ -21,9 +22,13 @@ const preview: Preview = {
   decorators: [
     (Story) =>
       React.createElement(
-        ThemeProvider,
-        { attribute: 'class', defaultTheme: 'system', enableSystem: true },
-        React.createElement(I18nProvider, null, React.createElement(Story)),
+        SessionProvider,
+        { session: null },
+        React.createElement(
+          ThemeProvider,
+          { attribute: 'class', defaultTheme: 'system', enableSystem: true },
+          React.createElement(I18nProvider, { initialLocale: 'en' }, React.createElement(Story)),
+        ),
       ),
   ],
 };

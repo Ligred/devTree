@@ -34,12 +34,39 @@
  */
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Settings } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 
 import { useI18n, type Locale } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { saveUserPreferences } from '@/lib/userPreferences';
+
+/** True when viewport is narrow (mobile). Used to open menu above trigger and widen dropdown. */
+function useIsNarrowViewport() {
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const mq = globalThis.matchMedia?.('(max-width: 640px)');
+    if (!mq) return;
+    const set = () => setIsNarrow(mq.matches);
+    set();
+    mq.addEventListener('change', set);
+    return () => mq.removeEventListener('change', set);
+  }, []);
+  return isNarrow;
+}
+
+/** Derive initials from name or email (fallback: LT). */
+function getInitials(user: { name?: string | null; email?: string | null }) {
+  if (user?.name) {
+    const parts = user.name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts.at(-1)![0]).toUpperCase();
+    return user.name.slice(0, 2).toUpperCase();
+  }
+  if (user?.email) return user.email.slice(0, 2).toUpperCase();
+  return 'LT';
+}
 
 type UserMenuProps = Readonly<{
   onOpenSettings: () => void;
@@ -55,11 +82,11 @@ const LOCALE_OPTIONS: { id: Locale; label: string }[] = [
   { id: 'uk', label: 'UK' },
 ];
 
-// Map theme value to a short display label
-const THEME_SHORT: Record<ThemeOption, string> = {
-  light: 'Light',
-  dark: 'Dark',
-  system: 'Auto',
+// Theme option -> translation key (use t() when rendering)
+const THEME_LABEL_KEYS: Record<ThemeOption, string> = {
+  light: 'settings.themeLight',
+  dark: 'settings.themeDark',
+  system: 'settings.themeSystem',
 };
 
 // ─── Inline segment button (used inside the dropdown) ─────────────────────────
@@ -92,9 +119,14 @@ function InlineSegment({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function UserMenu({ onOpenSettings }: UserMenuProps) {
+  const { data: session } = useSession();
   const { t, locale, setLocale } = useI18n();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
+  const isNarrow = useIsNarrowViewport();
+  const userName = session?.user?.name ?? t('userMenu.userName');
+  const userEmail = session?.user?.email ?? t('userMenu.workspace');
+  const initials = session?.user ? getInitials(session.user) : 'LT';
 
   // Close menu when the user scrolls anywhere on the page
   useEffect(() => {
@@ -106,23 +138,13 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
 
   return (
     <DropdownMenu.Root open={open} onOpenChange={setOpen} modal={false}>
-      {/**
-       * Avatar trigger button — gradient circle with "LT" initials.
-       *
-       * WHY initials instead of a photo?
-       *   The app currently has no user authentication that provides a profile
-       *   photo. Initials with a branded gradient are a common placeholder
-       *   (used by Google, Notion, Linear) and look polished without requiring
-       *   an image asset or upload feature.
-       *
-       * IMPROVEMENT: Replace with an <Image> when user profiles are added.
-       */}
+      {/* Avatar: user image from session (Google), or initials fallback. */}
       <DropdownMenu.Trigger asChild>
         <button
           type="button"
           aria-label={t('userMenu.label')}
           className={cn(
-            'flex h-8 w-8 items-center justify-center rounded-full',
+            'flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full',
             'bg-linear-to-br from-indigo-500 to-violet-600',
             'text-xs font-bold text-white shadow-sm',
             'transition-shadow hover:shadow-md',
@@ -130,7 +152,15 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
             open && 'ring-2 ring-indigo-400 ring-offset-2 ring-offset-background',
           )}
         >
-          LT
+          {session?.user?.image ? (
+            <img
+              src={session.user.image}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            initials
+          )}
         </button>
       </DropdownMenu.Trigger>
 
@@ -138,26 +168,38 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
         <DropdownMenu.Content
           className={cn(
             'z-50 min-w-56 overflow-hidden rounded-xl border border-border bg-popover shadow-xl',
+            'max-w-[min(20rem,calc(100vw-2rem))]',
             'text-popover-foreground',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
           )}
+          side={isNarrow ? 'top' : 'bottom'}
           sideOffset={8}
           align="end"
+          alignOffset={0}
+          collisionPadding={12}
         >
 
           {/* ── User info header ──────────────────────────────────────── */}
           <div className="flex items-center gap-3 border-b border-border/60 px-4 py-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white">
-              LT
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white">
+              {session?.user?.image ? (
+                <img
+                  src={session.user.image}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                initials
+              )}
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-foreground">
-                {t('userMenu.userName')}
+                {userName}
               </p>
               <p className="truncate text-xs text-muted-foreground">
-                {t('userMenu.workspace')}
+                {userEmail}
               </p>
             </div>
           </div>
@@ -172,9 +214,12 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
                 <InlineSegment
                   key={value}
                   active={theme === value}
-                  onClick={() => setTheme(value)}
+                  onClick={() => {
+                    setTheme(value);
+                    void saveUserPreferences({ theme: value });
+                  }}
                 >
-                  {THEME_SHORT[value]}
+                  {t(THEME_LABEL_KEYS[value])}
                 </InlineSegment>
               ))}
             </div>
@@ -190,7 +235,10 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
                 <InlineSegment
                   key={id}
                   active={locale === id}
-                  onClick={() => setLocale(id)}
+                  onClick={() => {
+                    setLocale(id);
+                    void saveUserPreferences({ locale: id });
+                  }}
                 >
                   {label}
                 </InlineSegment>
@@ -199,7 +247,7 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
           </div>
 
           {/* ── Settings link ─────────────────────────────────────────── */}
-          <div className="p-1">
+          <div className="border-b border-border/60 p-1">
             <DropdownMenu.Item
               className={cn(
                 'flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5',
@@ -215,6 +263,26 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
             >
               <Settings size={14} className="shrink-0 text-muted-foreground" />
               <span>{t('userMenu.settings')}</span>
+            </DropdownMenu.Item>
+          </div>
+
+          {/* ── Sign out ───────────────────────────────────────────────── */}
+          <div className="p-1">
+            <DropdownMenu.Item
+              className={cn(
+                'flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5',
+                'text-sm text-foreground outline-none transition-colors',
+                'hover:bg-accent hover:text-accent-foreground',
+                'focus:bg-accent focus:text-accent-foreground',
+              )}
+              onSelect={(e) => {
+                e.preventDefault();
+                setOpen(false);
+                void signOut({ callbackUrl: '/login' });
+              }}
+            >
+              <LogOut size={14} className="shrink-0 text-muted-foreground" />
+              <span>{t('userMenu.signOut')}</span>
             </DropdownMenu.Item>
           </div>
 

@@ -3,9 +3,10 @@
 /**
  * SettingsDialog — application preferences panel.
  *
- * Divided into two sections:
- *   1. Appearance  — theme (light / dark / system) and language.
- *   2. Features    — feature-flag toggles (tags per page, tags per block).
+ * Sections:
+ *   1. Account   — profile (name, avatar), change password.
+ *   2. Appearance — theme (light / dark / system) and language.
+ *   3. Features  — feature-flag toggles (tags per page, tags per block).
  *
  * ─── STATE MANAGEMENT ─────────────────────────────────────────────────────────
  *
@@ -27,7 +28,10 @@
  * to the toggle switch (ARIA role="switch") pattern.
  */
 
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
+import { useSession } from 'next-auth/react';
+import { User, Palette, SlidersHorizontal } from 'lucide-react';
 
 import {
   Dialog,
@@ -40,6 +44,19 @@ import { Switch } from '@/components/ui/Switch';
 import { useI18n, type Locale } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/settingsStore';
 import { cn } from '@/lib/utils';
+import { saveUserPreferences } from '@/lib/userPreferences';
+
+type SettingsTab = 'account' | 'appearance' | 'features';
+
+function getInitials(user: { name?: string | null; email?: string | null }) {
+  if (user?.name) {
+    const parts = user.name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts.at(-1)![0]).toUpperCase();
+    return user.name.slice(0, 2).toUpperCase();
+  }
+  if (user?.email) return user.email.slice(0, 2).toUpperCase();
+  return '?';
+}
 
 type SettingsDialogProps = Readonly<{
   open: boolean;
@@ -86,14 +103,14 @@ function SegmentButton({
   );
 }
 
-/** A single row showing a label+description on the left and a control on the right. */
+/** A single row: label (and optional description) on the left, control on the right. Vertically centered so labels line up with inputs. */
 function SettingRow({
   label,
   description,
   children,
 }: Readonly<{ label: string; description?: string; children: React.ReactNode }>) {
   return (
-    <div className="flex items-start justify-between gap-6">
+    <div className="flex items-center justify-between gap-6">
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-foreground">{label}</p>
         {description && (
@@ -119,26 +136,336 @@ function SectionHeader({ title }: Readonly<{ title: string }>) {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme();
   const { t, locale, setLocale } = useI18n();
+  const { data: session, update: updateSession } = useSession();
   const { tagsPerPageEnabled, tagsPerBlockEnabled, setTagsPerPage, setTagsPerBlock } =
     useSettingsStore();
 
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [displayName, setDisplayName] = useState(session?.user?.name ?? '');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState<'saved' | 'error' | null>(null);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+
+  const user = session?.user;
+  const initials = user ? getInitials(user) : '?';
+
+  useEffect(() => {
+    if (open && user?.name !== undefined) setDisplayName(user.name ?? '');
+  }, [open, user?.name]);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProfileMessage(null);
+    setProfileSaving(true);
+    try {
+      const formData = new FormData();
+      formData.set('avatar', file);
+      const res = await fetch('/api/user/avatar', { method: 'POST', body: formData });
+      if (!res.ok) {
+        await res.json().catch(() => ({}));
+        setProfileMessage('error');
+        setProfileSaving(false);
+        return;
+      }
+      await updateSession();
+      setProfileMessage('saved');
+    } catch {
+      setProfileMessage('error');
+    }
+    setProfileSaving(false);
+    e.target.value = '';
+  };
+
+  const handleRemoveAvatar = async () => {
+    setProfileMessage(null);
+    setProfileSaving(true);
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: null }),
+      });
+      if (!res.ok) {
+        setProfileMessage('error');
+        setProfileSaving(false);
+        return;
+      }
+      await updateSession();
+      setProfileMessage('saved');
+    } catch {
+      setProfileMessage('error');
+    }
+    setProfileSaving(false);
+  };
+
+  const handleSaveProfile = async () => {
+    setProfileMessage(null);
+    setProfileSaving(true);
+    try {
+      const res = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: displayName.trim() || null }),
+      });
+      if (!res.ok) {
+        setProfileMessage('error');
+        setProfileSaving(false);
+        return;
+      }
+      await updateSession();
+      setProfileMessage('saved');
+    } catch {
+      setProfileMessage('error');
+    }
+    setProfileSaving(false);
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(false);
+    if (newPassword !== confirmPassword) {
+      setPasswordError(t('settings.passwordMismatch'));
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      const res = await fetch('/api/user/password', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: currentPassword, newPassword }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setPasswordError(body.error ?? t('settings.passwordUpdateFailed'));
+        setPasswordSaving(false);
+        return;
+      }
+      setPasswordSuccess(true);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch {
+      setPasswordError(t('settings.errorGeneric'));
+    }
+    setPasswordSaving(false);
+  };
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>('account');
+
+  const tabs: { id: SettingsTab; labelKey: string; icon: React.ReactNode }[] = [
+    { id: 'account', labelKey: 'settings.sectionAccount', icon: <User size={18} /> },
+    { id: 'appearance', labelKey: 'settings.sectionAppearance', icon: <Palette size={18} /> },
+    { id: 'features', labelKey: 'settings.sectionFeatures', icon: <SlidersHorizontal size={18} /> },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-lg">{t('settings.title')}</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
+      <DialogContent
+        className={cn(
+          'flex flex-col gap-0 p-0 overflow-hidden',
+          'h-dvh max-h-none w-[calc(100vw-1rem)] max-w-full',
+          'sm:h-[85vh] sm:max-h-[720px] sm:w-full sm:max-w-2xl',
+        )}
+      >
+        <DialogHeader className="shrink-0 border-b border-border px-4 py-3 pr-12 sm:px-6 sm:py-4">
+          <DialogTitle className="text-base font-semibold sm:text-lg">{t('settings.title')}</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground sm:text-sm">
             {t('settings.description')}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-1 space-y-0 divide-y divide-border">
+        <div className="flex min-h-0 flex-1 flex-col sm:flex-row">
+          {/* Tabs: horizontal on mobile, vertical sidebar on desktop */}
+          <nav
+            className={cn(
+              'flex shrink-0 flex-row gap-0 border-b border-border bg-muted/30 py-2 sm:flex-col sm:border-b-0 sm:border-r sm:py-2',
+              'w-full sm:w-44',
+            )}
+            aria-label={t('settings.title')}
+          >
+            {tabs.map(({ id, labelKey, icon }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-2 px-3 py-2.5 text-center text-sm font-medium transition-colors sm:flex-initial sm:justify-start sm:px-4 sm:text-left',
+                  activeTab === id
+                    ? 'border-b-2 border-indigo-600 bg-background text-foreground sm:border-b-0 sm:border-r-2 dark:border-indigo-400'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
+                )}
+              >
+                <span
+                  className={cn('shrink-0', activeTab === id ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground')}
+                  aria-hidden
+                >
+                  {icon}
+                </span>
+                <span>{t(labelKey)}</span>
+              </button>
+            ))}
+          </nav>
 
-          {/* ── Appearance ─────────────────────────────────────────────── */}
-          <section className="py-5">
-            <SectionHeader title={t('settings.sectionAppearance')} />
-            <div className="space-y-5">
+          {/* Scrollable content */}
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+            {activeTab === 'account' && (
+              <section className="space-y-6 p-4 sm:p-6">
+              <div className="rounded-lg border border-border bg-muted/20 p-4">
+                <p className="mb-2 text-sm font-medium text-foreground">{t('settings.profile')}</p>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {t('settings.profileDescription')}
+                </p>
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div
+                      className={cn(
+                        'flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full text-lg font-bold text-white',
+                        'bg-linear-to-br from-indigo-500 to-violet-600',
+                      )}
+                    >
+                      {user?.image ? (
+                        <img
+                          src={user.image}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        initials
+                      )}
+                    </div>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      className="sr-only"
+                      tabIndex={-1}
+                      onChange={handleAvatarChange}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      disabled={profileSaving}
+                      onClick={() => avatarInputRef.current?.click()}
+                      className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 disabled:opacity-50"
+                    >
+                      {t('settings.changeAvatar')}
+                    </button>
+                    {user?.image && (
+                      <button
+                        type="button"
+                        disabled={profileSaving}
+                        onClick={handleRemoveAvatar}
+                        className="text-left text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
+                      >
+                        {t('settings.removeAvatar')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {profileMessage === 'saved' && (
+                  <output className="mt-2 block text-xs text-green-600 dark:text-green-400">
+                    {t('settings.profileSaved')}
+                  </output>
+                )}
+                {profileMessage === 'error' && (
+                  <p className="mt-2 text-xs text-destructive" role="alert">
+                    {t('settings.profileUpdateError')}
+                  </p>
+                )}
+              </div>
 
+              <SettingRow label={t('settings.displayName')}>
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder={t('settings.displayNamePlaceholder')}
+                  className="w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </SettingRow>
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  disabled={profileSaving}
+                  onClick={handleSaveProfile}
+                  className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                >
+                  {t('settings.saveProfile')}
+                </button>
+              </div>
+
+              {user?.email && (
+                <SettingRow label={t('settings.emailForSignIn')}>
+                  <span className="text-sm text-muted-foreground">{user.email}</span>
+                </SettingRow>
+              )}
+
+              <div>
+                <p className="mb-1 text-sm font-medium text-foreground">
+                  {t('settings.changePassword')}
+                </p>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  {t('settings.changePasswordDescription')}
+                </p>
+                <form onSubmit={handleChangePassword} className="space-y-3">
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder={t('settings.currentPassword')}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={t('settings.newPassword')}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder={t('settings.confirmPassword')}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring"
+                  />
+                  {passwordError && (
+                    <p className="text-xs text-destructive" role="alert">
+                      {passwordError}
+                    </p>
+                  )}
+                  {passwordSuccess && (
+                    <output className="block text-xs text-green-600 dark:text-green-400">
+                      {t('settings.passwordUpdated')}
+                    </output>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={passwordSaving}
+                    className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                  >
+                    {t('settings.updatePassword')}
+                  </button>
+                </form>
+              </div>
+              </section>
+            )}
+
+            {activeTab === 'appearance' && (
+              <section className="space-y-6 p-4 sm:p-6">
+                <SectionHeader title={t('settings.sectionAppearance')} />
+                <div className="space-y-5">
               <SettingRow
                 label={t('settings.theme')}
                 description={t('settings.themeDescription')}
@@ -148,7 +475,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     <SegmentButton
                       key={value}
                       active={theme === value}
-                      onClick={() => setTheme(value)}
+                      onClick={() => {
+                        setTheme(value);
+                        void saveUserPreferences({ theme: value });
+                      }}
                     >
                       {t(THEME_LABEL_KEYS[value])}
                     </SegmentButton>
@@ -165,29 +495,34 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     <SegmentButton
                       key={id}
                       active={locale === id}
-                      onClick={() => setLocale(id)}
+                      onClick={() => {
+                        setLocale(id);
+                        void saveUserPreferences({ locale: id });
+                      }}
                     >
                       {t(labelKey)}
                     </SegmentButton>
                   ))}
                 </div>
               </SettingRow>
+                </div>
+              </section>
+            )}
 
-            </div>
-          </section>
-
-          {/* ── Features ───────────────────────────────────────────────── */}
-          <section className="py-5">
-            <SectionHeader title={t('settings.sectionFeatures')} />
-            <div className="space-y-4">
-
+            {activeTab === 'features' && (
+              <section className="space-y-6 p-4 sm:p-6">
+                <SectionHeader title={t('settings.sectionFeatures')} />
+                <div className="space-y-4">
               <SettingRow
                 label={t('settings.tagsPerPage')}
                 description={t('settings.tagsPerPageDescription')}
               >
                 <Switch
                   checked={tagsPerPageEnabled}
-                  onChange={setTagsPerPage}
+                  onChange={(v) => {
+                    setTagsPerPage(v);
+                    void saveUserPreferences({ tagsPerPageEnabled: v });
+                  }}
                   label={t('settings.tagsPerPage')}
                 />
               </SettingRow>
@@ -198,14 +533,17 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               >
                 <Switch
                   checked={tagsPerBlockEnabled}
-                  onChange={setTagsPerBlock}
+                  onChange={(v) => {
+                    setTagsPerBlock(v);
+                    void saveUserPreferences({ tagsPerBlockEnabled: v });
+                  }}
                   label={t('settings.tagsPerBlock')}
                 />
               </SettingRow>
-
-            </div>
-          </section>
-
+                </div>
+              </section>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>

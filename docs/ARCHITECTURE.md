@@ -39,7 +39,7 @@ graph TB
     end
 
     subgraph Server["Next.js Server (Node.js)"]
-        NextAuth["NextAuth v5\n(GitHub OAuth)"]
+        NextAuth["NextAuth v5\n(Credentials + Google/GitHub)"]
         PrismaClient["Prisma Client"]
         API["API Routes\n/api/auth/..."]
         NextAuth --> API

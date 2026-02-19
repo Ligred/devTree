@@ -16,6 +16,10 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light' }),
 }));
 
+vi.mock('next-auth/react', () => ({
+  useSession: () => ({ data: { user: { name: 'Test', email: 'test@example.com' } }, status: 'authenticated' }),
+}));
+
 vi.mock('@/lib/pageUtils', () => ({
   computePageStats: () => ({ wordCount: 0, readingTimeMin: 1, blockCount: 0 }),
   downloadMarkdown: vi.fn(),

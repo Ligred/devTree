@@ -209,13 +209,15 @@ export function DiagramBlock({ content, onChange, isEditing = false }: DiagramBl
       mermaid.initialize({
         startOnLoad: false,
         theme: mermaidTheme,
-        securityLevel: 'loose',
+        // strict: no script/link in labels (user diagram code → safe SVG output)
+        securityLevel: 'strict',
         fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
       });
 
       const { svg } = await mermaid.render(`mermaid-${renderId}`, code);
 
       if (previewRef.current) {
+        // Mermaid-generated SVG only (no raw user HTML); securityLevel 'strict' reduces XSS surface
         previewRef.current.innerHTML = svg;
         const svgEl = previewRef.current.querySelector('svg');
         if (svgEl) {

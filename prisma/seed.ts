@@ -1,9 +1,30 @@
 import { PrismaClient } from '@prisma/client';
 
+import { hashPassword } from '../lib/auth/password';
+
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding database...');
+
+  // Default admin account (created when ADMIN_PASSWORD is set)
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminEmail = (process.env.ADMIN_EMAIL ?? 'admin@localhost').trim().toLowerCase();
+  if (adminPassword && adminEmail) {
+    const hashed = await hashPassword(adminPassword);
+    const admin = await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: { password: hashed, name: process.env.ADMIN_NAME ?? 'Admin' },
+      create: {
+        email: adminEmail,
+        password: hashed,
+        name: process.env.ADMIN_NAME ?? 'Admin',
+      },
+    });
+    console.log('Admin account:', admin.email);
+  } else if (!adminPassword) {
+    console.log('Skipping admin account (ADMIN_PASSWORD not set).');
+  }
 
   // Create a demo user
   const user = await prisma.user.upsert({
