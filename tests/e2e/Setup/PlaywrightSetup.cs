@@ -21,8 +21,21 @@ public abstract class E2ETestBase : PageTest
     {
         App = new AppPage(Page);
         await App.GotoAsync();
+
+        // If app redirected to login, sign in with E2E credentials so tests run against the main app
+        if (Page.Url.Contains("/login"))
+        {
+            var email = Environment.GetEnvironmentVariable("DEVTREE_E2E_EMAIL");
+            var password = Environment.GetEnvironmentVariable("DEVTREE_E2E_PASSWORD");
+            if (!string.IsNullOrEmpty(email) && !string.IsNullOrEmpty(password))
+            {
+                var loginPage = new LoginPage(Page);
+                await loginPage.SubmitLoginAsync(email, password);
+                await Page.WaitForURLAsync(u => !u.Contains("/login"), new() { Timeout = 10_000 });
+            }
+        }
+
         // The Next.js dev-mode overlay (nextjs-portal) can intercept pointer events
-        // and cause clicks to time out. Disable it via JS before each test runs.
         await Page.EvaluateAsync(@"
             document.querySelectorAll('nextjs-portal').forEach(el => {
                 el.style.pointerEvents = 'none';
