@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { TextBlock } from '@/components/MainContent/blocks/TextBlock';
+import { I18nProvider } from '@/lib/i18n';
+import { ConfirmationProvider } from '@/lib/confirmationContext';
 
 const meta: Meta<typeof TextBlock> = {
   title: 'Components/Blocks/TextBlock',
@@ -9,6 +11,15 @@ const meta: Meta<typeof TextBlock> = {
   argTypes: {
     content: { control: 'text' },
   },
+  decorators: [
+    (Story) => (
+      <ConfirmationProvider>
+        <I18nProvider>
+          <Story />
+        </I18nProvider>
+      </ConfirmationProvider>
+    ),
+  ],
 };
 
 export default meta;
@@ -51,5 +62,19 @@ export const EditMode: Story = {
   args: {
     isEditing: true,
     content: '<p>Edit this text with the full toolbar: code block, comment, link, colors, and more.</p>',
+  },
+};
+
+export const EditModeWithVoiceDictation: Story = {
+  args: {
+    isEditing: true,
+    content: '<p>Start voice dictation by clicking the microphone icon in the toolbar (Chrome only).</p>',
+  },
+};
+
+export const EditModeWithLanguageSelector: Story = {
+  args: {
+    isEditing: true,
+    content: '<p>Select dictation language by clicking the globe button next to the microphone (Chrome only). Supports English (EN) and Ukrainian (UK).</p>',
   },
 };

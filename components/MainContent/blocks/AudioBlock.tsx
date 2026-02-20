@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useId } from 'react';
 import { Mic, Upload } from 'lucide-react';
 
 import { useI18n } from '@/lib/i18n';
+import { useRecordingStore } from '@/lib/recordingStore';
+import { useConfirmation } from '@/lib/confirmationContext';
+import { attemptStartRecording } from './recordingHelpers';
 import type { AudioBlockContent } from '../types';
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -14,6 +17,7 @@ type AudioBlockProps = Readonly<{
   onChange: (content: AudioBlockContent) => void;
   isEditing: boolean;
   enterEdit: () => void;
+  blockId?: string;
 }>;
 
 /** Small animated bars used for both recording and playback states. */
@@ -30,7 +34,7 @@ function LevelBars({
       {LEVEL_BAR_IDS.map((id, index) => (
         <span
           key={id}
-          className={compact ? 'inline-block h-2 w-[3px] rounded-full bg-indigo-500' : 'inline-block h-3 w-[3px] rounded-full bg-indigo-500'}
+          className={compact ? 'inline-block h-2 w-0.75 rounded-full bg-indigo-500' : 'inline-block h-3 w-0.75 rounded-full bg-indigo-500'}
           style={{ opacity: 0.9, animationDelay: `${index * 120}ms` }}
         />
       ))}
@@ -38,8 +42,12 @@ function LevelBars({
   );
 }
 
-export function AudioBlock({ content, onChange, isEditing, enterEdit }: AudioBlockProps) {
+export function AudioBlock({ content, onChange, isEditing, enterEdit, blockId }: AudioBlockProps) {
   const { t } = useI18n();
+  const { startRecording: startRecordingStore, stopRecording: stopRecordingStore } = useRecordingStore();
+  const { confirm } = useConfirmation();
+  const generatedBlockId = useId();
+  const resolvedBlockId = blockId ?? generatedBlockId;
   const [draftUrl, setDraftUrl] = useState(content.url);
   const [draftCaption, setDraftCaption] = useState(content.caption ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -71,8 +79,9 @@ export function AudioBlock({ content, onChange, isEditing, enterEdit }: AudioBlo
     if (!isEditing && recording && mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
       setRecording(false);
+      stopRecordingStore(resolvedBlockId);
     }
-  }, [isEditing, recording]);
+  }, [isEditing, recording, resolvedBlockId, stopRecordingStore]);
 
   const uploadBlob = useCallback(
     async (blob: Blob): Promise<string> => {
@@ -94,6 +103,7 @@ export function AudioBlock({ content, onChange, isEditing, enterEdit }: AudioBlo
 
   const startRecording = useCallback(async () => {
     setError(null);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -113,19 +123,37 @@ export function AudioBlock({ content, onChange, isEditing, enterEdit }: AudioBlo
         }
       };
       mediaRecorderRef.current = recorder;
-      recorder.start();
-      setRecording(true);
+
+      // Use attemptStartRecording to handle confirmation if another block is recording
+      // Only start the actual recording after confirmation
+      await attemptStartRecording({
+        blockId: resolvedBlockId,
+        confirm,
+        startFn: () => {
+          recorder.start();
+          setRecording(true);
+          // Provide cancel callback for the store
+          startRecordingStore(resolvedBlockId, () => {
+            if (mediaRecorderRef.current?.state === 'recording') {
+              mediaRecorderRef.current.stop();
+              setRecording(false);
+            }
+          });
+        },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Microphone access denied');
+      setRecording(false);
     }
-  }, [draftCaption, onChange, uploadBlob]);
+  }, [resolvedBlockId, draftCaption, onChange, uploadBlob, startRecordingStore, confirm]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
       setRecording(false);
+      stopRecordingStore(resolvedBlockId);
     }
-  }, []);
+  }, [resolvedBlockId, stopRecordingStore]);
 
   const handleFileSelect = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {

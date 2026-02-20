@@ -15,7 +15,7 @@
  * when clicking a button (see comment in ToolbarButton).
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -52,6 +52,10 @@ import {
 
 import { CommentMark } from '@/lib/tiptap-comment-mark';
 import { cn } from '@/lib/utils';
+import { useI18n, type Locale } from '@/lib/i18n';
+import { useRecordingStore } from '@/lib/recordingStore';
+import { VoiceDictationButton } from './VoiceDictationButton';
+import { VoiceDictationLanguageButton } from './VoiceDictationLanguageButton';
 
 const TEXT_COLORS = [
   { name: 'Default', value: '' },
@@ -107,9 +111,14 @@ type TextBlockProps = Readonly<{
   content: string;
   onChange: (content: string) => void;
   isEditing?: boolean;
+  blockId?: string;
 }>;
 
-export function TextBlock({ content, onChange, isEditing = false }: TextBlockProps) {
+export function TextBlock({ content, onChange, isEditing = false, blockId }: TextBlockProps) {
+  const { locale } = useI18n();
+  const { stopRecording } = useRecordingStore();
+  const generatedBlockId = useId();
+  const resolvedBlockId = blockId ?? generatedBlockId;
   const linkInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const editorWrapRef = useRef<HTMLDivElement>(null);
@@ -118,6 +127,7 @@ export function TextBlock({ content, onChange, isEditing = false }: TextBlockPro
   const [highlightOpen, setHighlightOpen] = useState(false);
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentTooltip, setCommentTooltip] = useState<{ text: string; left: number; top: number } | null>(null);
+  const [dictationLanguage, setDictationLanguage] = useState<Locale>(locale);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -153,7 +163,11 @@ export function TextBlock({ content, onChange, isEditing = false }: TextBlockPro
 
   useEffect(() => {
     if (editor && editor.isEditable !== isEditing) editor.setEditable(isEditing);
-  }, [editor, isEditing]);
+    // Stop recording when exiting edit mode
+    if (!isEditing) {
+      stopRecording(resolvedBlockId);
+    }
+  }, [editor, isEditing, resolvedBlockId, stopRecording]);
 
   // Show comment text in a tooltip when hovering over a comment span (data-comment-text holds escaped text from CommentMark).
   const handleEditorMouseMove = useCallback((e: React.MouseEvent) => {
@@ -206,6 +220,19 @@ export function TextBlock({ content, onChange, isEditing = false }: TextBlockPro
   const removeComment = () => {
     (editor?.chain().focus() as unknown as { unsetComment: () => { run: () => boolean } }).unsetComment?.().run();
     setCommentOpen(false);
+  };
+
+  const handleVoiceTextRecognized = (voiceText: string) => {
+    if (!editor) return;
+    // Move to the end of the document and add the recognized text with a space before it
+    const currentContent = editor.getHTML();
+    const textToAdd = currentContent === '<p></p>' ? voiceText : ` ${voiceText}`;
+    
+    editor
+      .chain()
+      .focus('end')
+      .insertContent(textToAdd)
+      .run();
   };
 
   if (!editor) return null;
@@ -589,6 +616,12 @@ export function TextBlock({ content, onChange, isEditing = false }: TextBlockPro
 
           <span className="mx-1 h-5 w-px bg-border" />
 
+          {/* Voice Dictation and Language */}
+          <VoiceDictationButton onTextRecognized={handleVoiceTextRecognized} language={dictationLanguage} blockId={resolvedBlockId} />
+          <VoiceDictationLanguageButton onLanguageChange={setDictationLanguage} />
+
+          <span className="mx-1 h-5 w-px bg-border" />
+
           {/* Undo / Redo */}
           <ToolbarButton
             title="Undo"
@@ -608,12 +641,12 @@ export function TextBlock({ content, onChange, isEditing = false }: TextBlockPro
       {/* Wrapper captures mouse move/leave so we can show the comment tooltip when hovering over comment spans. */}
       <div
         ref={editorWrapRef}
-        onMouseMove={handleEditorMouseMove}
-        onMouseLeave={handleEditorMouseLeave}
         className="relative"
       >
         <EditorContent
           editor={editor}
+          onMouseMove={handleEditorMouseMove}
+          onMouseLeave={handleEditorMouseLeave}
           className={cn(
             'px-4 py-3 text-sm text-foreground',
             !isEditing && 'cursor-default select-text',

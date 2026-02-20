@@ -7,6 +7,8 @@ import { useTheme, ThemeProvider as NextThemesProvider } from 'next-themes';
 import { I18nProvider, useI18n, type Locale } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/settingsStore';
 import { loadUserPreferences } from '@/lib/userPreferences';
+import { ConfirmationProvider } from '@/lib/confirmationContext';
+import { RecordingIndicator } from './RecordingIndicator';
 
 /**
  * When the user is logged in, fetch their saved preferences from the API and
@@ -42,17 +44,20 @@ export function Providers({
 }: Readonly<{ children: React.ReactNode; initialLocale?: Locale }>) {
   return (
     <SessionProvider>
-      <NextThemesProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
-        <I18nProvider initialLocale={initialLocale}>
-          <SyncUserPreferences />
-          {children}
-        </I18nProvider>
-      </NextThemesProvider>
+      <ConfirmationProvider>
+        <NextThemesProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <I18nProvider initialLocale={initialLocale}>
+            <SyncUserPreferences />
+            {children}
+            <RecordingIndicator />
+          </I18nProvider>
+        </NextThemesProvider>
+      </ConfirmationProvider>
     </SessionProvider>
   );
 }

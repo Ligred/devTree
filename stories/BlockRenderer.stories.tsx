@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 import { fn } from 'storybook/test';
 
+import { ConfirmationProvider } from '@/lib/confirmationContext';
 import { BlockEditor } from '@/components/MainContent';
 import type { Block } from '@/components/MainContent';
 
@@ -73,6 +74,13 @@ const meta: Meta<typeof BlockEditor> = {
   argTypes: {
     onChange: { action: 'blocksChange' },
   },
+  decorators: [
+    (Story) => (
+      <ConfirmationProvider>
+        <Story />
+      </ConfirmationProvider>
+    ),
+  ],
 };
 
 export default meta;

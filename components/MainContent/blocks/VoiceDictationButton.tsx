@@ -1,0 +1,165 @@
+'use client';
+
+/**
+ * VoiceDictationButton — Voice-to-text dictation for text blocks.
+ *
+ * Features:
+ *   - Chrome-only (hidden on other browsers due to better Web Speech API support)
+ *   - Local processing via Web Speech API (no server requests)
+ *   - Appends recognized text to existing content (doesn't override)
+ *   - Visual feedback during recording
+ */
+
+import { useEffect, useState, useRef, useCallback, useId } from 'react';
+import { Mic } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { type Locale } from '@/lib/i18n';
+import { useRecordingStore } from '@/lib/recordingStore';
+import { attemptStartRecording } from './recordingHelpers';
+import { useConfirmation } from '@/lib/confirmationContext';
+import { getSpeechRecognitionApi, isChromeBasedBrowser, DICTATION_LANGUAGE_CODES } from './voiceDictationUtils';
+
+type VoiceDictationButtonProps = Readonly<{
+  onTextRecognized: (text: string) => void;
+  language?: Locale;
+  blockId?: string;
+}>;
+
+export function VoiceDictationButton({
+  onTextRecognized,
+  language = 'en',
+  blockId = '',
+}: VoiceDictationButtonProps) {
+  const { startRecording, stopRecording } = useRecordingStore();
+  const { confirm } = useConfirmation();
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
+  const transcriptRef = useRef<string>('');
+  const initRef = useRef(false);
+  const generatedId = useId();
+  const resolvedBlockId = blockId || generatedId;
+
+  // Initialize SpeechRecognition only once on mount
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
+    const SpeechRecognitionAPI = getSpeechRecognitionApi();
+    const supported = !!SpeechRecognitionAPI && isChromeBasedBrowser();
+
+    if (SpeechRecognitionAPI && supported) {
+      try {
+        const recognition = new SpeechRecognitionAPI();
+        
+        recognition.onstart = () => {
+          setListening(true);
+          startRecording(resolvedBlockId, () => {
+            try {
+              recognition.stop();
+            } catch (e) {
+              console.error('Error stopping recognition during cancel:', e);
+            }
+          });
+        };
+        
+        recognition.onend = () => {
+          setListening(false);
+          stopRecording(resolvedBlockId);
+          if (transcriptRef.current.trim()) {
+            onTextRecognized(transcriptRef.current.trim());
+            transcriptRef.current = '';
+          }
+        };
+        
+        recognition.onresult = (event) => {
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              transcriptRef.current += (transcriptRef.current ? ' ' : '') + transcript;
+            }
+          }
+        };
+        
+        recognition.onerror = (event) => {
+          console.error('Speech recognition error:', event.error);
+          setListening(false);
+          stopRecording(resolvedBlockId);
+        };
+        
+        recognitionRef.current = recognition;
+      } catch (error) {
+        console.error('Failed to initialize SpeechRecognition:', error);
+      }
+    }
+  }, [resolvedBlockId, startRecording, stopRecording, onTextRecognized]);
+
+  // Clean up and stop recording when component unmounts or when exiting edit mode
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current && listening) {
+        try {
+          recognitionRef.current.stop();
+          stopRecording(resolvedBlockId);
+        } catch (e) {
+          console.error('Error stopping recognition on unmount:', e);
+        }
+      }
+    };
+  }, [resolvedBlockId, listening, stopRecording]);
+
+  // Update language and continuous mode when they change
+  useEffect(() => {
+    if (!recognitionRef.current) return;
+    
+    recognitionRef.current.lang = DICTATION_LANGUAGE_CODES[language];
+    recognitionRef.current.continuous = true;
+    recognitionRef.current.interimResults = true;
+  }, [language]);
+
+  const handleToggleRecording = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!recognitionRef.current) return;
+
+    if (listening) {
+      try {
+        recognitionRef.current.stop();
+        setListening(false);
+        stopRecording(resolvedBlockId);
+      } catch (error) {
+        console.error('Error stopping recognition:', error);
+      }
+    } else {
+      await attemptStartRecording({
+        blockId: resolvedBlockId,
+        confirm,
+        startFn: () => {
+          transcriptRef.current = '';
+          const recognition = recognitionRef.current;
+          setTimeout(() => {
+            try {
+              recognition?.start();
+            } catch (error) {
+              console.error('Error starting recognition:', error);
+            }
+          }, 500); // Ensure state updates before starting recognition
+        },
+      });
+    }
+  }, [listening, resolvedBlockId, stopRecording, confirm]);
+
+  return (
+    <button
+      type="button"
+      title={listening ? 'Stop voice dictation' : 'Start voice dictation'}
+      onMouseDown={handleToggleRecording}
+      className={cn(
+        'flex h-7 w-7 items-center justify-center rounded text-sm transition-colors',
+        listening
+          ? 'animate-pulse bg-red-500 text-white'
+          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+      )}
+    >
+      <Mic size={14} />
+    </button>
+  );
+}

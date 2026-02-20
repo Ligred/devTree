@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
+import { ConfirmationProvider } from '@/lib/confirmationContext';
 import { AudioBlock } from '@/components/MainContent/blocks/AudioBlock';
 
 const meta: Meta<typeof AudioBlock> = {
@@ -10,6 +11,13 @@ const meta: Meta<typeof AudioBlock> = {
     content: { control: false },
     onChange: { action: 'contentChange' },
   },
+  decorators: [
+    (Story) => (
+      <ConfirmationProvider>
+        <Story />
+      </ConfirmationProvider>
+    ),
+  ],
 };
 
 export default meta;
