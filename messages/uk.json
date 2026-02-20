@@ -51,6 +51,8 @@
   "settings.tagsPerPageDescription": "Показувати рядок тегів під назвою кожної сторінки",
   "settings.tagsPerBlock": "Теги блоку",
   "settings.tagsPerBlockDescription": "Показувати теги на окремих блоках вмісту для детальних приміток",
+  "settings.recordingStartSound": "Звук початку запису",
+  "settings.recordingStartSoundDescription": "Відтворювати короткий звук-сповіщення, коли починається запис",
   "settings.sectionAccount": "Обліковий запис",
   "settings.profile": "Профіль",
   "settings.profileDescription": "Ваше ім'я та аватар",

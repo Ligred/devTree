@@ -10,6 +10,7 @@ export type UserPreferences = {
   locale?: 'en' | 'uk';
   tagsPerPageEnabled?: boolean;
   tagsPerBlockEnabled?: boolean;
+  recordingStartSoundEnabled?: boolean;
 };
 
 function isPreferencesBody(
@@ -79,6 +80,9 @@ export async function PATCH(req: NextRequest) {
   }
   if (typeof body.tagsPerBlockEnabled === 'boolean') {
     updates.tagsPerBlockEnabled = body.tagsPerBlockEnabled;
+  }
+  if (typeof body.recordingStartSoundEnabled === 'boolean') {
+    updates.recordingStartSoundEnabled = body.recordingStartSoundEnabled;
   }
 
   if (Object.keys(updates).length === 0) {

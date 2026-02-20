@@ -52,6 +52,19 @@ describe('SettingsDialog', () => {
     expect(screen.getByText('Ukrainian')).toBeInTheDocument();
   });
 
+  it('shows recording start sound toggle in Features tab', async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <SettingsDialog open onOpenChange={() => {}} />
+      </Wrapper>,
+    );
+
+    await user.click(screen.getByRole('button', { name: /features/i }));
+
+    expect(screen.getByText('Recording start sound')).toBeInTheDocument();
+  });
+
   it('does not render when closed', () => {
     render(
       <Wrapper>

@@ -36,8 +36,15 @@ public class AppPage(IPage page)
     /// <summary>Opens the Settings dialog via the user-menu avatar button.</summary>
     public async Task OpenSettingsAsync()
     {
-        await _page.GetByRole(AriaRole.Button, new() { Name = "User menu" }).ClickAsync();
-        await _page.GetByRole(AriaRole.Menuitem, new() { Name = "Settings" }).ClickAsync();
+        var userMenuTrigger = _page.Locator(
+            "button[aria-label='User menu'], button[aria-label='Меню користувача']"
+        ).First;
+        await userMenuTrigger.ClickAsync();
+
+        var settingsItem = _page.Locator(
+            "[role='menuitem']:has-text('All settings'), [role='menuitem']:has-text('Settings'), [role='menuitem']:has-text('Всі налаштування')"
+        ).First;
+        await settingsItem.ClickAsync();
         await Settings.WaitForAsync();
     }
 }

@@ -9,6 +9,28 @@ public class SettingsPage(IPage page)
 
     private ILocator Dialog      => _page.GetByRole(AriaRole.Dialog);
     private ILocator CloseBtn    => Dialog.GetByRole(AriaRole.Button, new() { Name = "Close" });
+    private ILocator AppearanceTab => Dialog.Locator("button:has-text('Appearance'), button:has-text('Зовнішній вигляд')").First;
+
+    private static string[] ThemeLabels(string theme) => theme switch
+    {
+        "Light" => ["Light", "Світла"],
+        "Dark" => ["Dark", "Темна"],
+        "System" => ["System", "Системна"],
+        _ => [theme],
+    };
+
+    private static string[] LanguageLabels(string language) => language switch
+    {
+        "English" => ["English", "Англійська"],
+        "Ukrainian" => ["Ukrainian", "Українська"],
+        _ => [language],
+    };
+
+    private ILocator DialogButtonByAnyLabel(params string[] labels)
+    {
+        var selector = string.Join(", ", labels.Select(label => $"button:has-text('{label}')"));
+        return Dialog.Locator(selector).First;
+    }
 
     // ── Waits ──────────────────────────────────────────────────────────────
 
@@ -22,16 +44,28 @@ public class SettingsPage(IPage page)
 
     public Task CloseAsync() => CloseBtn.ClickAsync();
 
+    private async Task OpenAppearanceTabAsync()
+    {
+        var lightOrUkrainianLight = DialogButtonByAnyLabel("Light", "Світла");
+        if (await lightOrUkrainianLight.IsVisibleAsync())
+            return;
+
+        await AppearanceTab.ClickAsync();
+        await lightOrUkrainianLight.WaitForAsync(new() { Timeout = 5_000 });
+    }
+
     /// <summary>Clicks the theme option button (Light | Dark | System).</summary>
     public async Task SetThemeAsync(string theme)
     {
-        await Dialog.GetByRole(AriaRole.Button, new() { Name = theme }).ClickAsync();
+        await OpenAppearanceTabAsync();
+        await DialogButtonByAnyLabel(ThemeLabels(theme)).ClickAsync();
     }
 
     /// <summary>Clicks the language option button (English | Ukrainian).</summary>
     public async Task SetLanguageAsync(string language)
     {
-        await Dialog.GetByRole(AriaRole.Button, new() { Name = language }).ClickAsync();
+        await OpenAppearanceTabAsync();
+        await DialogButtonByAnyLabel(LanguageLabels(language)).ClickAsync();
     }
 
     // ── Queries ────────────────────────────────────────────────────────────

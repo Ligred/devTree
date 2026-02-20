@@ -15,7 +15,7 @@ model User {
   password    String?  // Hashed; null for OAuth-only users
   name        String?
   image       String?
-  preferences Json?    // { theme?, locale?, tagsPerPageEnabled?, tagsPerBlockEnabled? }
+  preferences Json?    // { theme?, locale?, tagsPerPageEnabled?, tagsPerBlockEnabled?, recordingStartSoundEnabled? }
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

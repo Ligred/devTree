@@ -9,10 +9,10 @@ public class SidebarPage(IPage page)
 
     // ── Selectors ──────────────────────────────────────────────────────────
 
-    private ILocator NewPageBtn   => _page.GetByRole(AriaRole.Button, new() { Name = "Page" }).First;
-    private ILocator NewFolderBtn => _page.GetByRole(AriaRole.Button, new() { Name = "Folder" }).First;
-    private ILocator HideBtn      => _page.GetByRole(AriaRole.Button, new() { Name = "Hide sidebar" });
-    private ILocator ShowBtn      => _page.GetByRole(AriaRole.Button, new() { Name = "Show sidebar" });
+    private ILocator NewPageBtn   => _page.Locator("aside button:has-text('Page'), aside button:has-text('Сторінка')").First;
+    private ILocator NewFolderBtn => _page.Locator("aside button:has-text('Folder'), aside button:has-text('Папка')").First;
+    private ILocator HideBtn      => _page.Locator("button[aria-label='Hide sidebar'], button[aria-label='Сховати бічну панель']").First;
+    private ILocator ShowBtn      => _page.Locator("button[aria-label='Show sidebar'], button[aria-label='Показати бічну панель']").First;
 
     // ── Actions ────────────────────────────────────────────────────────────
 
@@ -118,9 +118,12 @@ public class SidebarPage(IPage page)
     /// <summary>Clicks a tree item by its visible text.</summary>
     public async Task SelectPageAsync(string title)
     {
-        var locator = _page.GetByText(title);
-        await locator.First.WaitForAsync();
-        await locator.First.ClickAsync();
+        var sidebar = _page.Locator("aside");
+        await sidebar.WaitForAsync(new() { Timeout = 15_000 });
+
+        var locator = sidebar.GetByText(title, new() { Exact = true }).First;
+        await locator.WaitForAsync(new() { Timeout = 15_000 });
+        await locator.ClickAsync();
         // After clicking, wait a bit for the page to load
         await _page.WaitForTimeoutAsync(500);
     }

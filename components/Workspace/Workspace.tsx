@@ -606,8 +606,10 @@ export function Workspace() {
           className={cn(
             'flex w-64 shrink-0 flex-col border-r border-border bg-card shadow-sm',
             'fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-in-out',
-            'md:relative md:z-auto md:translate-x-0',
+            'md:relative md:z-auto',
+            // Mobile: translate based on state. Desktop (md+): always visible
             mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+            'md:translate-x-0',
           )}
         >
           {/* Sidebar header */}

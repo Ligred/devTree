@@ -6,6 +6,8 @@
  */
 
 import { create } from 'zustand';
+import { playRecordingStartSound } from '@/lib/recordingSound';
+import { useSettingsStore } from '@/lib/settingsStore';
 
 type RecordingState = {
   /** Whether any block is currently recording */
@@ -32,6 +34,9 @@ export const useRecordingStore = create<RecordingState>((set) => ({
   cancelRecordingCallback: () => {},
 
   startRecording: (blockId: string, cancelCallback: () => void) => {
+    if (useSettingsStore.getState().recordingStartSoundEnabled) {
+      playRecordingStartSound();
+    }
     set({ isRecording: true, recordingBlockId: blockId, cancelRecordingCallback: cancelCallback });
   },
 

@@ -51,6 +51,8 @@
   "settings.tagsPerPageDescription": "Show the tag bar below each page title for categorising pages",
   "settings.tagsPerBlock": "Block tags",
   "settings.tagsPerBlockDescription": "Show tag labels on individual content blocks for fine-grained annotation",
+  "settings.recordingStartSound": "Recording start sound",
+  "settings.recordingStartSoundDescription": "Play a short notification sound when recording starts",
   "settings.sectionAccount": "Account",
   "settings.profile": "Profile",
   "settings.profileDescription": "Your name and avatar",

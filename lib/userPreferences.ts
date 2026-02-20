@@ -11,6 +11,7 @@ export type UserPreferencesPayload = {
   locale?: 'en' | 'uk';
   tagsPerPageEnabled?: boolean;
   tagsPerBlockEnabled?: boolean;
+  recordingStartSoundEnabled?: boolean;
 };
 
 /**

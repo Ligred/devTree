@@ -80,10 +80,16 @@ type SettingsState = {
    */
   tagsPerBlockEnabled: boolean;
 
+  /**
+   * Whether a short notification sound is played when recording starts.
+   */
+  recordingStartSoundEnabled: boolean;
+
   // ─── Actions ──────────────────────────────────────────────────────────────
 
   setTagsPerPage: (enabled: boolean) => void;
   setTagsPerBlock: (enabled: boolean) => void;
+  setRecordingStartSound: (enabled: boolean) => void;
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -93,9 +99,11 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       tagsPerPageEnabled: true,
       tagsPerBlockEnabled: true,
+      recordingStartSoundEnabled: true,
 
       setTagsPerPage: (tagsPerPageEnabled) => set({ tagsPerPageEnabled }),
       setTagsPerBlock: (tagsPerBlockEnabled) => set({ tagsPerBlockEnabled }),
+      setRecordingStartSound: (recordingStartSoundEnabled) => set({ recordingStartSoundEnabled }),
     }),
     {
       /**

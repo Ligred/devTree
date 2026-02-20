@@ -10,7 +10,7 @@ public class EditorPage(IPage page)
     // ── Selectors ──────────────────────────────────────────────────────────
 
     private ILocator AddBlockBtn =>
-        _page.GetByRole(AriaRole.Button, new() { Name = "Add block" });
+        _page.Locator("button[aria-label='Add block'], button[aria-label='Додати блок']").First;
 
     private ILocator BlockPickerPopover =>
         _page.Locator("[data-radix-popper-content-wrapper]").Last;
@@ -22,7 +22,7 @@ public class EditorPage(IPage page)
     {
         await AddBlockBtn.ClickAsync();
         await BlockPickerPopover.WaitForAsync();
-        await _page.GetByRole(AriaRole.Button, new() { Name = blockLabel }).ClickAsync();
+        await BlockPickerPopover.GetByRole(AriaRole.Button, new() { Name = blockLabel, Exact = true }).ClickAsync();
         await _page.WaitForTimeoutAsync(200);
         // New blocks start in view mode — activate edit mode so tests can interact with content.
         await EnterEditModeForLastBlockAsync();
@@ -38,7 +38,7 @@ public class EditorPage(IPage page)
         if (count == 0) return;
         var lastBlock = wrappers.Nth(count - 1);
         await lastBlock.HoverAsync();
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Edit block" }).Last.ClickAsync();
+        await _page.Locator("button[aria-label='Edit block'], button[aria-label='Редагувати блок']").Last.ClickAsync();
         await _page.WaitForTimeoutAsync(150);
     }
 
@@ -170,7 +170,7 @@ public class EditorPage(IPage page)
     {
         var wrappers = _page.Locator(".group\\/block");
         await wrappers.Nth(index).HoverAsync();
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Delete block" }).Nth(index).ClickAsync();
+        await _page.Locator("button[aria-label='Delete block'], button[aria-label='Видалити блок']").Nth(index).ClickAsync();
     }
 
     // ── Queries ────────────────────────────────────────────────────────────

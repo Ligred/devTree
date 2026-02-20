@@ -137,7 +137,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const { data: session, update: updateSession } = useSession();
-  const { tagsPerPageEnabled, tagsPerBlockEnabled, setTagsPerPage, setTagsPerBlock } =
+  const {
+    tagsPerPageEnabled,
+    tagsPerBlockEnabled,
+    recordingStartSoundEnabled,
+    setTagsPerPage,
+    setTagsPerBlock,
+    setRecordingStartSound,
+  } =
     useSettingsStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -538,6 +545,20 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     void saveUserPreferences({ tagsPerBlockEnabled: v });
                   }}
                   label={t('settings.tagsPerBlock')}
+                />
+              </SettingRow>
+
+              <SettingRow
+                label={t('settings.recordingStartSound')}
+                description={t('settings.recordingStartSoundDescription')}
+              >
+                <Switch
+                  checked={recordingStartSoundEnabled}
+                  onChange={(v) => {
+                    setRecordingStartSound(v);
+                    void saveUserPreferences({ recordingStartSoundEnabled: v });
+                  }}
+                  label={t('settings.recordingStartSound')}
                 />
               </SettingRow>
                 </div>

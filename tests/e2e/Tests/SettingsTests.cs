@@ -72,8 +72,17 @@ public class SettingsTests : E2ETestBase
     public async Task ThemeButtons_AllPresent(string themeName)
     {
         await App.OpenSettingsAsync();
+        var appearanceTab = Page.GetByRole(AriaRole.Dialog).Locator("button:has-text('Appearance'), button:has-text('Зовнішній вигляд')").First;
+        await appearanceTab.ClickAsync();
 
-        var btn = Page.GetByRole(AriaRole.Button, new() { Name = themeName });
+        var themeSelector = themeName switch
+        {
+            "Light" => "button:has-text('Light'), button:has-text('Світла')",
+            "Dark" => "button:has-text('Dark'), button:has-text('Темна')",
+            "System" => "button:has-text('System'), button:has-text('Системна')",
+            _ => $"button:has-text('{themeName}')",
+        };
+        var btn = Page.GetByRole(AriaRole.Dialog).Locator(themeSelector).First;
         await Expect(btn).ToBeVisibleAsync();
     }
 
@@ -114,8 +123,16 @@ public class SettingsTests : E2ETestBase
     public async Task LanguageButtons_AllPresent(string language)
     {
         await App.OpenSettingsAsync();
+        var appearanceTab = Page.GetByRole(AriaRole.Dialog).Locator("button:has-text('Appearance'), button:has-text('Зовнішній вигляд')").First;
+        await appearanceTab.ClickAsync();
 
-        var btn = Page.GetByRole(AriaRole.Button, new() { Name = language });
+        var languageSelector = language switch
+        {
+            "English" => "button:has-text('English'), button:has-text('Англійська')",
+            "Ukrainian" => "button:has-text('Ukrainian'), button:has-text('Українська')",
+            _ => $"button:has-text('{language}')",
+        };
+        var btn = Page.GetByRole(AriaRole.Dialog).Locator(languageSelector).First;
         await Expect(btn).ToBeVisibleAsync();
     }
 }

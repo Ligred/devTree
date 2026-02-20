@@ -20,7 +20,7 @@ function SyncUserPreferences() {
   const { data: session, status } = useSession();
   const { setTheme } = useTheme();
   const { setLocale } = useI18n();
-  const { setTagsPerPage, setTagsPerBlock } = useSettingsStore();
+  const { setTagsPerPage, setTagsPerBlock, setRecordingStartSound } = useSettingsStore();
   const appliedRef = useRef(false);
 
   useEffect(() => {
@@ -32,8 +32,9 @@ function SyncUserPreferences() {
       if (prefs.locale) setLocale(prefs.locale);
       if (typeof prefs.tagsPerPageEnabled === 'boolean') setTagsPerPage(prefs.tagsPerPageEnabled);
       if (typeof prefs.tagsPerBlockEnabled === 'boolean') setTagsPerBlock(prefs.tagsPerBlockEnabled);
+      if (typeof prefs.recordingStartSoundEnabled === 'boolean') setRecordingStartSound(prefs.recordingStartSoundEnabled);
     });
-  }, [status, session?.user, setTheme, setLocale, setTagsPerPage, setTagsPerBlock]);
+  }, [status, session?.user, setTheme, setLocale, setTagsPerPage, setTagsPerBlock, setRecordingStartSound]);
 
   return null;
 }
