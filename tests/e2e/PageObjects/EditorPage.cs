@@ -7,6 +7,19 @@ public class EditorPage(IPage page)
 {
     private readonly IPage _page = page;
 
+    private static readonly Dictionary<string, string> BlockLabelToType = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Text"] = "text",
+        ["Code"] = "code",
+        ["Table"] = "table",
+        ["Link"] = "link",
+        ["Checklist"] = "agenda",
+        ["Image"] = "image",
+        ["Audio"] = "audio",
+        ["Diagram"] = "diagram",
+        ["Whiteboard"] = "whiteboard",
+    };
+
     // ── Selectors ──────────────────────────────────────────────────────────
 
     private ILocator AddBlockBtn =>
@@ -22,7 +35,12 @@ public class EditorPage(IPage page)
     {
         await AddBlockBtn.ClickAsync();
         await BlockPickerPopover.WaitForAsync();
-        await BlockPickerPopover.GetByRole(AriaRole.Button, new() { Name = blockLabel, Exact = true }).ClickAsync();
+        if (!BlockLabelToType.TryGetValue(blockLabel, out var blockType))
+        {
+            throw new ArgumentException($"Unsupported block label: {blockLabel}", nameof(blockLabel));
+        }
+
+        await BlockPickerPopover.GetByTestId($"block-picker-option-{blockType}").ClickAsync();
         await _page.WaitForTimeoutAsync(200);
         // New blocks start in view mode — activate edit mode so tests can interact with content.
         await EnterEditModeForLastBlockAsync();

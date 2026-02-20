@@ -151,6 +151,7 @@ export function MainContent({
           <button
             type="button"
             aria-label={t('main.savePage')}
+            data-testid="save-page-button"
             className="inline-flex min-w-22 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
             onClick={onSave}
             disabled={saved}
@@ -340,6 +341,7 @@ function TagBar({ tags, onChange }: TagBarProps) {
           <button
             type="button"
             aria-label={`Remove tag ${tag}`}
+            data-testid={`page-tag-remove-${tag}`}
             className="rounded-full opacity-60 hover:opacity-100"
             onClick={() => removeTag(tag)}
           >
@@ -352,6 +354,7 @@ function TagBar({ tags, onChange }: TagBarProps) {
         ref={inputRef}
         id={inputId}
         type="text"
+        data-testid="page-tag-input"
         aria-label={t('main.addTag')}
         value={inputValue}
         placeholder={tags.length === 0 ? t('main.addTag') : ''}

@@ -277,6 +277,7 @@ export default function LoginPage() {
                 </label>
                 <input
                   id="auth-name"
+                  data-testid="auth-name"
                   type="text"
                   autoComplete="name"
                   value={name}
@@ -293,6 +294,7 @@ export default function LoginPage() {
               </label>
               <input
                 id="auth-email"
+                data-testid="auth-email"
                 type="email"
                 autoComplete="email"
                 value={email}
@@ -320,6 +322,7 @@ export default function LoginPage() {
                 {mode === 'login' && (
                   <Link
                     href="/forgot-password"
+                    data-testid="login-forgot-link"
                     className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                   >
                     {t('auth.forgotPassword')}
@@ -329,6 +332,7 @@ export default function LoginPage() {
               <div className="relative">
                 <input
                   id="auth-password"
+                  data-testid="auth-password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                   value={password}
@@ -395,7 +399,7 @@ export default function LoginPage() {
               )}
             </div>
 
-            <button type="submit" disabled={loading} className={`${btnBase} bg-primary text-primary-foreground hover:opacity-90`}>
+            <button type="submit" data-testid="auth-submit" disabled={loading} className={`${btnBase} bg-primary text-primary-foreground hover:opacity-90`}>
               {loading ? primaryLoading : primaryLabel}
             </button>
           </form>
@@ -438,6 +442,7 @@ export default function LoginPage() {
                 {t('auth.noAccount')}{' '}
                 <button
                   type="button"
+                  data-testid="auth-switch-register"
                   className="font-medium text-foreground underline-offset-2 hover:underline"
                   onClick={() => switchMode('register')}
                 >
@@ -449,6 +454,7 @@ export default function LoginPage() {
                 {t('auth.hasAccount')}{' '}
                 <button
                   type="button"
+                  data-testid="auth-switch-login"
                   className="font-medium text-foreground underline-offset-2 hover:underline"
                   onClick={() => switchMode('login')}
                 >

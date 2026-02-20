@@ -74,6 +74,7 @@ export function BlockPicker({ onSelect, compact = false }: BlockPickerProps) {
               <Popover.Close key={type} asChild>
                 <button
                   type="button"
+                  data-testid={`block-picker-option-${type}`}
                   className="flex flex-col items-start gap-1 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
                   onClick={() => onSelect(type)}
                 >

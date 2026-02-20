@@ -13,15 +13,15 @@ public class LoginPage(IPage page)
 
     private string LoginUrl => BaseUrl.TrimEnd('/') + "/login";
 
-    // ── Selectors (English UI; tests run with en-US locale) ──────────────────
+    // ── Selectors (locale-agnostic) ───────────────────────────────────────────
 
-    private ILocator EmailInput    => _page.GetByLabel("Email");
-    private ILocator PasswordInput => _page.GetByRole(AriaRole.Textbox, new() { Name = "Password" });
-    private ILocator SignInButton  => _page.GetByRole(AriaRole.Button, new() { Name = "Sign in" });
-    private ILocator SignUpButton  => _page.GetByRole(AriaRole.Button, new() { Name = "Sign up" });
-    private ILocator CreateAccountButton => _page.GetByRole(AriaRole.Button, new() { Name = "Create account" });
+    private ILocator EmailInput    => _page.GetByTestId("auth-email");
+    private ILocator PasswordInput => _page.GetByTestId("auth-password");
+    private ILocator SubmitButton  => _page.GetByTestId("auth-submit");
+    private ILocator RegisterSwitchButton => _page.GetByTestId("auth-switch-register");
+    private ILocator LoginSwitchButton => _page.GetByTestId("auth-switch-login");
     private ILocator ErrorAlert    => _page.Locator("[role='alert']").Filter(new() { HasText = "" }).First;
-    private ILocator ForgotLink    => _page.GetByRole(AriaRole.Link, new() { Name = "Forgot?" });
+    private ILocator ForgotLink    => _page.GetByTestId("login-forgot-link");
 
     // ── Navigation ─────────────────────────────────────────────────────────
 
@@ -48,8 +48,8 @@ public class LoginPage(IPage page)
     {
         await FillEmailAsync(email);
         await FillPasswordAsync(password);
-        await SignInButton.WaitForAsync(new() { Timeout = 10_000 });
-        await SignInButton.ClickAsync();
+        await SubmitButton.WaitForAsync(new() { Timeout = 10_000 });
+        await SubmitButton.ClickAsync();
     }
 
     /// <summary>Switch to register mode and submit with email + password.</summary>
@@ -59,21 +59,21 @@ public class LoginPage(IPage page)
         await FillEmailAsync(email);
         await FillPasswordAsync(password);
         if (!string.IsNullOrEmpty(name))
-            await _page.GetByLabel("Name (optional)").FillAsync(name);
-        await CreateAccountButton.WaitForAsync(new() { Timeout = 5_000 });
-        await CreateAccountButton.ClickAsync();
+            await _page.GetByTestId("auth-name").FillAsync(name);
+        await SubmitButton.WaitForAsync(new() { Timeout = 5_000 });
+        await SubmitButton.ClickAsync();
     }
 
     public async Task SwitchToRegisterAsync()
     {
-        await SignUpButton.ClickAsync();
+        await RegisterSwitchButton.ClickAsync();
         await _page.WaitForTimeoutAsync(200);
     }
 
     /// <summary>Switch from register back to login (click "Log in" link).</summary>
     public async Task SwitchToLoginAsync()
     {
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Log in" }).ClickAsync();
+        await LoginSwitchButton.ClickAsync();
         await _page.WaitForTimeoutAsync(200);
     }
 
@@ -85,8 +85,8 @@ public class LoginPage(IPage page)
 
     // ── Queries ─────────────────────────────────────────────────────────────
 
-    public Task<bool> IsSignInButtonVisibleAsync() => SignInButton.IsVisibleAsync();
-    public Task<bool> IsCreateAccountVisibleAsync() => CreateAccountButton.IsVisibleAsync();
+    public Task<bool> IsSignInButtonVisibleAsync() => SubmitButton.IsVisibleAsync();
+    public Task<bool> IsCreateAccountVisibleAsync() => SubmitButton.IsVisibleAsync();
     public Task<string> GetErrorTextAsync() => ErrorAlert.InnerTextAsync();
     public Task<bool> IsErrorVisibleAsync() => ErrorAlert.IsVisibleAsync();
 }

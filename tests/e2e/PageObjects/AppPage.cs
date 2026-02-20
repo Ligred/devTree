@@ -26,11 +26,11 @@ public class AppPage(IPage page)
     /// <summary>Clicks the Save button in the header.</summary>
     public async Task SaveAsync()
     {
-        var saveBtn = _page.GetByRole(AriaRole.Button, new() { Name = "Save page" });
+        var saveBtn = _page.GetByTestId("save-page-button");
         await saveBtn.ClickAsync();
         // Wait for "Saved" feedback
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Save page", Disabled = true })
-                   .WaitForAsync(new() { Timeout = 3_000 });
+        await _page.Locator("[data-testid='save-page-button']:disabled").First
+            .WaitForAsync(new() { Timeout = 3_000 });
     }
 
     /// <summary>Opens the Settings dialog via the user-menu avatar button.</summary>

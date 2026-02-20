@@ -297,6 +297,7 @@ export function DiagramBlock({ content, onChange, isEditing = false }: DiagramBl
                 <button
                   key={t_}
                   type="button"
+                  data-testid={t_ === 'preview' ? 'diagram-tab-preview' : 'diagram-tab-edit'}
                   onClick={() => setTab(t_)}
                   className={cn(
                     'flex items-center gap-1 rounded px-2.5 py-0.5 text-xs font-medium transition-colors',
@@ -317,6 +318,7 @@ export function DiagramBlock({ content, onChange, isEditing = false }: DiagramBl
             <div className="relative">
               <button
                 type="button"
+                data-testid="diagram-type-picker"
                 onClick={() => setTypePickerOpen((v) => !v)}
                 className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               >
@@ -333,6 +335,7 @@ export function DiagramBlock({ content, onChange, isEditing = false }: DiagramBl
                     <button
                       key={dt.id}
                       type="button"
+                      data-testid={`diagram-type-option-${dt.id}`}
                       className="flex w-full items-center justify-between px-3 py-1.5 text-xs text-foreground hover:bg-accent"
                       onClick={() => {
                         onChange({ code: dt.template });
@@ -362,6 +365,7 @@ export function DiagramBlock({ content, onChange, isEditing = false }: DiagramBl
         <div className="flex items-center gap-0.5">
           <button
             type="button"
+            data-testid="diagram-zoom-out"
             onClick={zoomOut}
             disabled={zoom <= ZOOM_MIN}
             title={t('diagram.zoomOut')}
@@ -371,6 +375,7 @@ export function DiagramBlock({ content, onChange, isEditing = false }: DiagramBl
           </button>
           <button
             type="button"
+            data-testid="diagram-zoom-reset"
             onClick={zoomReset}
             title={t('diagram.zoomReset')}
             className="min-w-10 rounded px-1 py-0.5 text-center font-mono text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -379,6 +384,7 @@ export function DiagramBlock({ content, onChange, isEditing = false }: DiagramBl
           </button>
           <button
             type="button"
+            data-testid="diagram-zoom-in"
             onClick={zoomIn}
             disabled={zoom >= ZOOM_MAX}
             title={t('diagram.zoomIn')}
@@ -397,6 +403,7 @@ export function DiagramBlock({ content, onChange, isEditing = false }: DiagramBl
           <div className="border-b border-border p-3 sm:border-b-0 sm:border-r">
             <textarea
               aria-label={t('diagram.placeholder')}
+              data-testid="diagram-editor-textarea"
               className="h-44 w-full resize-none rounded-lg border border-border bg-background p-2.5 font-mono text-xs leading-relaxed text-foreground outline-none focus:ring-1 focus:ring-indigo-500/50"
               value={content.code}
               placeholder={t('diagram.placeholder')}

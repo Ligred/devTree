@@ -23,14 +23,14 @@ public class LoginTests : E2ETestBase
     public async Task LoginPage_Loads_ShowsSignInForm()
     {
         Assert.That(await Login.IsSignInButtonVisibleAsync(), Is.True);
-        await Expect(Page.GetByLabel("Email")).ToBeVisibleAsync();
-        await Expect(Page.GetByRole(AriaRole.Textbox, new() { Name = "Password" })).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("auth-email")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("auth-password")).ToBeVisibleAsync();
     }
 
     [Test]
     public async Task LoginPage_ShowsForgotPasswordLink()
     {
-        var link = Page.GetByRole(AriaRole.Link, new() { Name = "Forgot?" });
+        var link = Page.GetByTestId("login-forgot-link");
         await Expect(link).ToBeVisibleAsync();
         await Expect(link).ToHaveAttributeAsync("href", "/forgot-password");
     }
@@ -38,7 +38,7 @@ public class LoginTests : E2ETestBase
     [Test]
     public async Task LoginPage_ShowsSignUpSwitch()
     {
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "Sign up" })).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("auth-switch-register")).ToBeVisibleAsync();
     }
 
     // ── Switch to register ──────────────────────────────────────────────────
@@ -48,7 +48,7 @@ public class LoginTests : E2ETestBase
     {
         await Login.SwitchToRegisterAsync();
         Assert.That(await Login.IsCreateAccountVisibleAsync(), Is.True);
-        await Expect(Page.GetByPlaceholder("Create a strong password")).ToBeVisibleAsync();
+        await Expect(Page.GetByTestId("auth-name")).ToBeVisibleAsync();
     }
 
     [Test]
@@ -62,12 +62,11 @@ public class LoginTests : E2ETestBase
     // ── Invalid credentials ─────────────────────────────────────────────────
 
     [Test]
-    [Ignore("Sign in button sometimes not available in test environment")]
     public async Task LoginPage_InvalidCredentials_ShowsError()
     {
         await Login.SubmitLoginAsync("wrong@example.com", "wrongpassword");
 
-        await Expect(Page.GetByRole(AriaRole.Alert).Filter(new() { HasText = "Invalid" })).ToBeVisibleAsync(new() { Timeout = 5_000 });
+        await Expect(Page.GetByRole(AriaRole.Alert).First).ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
 
     // ── Language toggle ─────────────────────────────────────────────────────
@@ -89,20 +88,19 @@ public class LoginTests : E2ETestBase
         await Expect(Page.GetByRole(AriaRole.Button).Filter(new() { HasText = "UA" })).ToBeVisibleAsync();
     }
 
-    // ── Valid login (requires DEVTREE_E2E_EMAIL and DEVTREE_E2E_PASSWORD) ───
+    // ── Valid login (self-registered deterministic account) ─────────────────
 
     [Test]
-    [Explicit("Requires DEVTREE_E2E_EMAIL and DEVTREE_E2E_PASSWORD; run manually or in CI with env set.")]
     public async Task LoginPage_ValidCredentials_RedirectsToApp()
     {
-        var email = Environment.GetEnvironmentVariable("DEVTREE_E2E_EMAIL");
-        var password = Environment.GetEnvironmentVariable("DEVTREE_E2E_PASSWORD");
-        Assume.That(email, Is.Not.Null.And.Not.Empty, "DEVTREE_E2E_EMAIL must be set");
-        Assume.That(password, Is.Not.Null.And.Not.Empty, "DEVTREE_E2E_PASSWORD must be set");
+        var email = $"e2e.login.{Guid.NewGuid():N}@devtree.local";
+        const string password = "E2E!Passw0rd123";
 
-        await Login.SubmitLoginAsync(email!, password!);
+        await Login.SubmitRegisterAsync(email, password, "E2E Login User");
+        await Login.SubmitLoginAsync(email, password);
 
         await Expect(Page).ToHaveURLAsync(new System.Text.RegularExpressions.Regex("^(?!.*/login)"), new() { Timeout = 10_000 });
-        await Expect(Page.GetByRole(AriaRole.Button, new() { Name = "User menu" })).ToBeVisibleAsync(new() { Timeout = 5_000 });
+        await Expect(Page.Locator("button[aria-label='User menu'], button[aria-label='Меню користувача']").First)
+            .ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
 }

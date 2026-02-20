@@ -20,7 +20,7 @@ public class TagTests : E2ETestBase
     public async Task TagBar_IsVisibleOnPageOpen()
     {
         // The tag input is always rendered below the page title
-        var tagInput = Page.GetByRole(AriaRole.Textbox, new() { Name = "Add tag…" });
+        var tagInput = Page.GetByTestId("page-tag-input");
         await Expect(tagInput).ToBeVisibleAsync();
     }
 
@@ -37,7 +37,7 @@ public class TagTests : E2ETestBase
     [Test]
     public async Task AddTag_AppearsAsChip()
     {
-        var tagInput = Page.GetByRole(AriaRole.Textbox, new() { Name = "Add tag…" });
+        var tagInput = Page.GetByTestId("page-tag-input");
         await tagInput.ClickAsync();
         await tagInput.FillAsync("algorithms");
         await tagInput.PressAsync("Enter");
@@ -49,7 +49,7 @@ public class TagTests : E2ETestBase
     [Test]
     public async Task AddTag_IsCasedToLowercase()
     {
-        var tagInput = Page.GetByRole(AriaRole.Textbox, new() { Name = "Add tag…" });
+        var tagInput = Page.GetByTestId("page-tag-input");
         await tagInput.ClickAsync();
         await tagInput.FillAsync("TypeScript");
         await tagInput.PressAsync("Enter");
@@ -61,10 +61,10 @@ public class TagTests : E2ETestBase
     public async Task AddTag_ByCommaDelimiter()
     {
         // Navigate to a fresh page with no tags
-        await App.Sidebar.CreatePageAsync("Tag Test Page");
+        await App.Sidebar.CreatePageAsync();
         await Page.WaitForTimeoutAsync(300);
 
-        var tagInput = Page.GetByRole(AriaRole.Textbox, new() { Name = "Add tag…" });
+        var tagInput = Page.GetByTestId("page-tag-input");
         await tagInput.ClickAsync();
         await tagInput.FillAsync("performance");
         // Simulate comma key — should commit the tag

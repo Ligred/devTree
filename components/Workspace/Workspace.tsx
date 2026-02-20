@@ -632,6 +632,7 @@ export function Workspace() {
             <button
               type="button"
               aria-label={t('sidebar.newPage')}
+              data-testid="sidebar-new-page"
               className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               onClick={() => createFile(ROOT_ID)}
             >
@@ -641,6 +642,7 @@ export function Workspace() {
             <button
               type="button"
               aria-label={t('sidebar.newFolder')}
+              data-testid="sidebar-new-folder"
               className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               onClick={() => createFolder(ROOT_ID)}
             >
@@ -665,6 +667,7 @@ export function Workspace() {
               <Search size={14} className="shrink-0 text-muted-foreground" />
               <input
                 ref={searchInputRef}
+                data-testid="sidebar-search-input"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -677,6 +680,7 @@ export function Workspace() {
                   onClick={() => setSearchQuery('')}
                   className="text-muted-foreground hover:text-foreground"
                   aria-label="Clear search"
+                  data-testid="sidebar-clear-search"
                 >
                   <X size={12} />
                 </button>

@@ -10,7 +10,6 @@ namespace DevTree.E2E.Setup;
 [Parallelizable(ParallelScope.Self)]
 public abstract class E2ETestBase : PageTest
 {
-    private static readonly string FallbackE2EEmail = $"e2e.{Guid.NewGuid():N}@devtree.local";
     private const string FallbackE2EPassword = "E2E!Passw0rd123";
 
     /// <summary>The base URL of the running DevTree app.</summary>
@@ -44,16 +43,20 @@ public abstract class E2ETestBase : PageTest
             {
                 var email = Environment.GetEnvironmentVariable("DEVTREE_E2E_EMAIL");
                 var password = Environment.GetEnvironmentVariable("DEVTREE_E2E_PASSWORD");
+                var hasProvidedCredentials = !string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(password);
 
-                var effectiveEmail = string.IsNullOrWhiteSpace(email) ? FallbackE2EEmail : email;
-                var effectivePassword = string.IsNullOrWhiteSpace(password) ? FallbackE2EPassword : password;
+                var effectiveEmail = hasProvidedCredentials
+                    ? email!
+                    : $"e2e.{Guid.NewGuid():N}@devtree.local";
+                var effectivePassword = hasProvidedCredentials
+                    ? password!
+                    : FallbackE2EPassword;
 
-                await EnsureAuthenticatedAsync(effectiveEmail, effectivePassword);
+                await EnsureAuthenticatedAsync(effectiveEmail, effectivePassword, hasProvidedCredentials);
             }
             catch (Exception ex)
             {
-                // Auth failed, but don't block the test - continue anyway
-                System.Diagnostics.Debug.WriteLine($"Auth setup failed: {ex.Message}");
+                throw new AssertionException($"Auth setup failed: {ex.Message}");
             }
         }
 
@@ -66,42 +69,49 @@ public abstract class E2ETestBase : PageTest
         ");
     }
 
-    private async Task EnsureAuthenticatedAsync(string email, string password)
+    private async Task EnsureAuthenticatedAsync(string email, string password, bool hasProvidedCredentials)
     {
         var loginPage = new LoginPage(Page);
 
-        try
+        if (!Page.Url.Contains("/login"))
+            return;
+
+        // Try login first only when caller provided existing credentials.
+        if (hasProvidedCredentials)
         {
-            // First try regular login (works for pre-seeded/provided credentials).
-            // Use a short timeout since we might not actually be on the login form
-            var signInBtn = Page.GetByRole(AriaRole.Button, new() { Name = "Sign in" });
-            await signInBtn.WaitForAsync(new() { Timeout = 5_000 });
-            
-            await loginPage.SubmitLoginAsync(email, password);
-            if (await WaitUntilLoggedInAsync(timeoutMs: 10_000))
-                return;
-        }
-        catch (PlaywrightException)
-        {
-            // Button not found or other playwright error - continue to registration
+            try
+            {
+                await loginPage.SubmitLoginAsync(email, password);
+                if (await WaitUntilLoggedInAsync(timeoutMs: 8_000))
+                    return;
+            }
+            catch (PlaywrightException)
+            {
+                // Continue to register flow
+            }
         }
 
-        try
+        // Register a user and then sign in. Retry once with a new email if needed.
+        for (var attempt = 0; attempt < 2; attempt++)
         {
-            // Login failed: create account and then login with the same credentials.
-            await loginPage.SubmitRegisterAsync(email, password, "E2E User");
-            await loginPage.SubmitLoginAsync(email, password);
+            var registerEmail = hasProvidedCredentials && attempt == 0
+                ? email
+                : $"e2e.{Guid.NewGuid():N}@devtree.local";
 
-            await Page.WaitForURLAsync(
-                url => !url.Contains("/login"),
-                new() { Timeout = 10_000 }
-            );
+            try
+            {
+                await loginPage.SubmitRegisterAsync(registerEmail, password, "E2E User");
+                await loginPage.SubmitLoginAsync(registerEmail, password);
+                if (await WaitUntilLoggedInAsync(timeoutMs: 12_000))
+                    return;
+            }
+            catch (PlaywrightException)
+            {
+                // Try the next attempt.
+            }
         }
-        catch (PlaywrightException)
-        {
-            // If registration/login also fails, just continue anyways.
-            // The test might be running against an already-logged-in session.
-        }
+
+        throw new PlaywrightException("Unable to authenticate in E2E setup.");
     }
 
     private async Task<bool> WaitUntilLoggedInAsync(float timeoutMs)

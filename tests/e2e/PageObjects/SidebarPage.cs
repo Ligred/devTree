@@ -9,8 +9,8 @@ public class SidebarPage(IPage page)
 
     // ── Selectors ──────────────────────────────────────────────────────────
 
-    private ILocator NewPageBtn   => _page.Locator("aside button:has-text('Page'), aside button:has-text('Сторінка')").First;
-    private ILocator NewFolderBtn => _page.Locator("aside button:has-text('Folder'), aside button:has-text('Папка')").First;
+    private ILocator NewPageBtn   => _page.GetByTestId("sidebar-new-page").First;
+    private ILocator NewFolderBtn => _page.GetByTestId("sidebar-new-folder").First;
     private ILocator HideBtn      => _page.Locator("button[aria-label='Hide sidebar'], button[aria-label='Сховати бічну панель']").First;
     private ILocator ShowBtn      => _page.Locator("button[aria-label='Show sidebar'], button[aria-label='Показати бічну панель']").First;
 
@@ -50,12 +50,9 @@ public class SidebarPage(IPage page)
         // Wait for the new item to appear in the tree
         await _page.WaitForTimeoutAsync(300);
 
-        // NOTE: Pages cannot be renamed inline in the sidebar like folders can.
-        // Page titles must be changed via the PageTitle editor component.
-        // If a specific title is desired, the test should update it in the editor
-        // after creating the page.
-        var pageText = string.IsNullOrEmpty(title) ? "Untitled" : title;
-        var locator = _page.GetByText(pageText).First;
+        // NOTE: Pages are created as "Untitled" in the sidebar.
+        // Optional `title` is intentionally ignored to keep API compatibility.
+        var locator = _page.GetByText("Untitled").First;
         await locator.WaitForAsync(new() { Timeout = 5_000 });
         return locator;
     }
@@ -103,8 +100,8 @@ public class SidebarPage(IPage page)
 
         // Clear any existing text and type the new name
         await input.ClearAsync();
-        await input.TypeAsync(newName);
-        
+        await input.PressSequentiallyAsync(newName);
+
         // Wait for text to be entered
         await _page.WaitForTimeoutAsync(150);
         

@@ -210,7 +210,10 @@ public class EditorTests : E2ETestBase
     [Test]
     public async Task SaveButton_ShowsSavedFeedback()
     {
-        var saveBtn = Page.GetByRole(AriaRole.Button, new() { Name = "Save page" });
+        await App.Editor.AddBlockAsync("Text");
+        await App.Editor.TypeInLastTextBlockAsync("dirty");
+
+        var saveBtn = Page.GetByTestId("save-page-button");
         await Expect(saveBtn).ToBeEnabledAsync();
 
         await App.SaveAsync();
