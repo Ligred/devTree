@@ -17,6 +17,7 @@ type AudioBlockProps = Readonly<{
   onChange: (content: AudioBlockContent) => void;
   isEditing: boolean;
   enterEdit: () => void;
+  exitEdit?: () => void;
   blockId?: string;
 }>;
 
@@ -42,7 +43,7 @@ function LevelBars({
   );
 }
 
-export function AudioBlock({ content, onChange, isEditing, enterEdit, blockId }: AudioBlockProps) {
+export function AudioBlock({ content, onChange, isEditing, enterEdit, exitEdit, blockId }: AudioBlockProps) {
   const { t } = useI18n();
   const { startRecording: startRecordingStore, stopRecording: stopRecordingStore } = useRecordingStore();
   const { confirm } = useConfirmation();
@@ -63,13 +64,6 @@ export function AudioBlock({ content, onChange, isEditing, enterEdit, blockId }:
     if (isEditing) {
       setDraftUrl(url);
       setDraftCaption(caption ?? '');
-    } else {
-      // Leaving edit mode: auto-save any changes.
-      const trimmedUrl = draftUrl.trim();
-      const trimmedCaption = draftCaption.trim();
-      if (trimmedUrl && (trimmedUrl !== url || trimmedCaption !== (caption ?? ''))) {
-        onChange({ url: trimmedUrl, caption: trimmedCaption || undefined });
-      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing]);
@@ -225,6 +219,32 @@ export function AudioBlock({ content, onChange, isEditing, enterEdit, blockId }:
             onChange={(e) => setDraftCaption(e.target.value)}
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-muted-foreground hover:bg-accent"
+              onClick={() => {
+                setDraftUrl(url);
+                setDraftCaption(caption ?? '');
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              onClick={() => {
+                const trimmedUrl = draftUrl.trim();
+                const trimmedCaption = draftCaption.trim();
+                if (trimmedUrl) {
+                  onChange({ url: trimmedUrl, caption: trimmedCaption || undefined });
+                  exitEdit?.();
+                }
+              }}
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
     );

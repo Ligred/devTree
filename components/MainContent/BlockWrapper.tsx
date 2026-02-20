@@ -206,11 +206,11 @@ type BlockWrapperProps = Readonly<{
    * WHY a render prop instead of `children: React.ReactNode`?
    *   `isEditing` lives in BlockWrapper's state. Passing it to the block
    *   content requires either cloneElement (fragile) or a render prop (clean).
-   *   `renderContent(isEditing, isDragging, enterEdit)` gives the caller full control.
+   *   `renderContent(isEditing, isDragging, enterEdit, exitEdit)` gives the caller full control.
    *   isDragging is passed so content can unmount heavy editors (e.g. Monaco)
    *   during drag and avoid "domNode" / "InstantiationService disposed" errors.
    */
-  renderContent: (isEditing: boolean, isDragging: boolean, enterEdit: () => void) => React.ReactNode;
+  renderContent: (isEditing: boolean, isDragging: boolean, enterEdit: () => void, exitEdit: () => void) => React.ReactNode;
   onDelete: () => void;
   onAddAfter: (type: BlockType) => void;
   onToggleColSpan: () => void;
@@ -350,7 +350,7 @@ export function BlockWrapper({
       )}
 
       {/* Block content — rendered via render prop so isEditing/isDragging can be threaded in */}
-      {renderContent(isEditing, isDragging, () => setIsEditing(true))}
+      {renderContent(isEditing, isDragging, () => setIsEditing(true), () => setIsEditing(false))}
     </div>
   );
 }

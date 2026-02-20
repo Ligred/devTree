@@ -13,6 +13,8 @@ public class SidebarTests : E2ETestBase
     [Test]
     public async Task App_LoadsSuccessfully_ShowsSidebar()
     {
+        // Wait for sidebar to be visible
+        await App.Sidebar.WaitForVisibleAsync();
         Assert.That(await App.Sidebar.IsVisibleAsync(), Is.True,
             "Sidebar should be visible on initial load.");
     }

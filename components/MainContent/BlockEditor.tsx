@@ -350,13 +350,14 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
                 onToggleColSpan={() => toggleColSpan(block.id)}
                 onTagsChange={(tags) => updateBlockTags(block.id, tags)}
                 showBlockTags={showBlockTags}
-                renderContent={(isEditing, isDragging, enterEdit) => (
+                renderContent={(isEditing, isDragging, enterEdit, exitEdit) => (
                   <BlockContent
                     block={block}
                     onChange={(content) => updateBlock(block.id, content)}
                     isEditing={isEditing}
                     isDragging={isDragging || isDragActive}
                     enterEdit={enterEdit}
+                    exitEdit={exitEdit}
                   />
                 )}
               />
@@ -469,6 +470,7 @@ function BlockContent({
   isEditing,
   isDragging = false,
   enterEdit,
+  exitEdit,
 }: Readonly<{
   block: Block;
   onChange: (content: BlockContent) => void;
@@ -477,6 +479,8 @@ function BlockContent({
   isDragging?: boolean;
   /** Callback to force the block into edit mode (from inside the block). */
   enterEdit: () => void;
+  /** Callback to exit edit mode (from inside the block). */
+  exitEdit: () => void;
 }>) {
   const { type, content } = block;
 
@@ -507,6 +511,7 @@ function BlockContent({
           onChange={onChange}
           isEditing={isEditing}
           enterEdit={enterEdit}
+          exitEdit={exitEdit}
         />
       );
     case 'diagram':

@@ -134,4 +134,11 @@ public class SidebarPage(IPage page)
     /// <summary>Returns true when the sidebar panel is visible.</summary>
     public async Task<bool> IsVisibleAsync() =>
         await _page.Locator("aside").IsVisibleAsync();
+
+    /// <summary>Waits for the sidebar to be visible.</summary>
+    public async Task WaitForVisibleAsync()
+    {
+        await _page.Locator("aside").WaitForAsync(new() { Timeout = 10_000 });
+        await _page.Locator("aside").IsVisibleAsync();
+    }
 }
