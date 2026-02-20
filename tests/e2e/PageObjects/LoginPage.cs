@@ -48,6 +48,7 @@ public class LoginPage(IPage page)
     {
         await FillEmailAsync(email);
         await FillPasswordAsync(password);
+        await SignInButton.WaitForAsync(new() { Timeout = 10_000 });
         await SignInButton.ClickAsync();
     }
 
@@ -59,6 +60,7 @@ public class LoginPage(IPage page)
         await FillPasswordAsync(password);
         if (!string.IsNullOrEmpty(name))
             await _page.GetByLabel("Name (optional)").FillAsync(name);
+        await CreateAccountButton.WaitForAsync(new() { Timeout = 5_000 });
         await CreateAccountButton.ClickAsync();
     }
 

@@ -19,14 +19,45 @@ public class SidebarPage(IPage page)
     /// <summary>Creates a new page and returns its title locator.</summary>
     public async Task<ILocator> CreatePageAsync(string title = "")
     {
-        await NewPageBtn.ClickAsync();
+        // Wait for the sidebar to be ready before trying to find the button
+        // Use a longer timeout in case the app is taking time to load
+        var sidebar = _page.Locator("aside");
+        try
+        {
+            await sidebar.WaitForAsync(new() { Timeout = 15_000 });
+        }
+        catch
+        {
+            // If sidebar doesn't appear, wait a bit and hope it loads
+            await _page.WaitForTimeoutAsync(2000);
+        }
+
+        // Try to click the button with retries
+        var newPageBtn = NewPageBtn;
+        for (int i = 0; i < 3; i++)
+        {
+            try
+            {
+                await newPageBtn.ClickAsync(new() { Timeout = 5_000 });
+                break;
+            }
+            catch when (i < 2)
+            {
+                await _page.WaitForTimeoutAsync(500);
+            }
+        }
+
         // Wait for the new item to appear in the tree
         await _page.WaitForTimeoutAsync(300);
 
-        if (!string.IsNullOrEmpty(title))
-            await RenameLastItemAsync(title);
-
-        return _page.GetByText(string.IsNullOrEmpty(title) ? "New page" : title);
+        // NOTE: Pages cannot be renamed inline in the sidebar like folders can.
+        // Page titles must be changed via the PageTitle editor component.
+        // If a specific title is desired, the test should update it in the editor
+        // after creating the page.
+        var pageText = string.IsNullOrEmpty(title) ? "Untitled" : title;
+        var locator = _page.GetByText(pageText).First;
+        await locator.WaitForAsync(new() { Timeout = 5_000 });
+        return locator;
     }
 
     /// <summary>Creates a new folder and optionally renames it.</summary>
@@ -36,9 +67,20 @@ public class SidebarPage(IPage page)
         await _page.WaitForTimeoutAsync(300);
 
         if (!string.IsNullOrEmpty(name))
+        {
             await RenameLastItemAsync(name);
-
-        return _page.GetByText(string.IsNullOrEmpty(name) ? "New folder" : name);
+            // After rename, explicitly wait for the renamed text to appear
+            var locator = _page.GetByText(name).First;
+            await locator.WaitForAsync(new() { Timeout = 15_000 });
+            return locator;
+        }
+        else
+        {
+            // If no name provided, wait for "New folder" text to appear
+            var locator = _page.GetByText("New folder").First;
+            await locator.WaitForAsync();
+            return locator;
+        }
     }
 
     /// <summary>Double-clicks the last tree item to enter rename mode and types a name.</summary>
@@ -49,15 +91,39 @@ public class SidebarPage(IPage page)
         var count = await items.CountAsync();
         if (count == 0) return;
 
-        await items.Nth(count - 1).DblClickAsync();
+        var lastItem = items.Nth(count - 1);
+        
+        // Scroll into view before interacting
+        await lastItem.ScrollIntoViewIfNeededAsync();
+        await lastItem.DblClickAsync();
+
+        // Wait for the input to appear after double-click
         var input = _page.GetByRole(AriaRole.Textbox).Last;
-        await input.FillAsync(newName);
+        await input.WaitForAsync();
+
+        // Clear any existing text and type the new name
+        await input.ClearAsync();
+        await input.TypeAsync(newName);
+        
+        // Wait for text to be entered
+        await _page.WaitForTimeoutAsync(150);
+        
+        // Press Enter to commit the rename
         await input.PressAsync("Enter");
+
+        // Wait for the input to disappear and the tree to update
+        await _page.WaitForTimeoutAsync(500);
     }
 
     /// <summary>Clicks a tree item by its visible text.</summary>
-    public Task SelectPageAsync(string title) =>
-        _page.GetByText(title).First.ClickAsync();
+    public async Task SelectPageAsync(string title)
+    {
+        var locator = _page.GetByText(title);
+        await locator.First.WaitForAsync();
+        await locator.First.ClickAsync();
+        // After clicking, wait a bit for the page to load
+        await _page.WaitForTimeoutAsync(500);
+    }
 
     /// <summary>Collapses the sidebar.</summary>
     public Task HideAsync() => HideBtn.ClickAsync();

@@ -10,7 +10,7 @@ public class EditorPage(IPage page)
     // ── Selectors ──────────────────────────────────────────────────────────
 
     private ILocator AddBlockBtn =>
-        _page.GetByRole(AriaRole.Button, new() { Name = "Add a block" });
+        _page.GetByRole(AriaRole.Button, new() { Name = "Add block" });
 
     private ILocator BlockPickerPopover =>
         _page.Locator("[data-radix-popper-content-wrapper]").Last;
@@ -42,6 +42,15 @@ public class EditorPage(IPage page)
         await _page.WaitForTimeoutAsync(150);
     }
 
+    /// <summary>
+    /// Exits edit mode for the last block by pressing Escape.
+    /// </summary>
+    public async Task ExitEditModeAsync()
+    {
+        await _page.Keyboard.PressAsync("Escape");
+        await _page.WaitForTimeoutAsync(150);
+    }
+
     // ── Text block ─────────────────────────────────────────────────────────
 
     /// <summary>Types text into the most recently added text block.</summary>
@@ -61,10 +70,28 @@ public class EditorPage(IPage page)
     /// <summary>Changes the language of the last code block.</summary>
     public async Task SetCodeLanguageAsync(string language)
     {
-        // Click the language dropdown button (shows current language)
+        // Click the language dropdown button (shows current language, has font-mono class)
         var langBtn = _page.Locator("button[class*='font-mono']").Last;
         await langBtn.ClickAsync();
-        await _page.GetByRole(AriaRole.Button, new() { Name = language, Exact = true }).ClickAsync();
+
+        // Wait for dropdown to appear - look for any popover content
+        await _page.WaitForTimeoutAsync(300);
+
+        // Try to find the language button in the dropdown
+        // First, try in the last popover (most recently opened)
+        var allPopovers = _page.Locator("[data-radix-popper-content-wrapper]");
+        var count = await allPopovers.CountAsync();
+        
+        if (count > 0)
+        {
+            var dropdown = allPopovers.Nth(count - 1);
+            await dropdown.GetByRole(AriaRole.Button, new() { Name = language, Exact = true }).ClickAsync();
+        }
+        else
+        {
+            // Fallback: search the entire page
+            await _page.GetByRole(AriaRole.Button, new() { Name = language, Exact = true }).Last.ClickAsync();
+        }
     }
 
     // ── Table block ────────────────────────────────────────────────────────
@@ -132,6 +159,8 @@ public class EditorPage(IPage page)
         var urlInput = _page.GetByPlaceholder("https://example.com/audio.mp3");
         await urlInput.FillAsync(url);
         await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
+        // Wait for the audio element to load and render
+        await _page.WaitForTimeoutAsync(500);
     }
 
     // ── Block controls ─────────────────────────────────────────────────────
