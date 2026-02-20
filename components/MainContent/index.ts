@@ -9,6 +9,7 @@ export { AgendaBlock } from './blocks/AgendaBlock';
 export { AudioBlock } from './blocks/AudioBlock';
 export { ImageBlock } from './blocks/ImageBlock';
 export { DiagramBlock } from './blocks/DiagramBlock';
+export { VideoBlock } from './blocks/VideoBlock';
 export { WhiteboardBlock } from './blocks/WhiteboardBlock';
 export type {
   Block,
@@ -20,6 +21,7 @@ export type {
   AudioBlockContent,
   ImageBlockContent,
   DiagramBlockContent,
+  VideoBlockContent,
   WhiteboardBlockContent,
   CodeBlockContent,
   LinkBlockContent,
@@ -35,4 +37,5 @@ export {
   isAudioBlockContent,
   isImageBlockContent,
   isDiagramBlockContent,
+  isVideoBlockContent,
 } from './types';

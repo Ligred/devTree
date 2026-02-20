@@ -164,6 +164,8 @@
   "block.audio.description": "Записати або завантажити аудіозамітки (макс. 5 МБ)",
   "block.diagram.label": "Діаграма",
   "block.diagram.description": "Блок-схеми та діаграми",
+  "block.video.label": "Відео",
+  "block.video.description": "Вставити YouTube-відео за URL",
   "block.whiteboard.label": "Дошка",
   "block.whiteboard.description": "Полотно для малювання від руки",
   "diagram.editTab": "Редагувати",

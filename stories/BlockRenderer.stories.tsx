@@ -65,6 +65,14 @@ const blocks: Block[] = [
     },
     colSpan: 2,
   },
+  {
+    id: 'vid1',
+    type: 'video',
+    content: {
+      url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    },
+    colSpan: 2,
+  },
 ];
 
 const meta: Meta<typeof BlockEditor> = {

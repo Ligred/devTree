@@ -83,7 +83,7 @@ tests/e2e/
 |----------|----------------|
 | `Login` | Login page: form visibility, register switch, invalid credentials, language toggle (no OAuth) |
 | `Sidebar` | Page/folder creation, navigation, hide/show sidebar |
-| `Editor` | Add/edit/delete blocks (Text, Code, Table, Checklist, Image, Audio) |
+| `Editor` | Add/edit/delete blocks (Text, Code, Table, Checklist, Image, Audio, Video) |
 | `Settings` | Open/close dialog, theme switching, language switching |
 
 ## Test report (HTML)

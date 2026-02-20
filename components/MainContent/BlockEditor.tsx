@@ -87,6 +87,7 @@ import { ImageBlock } from './blocks/ImageBlock';
 import { LinkBlock } from './blocks/LinkBlock';
 import { TableBlock } from './blocks/TableBlock';
 import { TextBlock } from './blocks/TextBlock';
+import { VideoBlock } from './blocks/VideoBlock';
 import { WhiteboardBlock } from './blocks/WhiteboardBlock';
 import {
   type AgendaBlockContent,
@@ -100,6 +101,7 @@ import {
   type LinkBlockContent,
   type TableBlockContent,
   type TextBlockContent,
+  type VideoBlockContent,
   type WhiteboardBlockContent,
 } from './types';
 
@@ -158,6 +160,8 @@ function createBlock(type: BlockType): Block {
       return { id, type, content: { url: '', caption: '' }, colSpan: 2 };
     case 'diagram':
       return { id, type, content: { code: '' }, colSpan: 2 };
+    case 'video':
+      return { id, type, content: { url: '' }, colSpan: 2 };
     case 'whiteboard':
       return { id, type, content: { dataUrl: '' }, colSpan: 2 };
   }
@@ -516,6 +520,8 @@ function BlockContent({
       );
     case 'diagram':
       return <DiagramBlock content={content as DiagramBlockContent} onChange={onChange} isEditing={isEditing} />;
+    case 'video':
+      return <VideoBlock content={content as VideoBlockContent} onChange={onChange} />;
     case 'whiteboard':
       return <WhiteboardBlock content={content as WhiteboardBlockContent} onChange={onChange} isEditing={isEditing} />;
     default:

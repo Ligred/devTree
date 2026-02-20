@@ -1,7 +1,7 @@
 'use client';
 
 import * as Popover from '@radix-ui/react-popover';
-import { AlignLeft, Code2, Link, Table2, ListChecks, Image as ImageIcon, Mic, GitBranch, PenLine, Plus } from 'lucide-react';
+import { AlignLeft, Code2, Link, Table2, ListChecks, Image as ImageIcon, Mic, GitBranch, PenLine, Plus, Video } from 'lucide-react';
 
 import { useI18n } from '@/lib/i18n';
 import type { BlockType } from './types';
@@ -22,6 +22,7 @@ const BLOCK_DEFS: BlockDef[] = [
   { type: 'image',   labelKey: 'block.image.label',     descriptionKey: 'block.image.description',     icon: <ImageIcon size={18} aria-hidden /> },
   { type: 'audio',   labelKey: 'block.audio.label',     descriptionKey: 'block.audio.description',     icon: <Mic size={18} /> },
   { type: 'diagram',    labelKey: 'block.diagram.label',     descriptionKey: 'block.diagram.description',     icon: <GitBranch size={18} /> },
+  { type: 'video',      labelKey: 'block.video.label',       descriptionKey: 'block.video.description',       icon: <Video size={18} /> },
   { type: 'whiteboard', labelKey: 'block.whiteboard.label', descriptionKey: 'block.whiteboard.description', icon: <PenLine size={18} /> },
 ];
 

@@ -17,6 +17,7 @@ public class EditorPage(IPage page)
         ["Image"] = "image",
         ["Audio"] = "audio",
         ["Diagram"] = "diagram",
+        ["Video"] = "video",
         ["Whiteboard"] = "whiteboard",
     };
 
@@ -179,6 +180,17 @@ public class EditorPage(IPage page)
         await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
         // Wait for the audio element to load and render
         await _page.WaitForTimeoutAsync(500);
+    }
+
+    // ── Video block ────────────────────────────────────────────────────────
+
+    /// <summary>Sets the URL and saves the video block form.</summary>
+    public async Task SetVideoUrlAsync(string url)
+    {
+        var urlInput = _page.GetByPlaceholder("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        await urlInput.FillAsync(url);
+        await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
+        await _page.WaitForTimeoutAsync(250);
     }
 
     // ── Block controls ─────────────────────────────────────────────────────

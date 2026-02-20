@@ -164,6 +164,8 @@
   "block.audio.description": "Record or upload audio notes (max 5MB)",
   "block.diagram.label": "Diagram",
   "block.diagram.description": "Flowcharts and diagrams",
+  "block.video.label": "Video",
+  "block.video.description": "Embed a YouTube video by URL",
   "block.whiteboard.label": "Whiteboard",
   "block.whiteboard.description": "Freehand drawing canvas",
   "diagram.editTab": "Edit",

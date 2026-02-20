@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace DevTree.E2E.Tests;
 
 /// <summary>
@@ -188,6 +190,27 @@ public class EditorTests : E2ETestBase
         var audio = Page.Locator("audio[src*='SoundHelix']");
         // Check that the audio element exists (may not be fully visible/loaded due to external URL)
         await Expect(audio).ToHaveCountAsync(1);
+    }
+
+    [Test]
+    public async Task AddVideoBlock_ShowsEmptyForm()
+    {
+        await App.Editor.AddBlockAsync("Video");
+
+        await Expect(Page.GetByPlaceholder("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).ToBeVisibleAsync();
+    }
+
+    [Test]
+    public async Task AddVideoBlock_CanRenderYoutubeEmbed()
+    {
+        const string videoUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+        await App.Editor.AddBlockAsync("Video");
+        await App.Editor.SetVideoUrlAsync(videoUrl);
+
+        var iframe = Page.GetByTestId("video-block-iframe").Last;
+        await Expect(iframe).ToBeVisibleAsync();
+        await Expect(iframe).ToHaveAttributeAsync("src", new Regex("youtube-nocookie\\.com/embed/dQw4w9WgXcQ", RegexOptions.IgnoreCase));
     }
 
     // ── Delete blocks ────────────────────────────────────────────────────────

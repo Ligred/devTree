@@ -58,6 +58,7 @@ export type BlockType =
   | 'image'
   | 'audio'
   | 'diagram'
+  | 'video'
   | 'whiteboard';
 
 // ─── Content shapes ───────────────────────────────────────────────────────────
@@ -174,6 +175,17 @@ export type DiagramBlockContent = {
 };
 
 /**
+ * VideoBlockContent — embeddable video URL.
+ *
+ * Currently supports YouTube URLs for inline embedding.
+ * The raw URL is stored so future provider support can be added without data
+ * migration.
+ */
+export type VideoBlockContent = {
+  url: string;
+};
+
+/**
  * WhiteboardBlockContent — freehand drawing canvas.
  *
  * The canvas is serialized to a base64 PNG data URL after each stroke.
@@ -209,6 +221,7 @@ export type BlockContent =
   | ImageBlockContent
   | AudioBlockContent
   | DiagramBlockContent
+  | VideoBlockContent
   | WhiteboardBlockContent;
 
 /**
@@ -399,6 +412,19 @@ export function isDiagramBlockContent(
     content !== null &&
     'code' in content &&
     !('language' in content)
+  );
+}
+
+/** Video blocks have a URL; provider support is resolved in the component. */
+export function isVideoBlockContent(
+  content: BlockContent,
+  type: BlockType,
+): content is VideoBlockContent {
+  return (
+    type === 'video' &&
+    typeof content === 'object' &&
+    content !== null &&
+    'url' in content
   );
 }
 

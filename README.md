@@ -1,6 +1,6 @@
 # DevTree — Learning Workspace
 
-A **personal knowledge base** built as a learning project to explore modern full-stack web development. Create structured notes with rich text, code snippets, tables, checklists, images, and diagrams — all in a drag-and-drop block editor.
+A **personal knowledge base** built as a learning project to explore modern full-stack web development. Create structured notes with rich text, code snippets, tables, checklists, links, images, audio, diagrams, whiteboards, and embedded videos — all in a drag-and-drop block editor.
 
 > **Learning goal:** Understand how a real production-grade React application is architected, tested, and deployed — with source code that is intentionally over-commented for educational purposes.
 
@@ -10,7 +10,7 @@ A **personal knowledge base** built as a learning project to explore modern full
 
 | Feature | Description |
 |---------|-------------|
-| 📝 **Block editor** | 8 block types: Text (rich text), Code (Monaco), Table, Checklist, Link, Image, Diagram, Whiteboard |
+| 📝 **Block editor** | 10 block types: Text (rich text), Code (Monaco), Table, Checklist, Link, Image, Audio, Diagram, Video, Whiteboard |
 | 🗂️ **File explorer** | Sidebar tree with folders, drag-and-drop reordering, rename, delete |
 | 🎨 **Themes** | Light / Dark / System via `next-themes` |
 | 🌍 **Internationalisation** | English and Ukrainian; persisted in cookie and `localStorage` (correct language on refresh) |
@@ -242,7 +242,7 @@ devTree/
 ├── components/
 │   ├── FileExplorer/            # Sidebar file tree
 │   ├── MainContent/             # Right panel: header, editor, stats
-│   │   └── blocks/              # 8 block type components
+│   │   └── blocks/              # 10 block type components
 │   ├── SettingsDialog/          # Tabbed settings (Account, Appearance, Features)
 │   ├── UserMenu/                # Avatar dropdown (theme, language, settings, sign out)
 │   ├── Workspace/               # App shell (layout + state)

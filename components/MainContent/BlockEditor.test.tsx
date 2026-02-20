@@ -102,6 +102,7 @@ describe('BlockEditor', () => {
     expect(screen.getByRole('button', { name: /table/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /checklist/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /image/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /video/i })).toBeInTheDocument();
   });
 
   it('calls onChange with new link block when Link is selected', async () => {
@@ -131,6 +132,21 @@ describe('BlockEditor', () => {
     expect(onChange).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ type: 'agenda' }),
+      ]),
+    );
+  });
+
+  it('calls onChange with new video block when Video is selected', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    wrap(<BlockEditor blocks={[]} onChange={onChange} />);
+
+    await user.click(screen.getByRole('button', { name: /add block/i }));
+    await user.click(screen.getByRole('button', { name: /video/i }));
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'video' }),
       ]),
     );
   });

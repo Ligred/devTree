@@ -98,7 +98,10 @@ graph TD
     BlockWrapper --> AgendaBlock
     BlockWrapper --> LinkBlock
     BlockWrapper --> ImageBlock
+    BlockWrapper --> AudioBlock
     BlockWrapper --> DiagramBlock
+    BlockWrapper --> VideoBlock
+    BlockWrapper --> WhiteboardBlock
 ```
 
 **Why is all state in `Workspace`?**
@@ -147,6 +150,8 @@ classDiagram
         image
         audio
         diagram
+        video
+        whiteboard
     }
 
     class TextBlockContent {
@@ -176,6 +181,12 @@ classDiagram
     class DiagramBlockContent {
         +string code "Mermaid syntax"
     }
+    class VideoBlockContent {
+        +string url
+    }
+    class WhiteboardBlockContent {
+        +string dataUrl "PNG data URL"
+    }
     class LinkBlockContent {
         +string url
         +string label?
@@ -189,6 +200,8 @@ classDiagram
     Block --> ImageBlockContent : "type=image"
     Block --> AudioBlockContent : "type=audio"
     Block --> DiagramBlockContent : "type=diagram"
+    Block --> VideoBlockContent : "type=video"
+    Block --> WhiteboardBlockContent : "type=whiteboard"
     Block --> LinkBlockContent : "type=link"
 ```
 
