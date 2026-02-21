@@ -23,14 +23,14 @@ public class AppPage(IPage page)
 
     // ── Header ─────────────────────────────────────────────────────────────
 
-    /// <summary>Clicks the Save button in the header.</summary>
+    /// <summary>Clicks the Save button in the page-header area (below the title).</summary>
     public async Task SaveAsync()
     {
         var saveBtn = _page.GetByTestId("save-page-button");
         await saveBtn.ClickAsync();
-        // Wait for "Saved" feedback
+        // Wait until the save completes (isDirty becomes false → button disabled)
         await _page.Locator("[data-testid='save-page-button']:disabled").First
-            .WaitForAsync(new() { Timeout = 3_000 });
+            .WaitForAsync(new() { Timeout = 5_000 });
     }
 
     /// <summary>Opens the Settings dialog via the user-menu avatar button.</summary>

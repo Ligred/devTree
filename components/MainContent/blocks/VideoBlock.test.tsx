@@ -4,24 +4,29 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi } from 'vitest';
 
+import { I18nProvider } from '@/lib/i18n';
 import { VideoBlock, parseVideoUrl } from './VideoBlock';
+
+function renderBlock(ui: React.ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>);
+}
 
 describe('VideoBlock', () => {
   it('shows edit form when url is empty', () => {
-    render(<VideoBlock content={{ url: '' }} onChange={vi.fn()} />);
+    renderBlock(<VideoBlock content={{ url: '' }} onChange={vi.fn()} />);
     expect(screen.getByPlaceholderText(/youtube\.com\/watch/i)).toBeInTheDocument();
   });
 
   it('saves a trimmed URL', async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
-    render(<VideoBlock content={{ url: '' }} onChange={onChange} />);
+    renderBlock(<VideoBlock content={{ url: '' }} onChange={onChange} />);
 
     await user.type(
       screen.getByPlaceholderText(/youtube\.com\/watch/i),
       '  https://www.youtube.com/watch?v=dQw4w9WgXcQ  ',
     );
-    await user.click(screen.getByRole('button', { name: /save/i }));
+    await user.click(screen.getByRole('button', { name: /apply/i }));
 
     expect(onChange).toHaveBeenCalledWith({
       url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -29,7 +34,7 @@ describe('VideoBlock', () => {
   });
 
   it('renders iframe for supported YouTube links', () => {
-    render(
+    renderBlock(
       <VideoBlock
         content={{ url: 'https://youtu.be/dQw4w9WgXcQ?si=abc' }}
         onChange={vi.fn()}
@@ -42,7 +47,7 @@ describe('VideoBlock', () => {
   });
 
   it('falls back to external link for unsupported providers', () => {
-    render(
+    renderBlock(
       <VideoBlock
         content={{ url: 'https://vimeo.com/148751763' }}
         onChange={vi.fn()}

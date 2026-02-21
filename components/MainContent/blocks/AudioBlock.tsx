@@ -128,7 +128,7 @@ export function AudioBlock({ content, onChange, isEditing, enterEdit, exitEdit }
               className="rounded-md bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700 disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
               onClick={handleSave}
             >
-              {t('main.save')}
+              {t('block.apply')}
             </button>
           </div>
         </div>

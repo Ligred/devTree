@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Check, ExternalLink, PlaySquare, X } from 'lucide-react';
 
+import { useI18n } from '@/lib/i18n';
 import type { VideoBlockContent } from '../types';
 
 type VideoBlockProps = Readonly<{
@@ -71,6 +72,7 @@ export function parseVideoUrl(rawUrl: string): ParsedVideoUrl {
 }
 
 export function VideoBlock({ content, onChange }: VideoBlockProps) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(!content.url);
   const [draftUrl, setDraftUrl] = useState(content.url);
 
@@ -123,7 +125,7 @@ export function VideoBlock({ content, onChange }: VideoBlockProps) {
               className="flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
               onClick={save}
             >
-              <Check size={12} /> Save
+              <Check size={12} /> {t('block.apply')}
             </button>
           </div>
         </div>

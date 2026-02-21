@@ -59,20 +59,20 @@ describe('AudioBlock – edit mode', () => {
     expect(screen.getByLabelText(/caption/i)).toBeInTheDocument();
   });
 
-  it('Save button is disabled when URL is empty', () => {
+  it('Apply button is disabled when URL is empty', () => {
     renderAudio({ content: { url: '' }, isEditing: true });
-    expect(screen.getByRole('button', { name: /save/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /apply/i })).toBeDisabled();
   });
 
-  it('Save button is enabled after typing a URL', async () => {
+  it('Apply button is enabled after typing a URL', async () => {
     renderAudio({ content: { url: '' }, isEditing: true });
 
     await userEvent.type(screen.getByLabelText(/audio url/i), 'https://example.com/audio.mp3');
 
-    expect(screen.getByRole('button', { name: /save/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /apply/i })).toBeEnabled();
   });
 
-  it('calls onChange with trimmed URL on Save', async () => {
+  it('calls onChange with trimmed URL on Apply', async () => {
     const onChange = vi.fn();
     const exitEdit = vi.fn();
     renderAudio({ content: { url: '' }, isEditing: true, onChange, exitEdit });
@@ -81,7 +81,7 @@ describe('AudioBlock – edit mode', () => {
       screen.getByLabelText(/audio url/i),
       '  https://example.com/audio.mp3  ',
     );
-    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    await userEvent.click(screen.getByRole('button', { name: /apply/i }));
 
     expect(onChange).toHaveBeenCalledWith({ url: 'https://example.com/audio.mp3' });
     expect(exitEdit).toHaveBeenCalledOnce();
@@ -93,7 +93,7 @@ describe('AudioBlock – edit mode', () => {
 
     await userEvent.type(screen.getByLabelText(/audio url/i), 'https://example.com/a.mp3');
     await userEvent.type(screen.getByLabelText(/caption/i), 'My podcast');
-    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    await userEvent.click(screen.getByRole('button', { name: /apply/i }));
 
     expect(onChange).toHaveBeenCalledWith({ url: 'https://example.com/a.mp3', caption: 'My podcast' });
   });

@@ -161,22 +161,22 @@ public class EditorPage(IPage page)
 
     // ── Image block ────────────────────────────────────────────────────────
 
-    /// <summary>Sets the URL and saves the image block form.</summary>
+    /// <summary>Sets the URL and applies the image block form.</summary>
     public async Task SetImageUrlAsync(string url)
     {
         var urlInput = _page.GetByPlaceholder("https://example.com/image.png");
         await urlInput.FillAsync(url);
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
+        await _page.GetByRole(AriaRole.Button, new() { Name = "Apply" }).Last.ClickAsync();
     }
 
     // ── Video block ────────────────────────────────────────────────────────
 
-    /// <summary>Sets the URL and saves the video block form.</summary>
+    /// <summary>Sets the URL and applies the video block form.</summary>
     public async Task SetVideoUrlAsync(string url)
     {
         var urlInput = _page.GetByPlaceholder("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
         await urlInput.FillAsync(url);
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
+        await _page.GetByRole(AriaRole.Button, new() { Name = "Apply" }).Last.ClickAsync();
         await _page.WaitForTimeoutAsync(250);
     }
 

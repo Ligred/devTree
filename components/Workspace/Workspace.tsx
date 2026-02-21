@@ -48,6 +48,7 @@ import { cn } from '@/lib/utils';
 import { buildTreeDataWithActions } from './buildTreeData';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { FolderRenameRow } from './FolderRenameRow';
+import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import type { TreeRoot } from './treeTypes';
 import { ROOT_DROP_TARGET_ID, ROOT_ID } from './treeTypes';
 import {
@@ -211,6 +212,27 @@ export function Workspace() {
 
   /** "Saved" feedback: true for 2 seconds after the user saves. */
   const [saveFeedback, setSaveFeedback] = useState(false);
+
+  /**
+   * Whether the current page has unsaved changes.
+   *
+   * Set to `true` whenever the user edits the title or any block.
+   * Set to `false` after a successful save or after navigating away.
+   *
+   * WHY not derived from a server-snapshot diff at render time?
+   *   Block diffs are expensive (JSON.stringify on every render). A flag is
+   *   O(1) and avoids unnecessary computation on every keystroke.
+   */
+  const [isDirty, setIsDirty] = useState(false);
+
+  /**
+   * Page ID the user intends to navigate to while the current page is dirty.
+   *
+   * Set when the user clicks a different page in the sidebar while `isDirty`
+   * is true. Triggers the UnsavedChangesDialog. Cleared when the dialog is
+   * dismissed (save, discard, or cancel).
+   */
+  const [pendingNavId, setPendingNavId] = useState<string | null>(null);
 
   /** Search query for filtering pages in the sidebar. */
   const [searchQuery, setSearchQuery] = useState('');
@@ -602,13 +624,16 @@ export function Workspace() {
     (item: TreeDataItem | undefined) => {
       if (!item) return;
       const isFile = pages.some((p) => p.id === item.id);
-      if (isFile) {
-        setActivePageId(item.id);
-        // Close mobile sidebar after selection for better UX
-        setMobileSidebarOpen(false);
+      if (!isFile || item.id === activePageId) return;
+      // Guard: if the current page has unsaved changes, ask the user first.
+      if (isDirty) {
+        setPendingNavId(item.id);
+        return;
       }
+      setActivePageId(item.id);
+      setMobileSidebarOpen(false);
     },
-    [pages],
+    [pages, activePageId, isDirty],
   );
 
   /** Sync page title changes into local state only — no API call yet. */
@@ -619,6 +644,7 @@ export function Workspace() {
         prev.map((p) => (p.id === activePageId ? { ...p, title } : p)),
       );
       setTreeRoot((root) => renameNode(root, activePageId, title));
+      setIsDirty(true);
     },
     [activePageId],
   );
@@ -649,6 +675,7 @@ export function Workspace() {
       setPages((pages) =>
         pages.map((p) => (p.id === activePageId ? { ...p, blocks } : p)),
       );
+      setIsDirty(true);
     },
     [activePageId],
   );
@@ -762,8 +789,44 @@ export function Workspace() {
     // 6. Update server snapshot
     serverBlocksRef.current.set(activePageId, reconciledBlocks);
 
+    setIsDirty(false);
     setSaveFeedback(true);
   }, [activePageId, pages]);
+
+  /** Save current page then navigate to the pending destination. */
+  const handleSaveAndLeave = useCallback(async () => {
+    await handleSave();
+    if (pendingNavId) {
+      setActivePageId(pendingNavId);
+      setMobileSidebarOpen(false);
+      setPendingNavId(null);
+    }
+  }, [handleSave, pendingNavId]);
+
+  /**
+   * Discard current changes and navigate to the pending destination.
+   *
+   * Restores the server snapshot for the current page so the user sees the
+   * persisted version if they return to it later.
+   */
+  const handleLeaveWithout = useCallback(() => {
+    if (pendingNavId) {
+      // Revert local edits to the server snapshot
+      const snap = serverBlocksRef.current.get(activePageId ?? '') ?? [];
+      setPages((prev) =>
+        prev.map((p) => (p.id === activePageId ? { ...p, blocks: snap } : p)),
+      );
+      setIsDirty(false);
+      setActivePageId(pendingNavId);
+      setMobileSidebarOpen(false);
+      setPendingNavId(null);
+    }
+  }, [pendingNavId, activePageId]);
+
+  /** Close the unsaved-changes dialog without navigating. */
+  const handleCancelPendingNav = useCallback(() => {
+    setPendingNavId(null);
+  }, []);
 
   // ─── Effects ─────────────────────────────────────────────────────────────────
 
@@ -1138,6 +1201,7 @@ export function Workspace() {
         page={activePage}
         onSave={handleSave}
         saved={saveFeedback}
+        isDirty={isDirty}
         onTitleChange={handleTitleChange}
         onTitleBlur={handleTitleBlur}
         onBlocksChange={handleBlocksChange}
@@ -1151,6 +1215,13 @@ export function Workspace() {
         title={deleteDialog?.title ?? ''}
         description={deleteDialog?.description ?? ''}
         onConfirm={handleConfirmDelete}
+      />
+
+      <UnsavedChangesDialog
+        open={pendingNavId !== null}
+        onSaveAndLeave={handleSaveAndLeave}
+        onLeaveWithout={handleLeaveWithout}
+        onCancel={handleCancelPendingNav}
       />
     </div>
   );

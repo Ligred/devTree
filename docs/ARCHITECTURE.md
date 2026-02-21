@@ -285,6 +285,91 @@ Why? React detects changes by comparing references (`Object.is`). If you mutate 
 - `useCallback` wraps event handlers that are passed to child components. Without it, a new function reference is created on every parent render, causing children to re-render even when nothing changed.
 - `useMemo` wraps derived values (like `treeData`, `activePage`, `searchResults`) that are expensive to recompute.
 
+### Save-on-Demand Strategy
+
+DevTree uses **explicit save** rather than auto-save. The user must click the Save button (or press `Cmd/Ctrl+S`) to persist changes to the server. Until then, all edits exist only in React state (in `Workspace`).
+
+#### Why explicit save?
+
+| Auto-save | Explicit save |
+|-----------|---------------|
+| Every keystroke → API call | Single API call per save |
+| Hard to batch/reorder blocks | Full diff-sync on save |
+| Hard to detect "no changes" | `isDirty` flag prevents redundant calls |
+| Good for collaborative editors | Good for single-user note editors |
+
+DevTree is a single-user note-taking tool, so explicit save is the simpler, lower-latency choice.
+
+#### The `isDirty` flag
+
+```mermaid
+stateDiagram-v2
+    [*] --> Clean : page loaded / saved
+    Clean --> Dirty : title changed / block edited / block added
+    Dirty --> Clean : user clicks Save\n(API diff-sync succeeds)
+    Dirty --> ConfirmDialog : user navigates away
+    ConfirmDialog --> Clean : "Save & leave"\n(save succeeds, navigate)
+    ConfirmDialog --> Clean : "Leave without saving"\n(discard, navigate)
+    ConfirmDialog --> Dirty : "Cancel / Stay"
+```
+
+The `isDirty: boolean` state in `Workspace` tracks whether the currently displayed page has local changes not yet persisted to the server. The Save button in `MainContent` is:
+- **Disabled** when `isDirty === false` — no redundant API calls.
+- **Enabled** when `isDirty === true` — indicates there is something to save.
+
+#### The diff-sync algorithm (`handleSave`)
+
+When the user saves, `handleSave` compares the current local block list against `serverBlocksRef` (a `Map<pageId, Block[]>` that holds the last-persisted server state):
+
+```mermaid
+flowchart TD
+    A([handleSave called]) --> B["PUT /api/pages/:id\n(persist title)"]
+    B --> C["Compute diff:\nlocal blocks vs serverBlocksRef"]
+    C --> D["DELETE removed blocks\n(in serverBlocks but not local)"]
+    D --> E["POST new blocks\n(in local but not serverBlocks)\nreceive server-assigned UUIDs"]
+    E --> F["PUT changed blocks\n(same id, different content)"]
+    F --> G["POST /api/blocks/reorder\n(persist new order)"]
+    G --> H["Reconcile local IDs\n(replace temp ids with server UUIDs)"]
+    H --> I["serverBlocksRef = structuredClone(local)"]
+    I --> J["setIsDirty(false)"]
+    J --> K([Done])
+```
+
+**Why `serverBlocksRef` instead of state?**
+
+`serverBlocksRef` is a `useRef` (not `useState`) because:
+1. It should **not** trigger a re-render when updated — it's only read during `handleSave`.
+2. It persists across renders without being a dependency of `useMemo`/`useCallback`.
+3. Think of it as a "snapshot" of what the server knows — only updated when a save succeeds.
+
+#### Block ID lifecycle
+
+Every block created locally gets a temporary ID `block-${uuid}`. When `handleSave` POSTs new blocks to the server, the server assigns its own UUIDs. The client then swaps the temporary IDs for the real server IDs throughout `pages` state and `serverBlocksRef`:
+
+```
+Local block:  { id: "block-abc123", type: "text", ... }
+After save:   { id: "b3f9e712-...", type: "text", ... }  ← server UUID
+```
+
+This reconciliation step is essential: without it, subsequent PUT/DELETE calls would 404 because they'd send the local temporary ID, which the server doesn't recognise.
+
+#### Unsaved-changes navigation guard
+
+`handleSelect` in `Workspace` checks `isDirty` before navigating:
+
+```typescript
+if (isDirty) {
+  setPendingNavId(item.id);  // remember where the user wanted to go
+  return;                    // show UnsavedChangesDialog instead of navigating
+}
+setActivePageId(item.id);   // normal navigation
+```
+
+The `<UnsavedChangesDialog>` presents three choices:
+1. **Save and leave** — runs `handleSave()`, then navigates to `pendingNavId`.
+2. **Leave without saving** — discards local changes (restores from `serverBlocksRef`), navigates.
+3. **Cancel / Stay** — closes the dialog, user stays on the current dirty page.
+
 ---
 
 ## 5. Block Editor

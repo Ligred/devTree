@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ExternalLink, Pencil, Check, X } from 'lucide-react';
 
+import { useI18n } from '@/lib/i18n';
 import type { LinkBlockContent } from '../types';
 
 type LinkBlockProps = Readonly<{
@@ -11,6 +12,7 @@ type LinkBlockProps = Readonly<{
 }>;
 
 export function LinkBlock({ content, onChange }: LinkBlockProps) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(!content.url);
   const [draft, setDraft] = useState(content);
 
@@ -73,7 +75,7 @@ export function LinkBlock({ content, onChange }: LinkBlockProps) {
               className="flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
               onClick={save}
             >
-              <Check size={12} /> Save
+              <Check size={12} /> {t('block.apply')}
             </button>
           </div>
         </div>

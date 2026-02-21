@@ -41,6 +41,11 @@ type MainContentProps = Readonly<{
   page: Page | null;
   onSave?: () => void;
   saved?: boolean;
+  /**
+   * True when there are local edits not yet persisted to the server.
+   * When false the Save button is disabled to avoid redundant API calls.
+   */
+  isDirty?: boolean;
   onTitleChange?: (title: string) => void;
   /** Called when the title input loses focus — persists the title to the server. */
   onTitleBlur?: () => void;
@@ -55,6 +60,7 @@ export function MainContent({
   page,
   onSave,
   saved = false,
+  isDirty = false,
   onTitleChange,
   onTitleBlur,
   onBlocksChange,
@@ -138,31 +144,6 @@ export function MainContent({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          {page && (
-            <button
-              type="button"
-              title={t(I18N_EXPORT_MARKDOWN)}
-              aria-label={t(I18N_EXPORT_MARKDOWN)}
-              className="hidden items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:flex"
-              onClick={() => downloadMarkdown(page)}
-            >
-              <Download size={14} />
-              <span className="hidden md:inline">{t(I18N_EXPORT_MARKDOWN)}</span>
-            </button>
-          )}
-
-          <button
-            type="button"
-            aria-label={t('main.savePage')}
-            data-testid="save-page-button"
-            className="inline-flex min-w-22 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-            onClick={onSave}
-            disabled={saved}
-          >
-            <Save size={16} aria-hidden />
-            {saved ? t('main.saved') : t('main.save')}
-          </button>
-
           <UserMenu onOpenSettings={() => setSettingsOpen(true)} />
         </div>
       </header>
@@ -172,12 +153,42 @@ export function MainContent({
         <div className="mx-auto w-full max-w-4xl">
           {page ? (
             <div className="flex flex-col gap-4">
-              <PageTitle
-                page={page}
-                readOnly={!onTitleChange}
-                onTitleChange={onTitleChange}
-                onTitleBlur={onTitleBlur}
-              />
+              {/* ── Page-level actions row (title + save/export buttons) ── */}
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <PageTitle
+                    page={page}
+                    readOnly={!onTitleChange}
+                    onTitleChange={onTitleChange}
+                    onTitleBlur={onTitleBlur}
+                  />
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    title={t(I18N_EXPORT_MARKDOWN)}
+                    aria-label={t(I18N_EXPORT_MARKDOWN)}
+                    className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    onClick={() => downloadMarkdown(page)}
+                  >
+                    <Download size={14} />
+                    <span className="hidden sm:inline">{t(I18N_EXPORT_MARKDOWN)}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    aria-label={t('main.savePage')}
+                    data-testid="save-page-button"
+                    className="inline-flex min-w-22 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                    onClick={onSave}
+                    disabled={!isDirty}
+                  >
+                    <Save size={16} aria-hidden />
+                    {saved ? t('main.saved') : t('main.save')}
+                  </button>
+                </div>
+              </div>
 
               {/* Page-level tag bar — hidden when tagsPerPageEnabled is false */}
               {tagsPerPageEnabled && onTagsChange && (
