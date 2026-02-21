@@ -574,9 +574,11 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
         selectedPageId: activePageId,
         ancestorPathIds,
         t,
+        editingFolderId,
+        setEditingFolderId,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [treeRoot, activePageId, ancestorPathIds, t],
+    [treeRoot, activePageId, ancestorPathIds, t, editingFolderId, setEditingFolderId],
   );
 
   /**

@@ -250,6 +250,8 @@ export type Block = {
   colSpan?: 1 | 2;
   /** Optional labels annotating this block */
   tags?: string[];
+  /** Transient flag: set to true only for newly created blocks (creation-only) */
+  createdNow?: boolean;
 };
 
 /**

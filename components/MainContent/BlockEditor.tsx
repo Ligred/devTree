@@ -268,7 +268,9 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
     (afterId: string, type: BlockType) => {
       const index = blocks.findIndex((b) => b.id === afterId);
       const next = [...blocks];
-      next.splice(index + 1, 0, createBlock(type));
+      const newBlock = createBlock(type);
+      newBlock.createdNow = true;
+      next.splice(index + 1, 0, newBlock);
       onChange(next);
     },
     [blocks, onChange],
@@ -298,6 +300,16 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
   const updateBlockTags = useCallback(
     (id: string, tags: string[]) => {
       onChange(blocks.map((b) => (b.id === id ? { ...b, tags } : b)));
+    },
+    [blocks, onChange],
+  );
+
+  /** Clear the `createdNow` flag from a block (transient flag used only on creation). */
+  const clearCreatedNowFlag = useCallback(
+    (id: string) => {
+      onChange(
+        blocks.map((b) => (b.id === id ? { ...b, createdNow: undefined } : b)),
+      );
     },
     [blocks, onChange],
   );
@@ -353,6 +365,7 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
                 onAddAfter={(type) => addBlockAfter(block.id, type)}
                 onToggleColSpan={() => toggleColSpan(block.id)}
                 onTagsChange={(tags) => updateBlockTags(block.id, tags)}
+                onClearCreatedNowFlag={() => clearCreatedNowFlag(block.id)}
                 showBlockTags={showBlockTags}
                 renderContent={(isEditing, isDragging, enterEdit, exitEdit) => (
                   <BlockContent
@@ -372,7 +385,13 @@ export function BlockEditor({ blocks, onChange, filterTags, showBlockTags = true
 
       {/* "Add block" picker anchored after the last block */}
       <div className="mt-4 pl-0 sm:pl-12">
-        <BlockPicker onSelect={(type) => onChange([...blocks, createBlock(type)])} />
+        <BlockPicker
+          onSelect={(type) => {
+            const newBlock = createBlock(type);
+            newBlock.createdNow = true;
+            onChange([...blocks, newBlock]);
+          }}
+        />
       </div>
     </DndContext>
   );

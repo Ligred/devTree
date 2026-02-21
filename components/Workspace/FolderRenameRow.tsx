@@ -45,6 +45,7 @@ import { FileCode, Folder } from 'lucide-react';
 
 import type { TreeDataItem } from '@/components/ui/tree-view';
 import { useI18n } from '@/lib/i18n';
+import { TruncatedText } from '@/components/ui/TruncatedText';
 
 type FolderRenameRowParams = Readonly<{
   item: TreeDataItem;
@@ -105,9 +106,9 @@ export function FolderRenameRow({
   if (isLeaf) {
     // Files can't be renamed inline — the page title is the canonical name
     nameContent = (
-      <span className="min-w-0 flex-1 truncate text-sm">
+      <TruncatedText className="min-w-0 flex-1 text-sm">
         {item.name}
-      </span>
+      </TruncatedText>
     );
   } else if (isEditing) {
     nameContent = (
@@ -139,18 +140,12 @@ export function FolderRenameRow({
       />
     );
   } else {
-    // Normal folder name — double-click to enter rename mode.
-    // No extra role or keyboard handler here: the outer accordion trigger
-    // already handles keyboard focus. Adding interactive attributes on a
-    // child span inside a <button> creates invalid nested interactivity.
+    // Normal folder name — no longer double-click to enter rename mode.
+    // Rename is now triggered via the rename icon in the actions menu.
     nameContent = (
-      <span
-        className="min-w-0 flex-1 truncate text-sm"
-        onDoubleClick={startEdit}
-        title={t('tree.renameHint')}
-      >
+      <TruncatedText className="min-w-0 flex-1 text-sm">
         {item.name}
-      </span>
+      </TruncatedText>
     );
   }
 

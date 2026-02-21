@@ -197,5 +197,12 @@
   "audio.captionPlaceholder": "Describe this audio\u2026",
   "audio.urlHint": "Paste a direct link to an MP3, OGG, WAV, or M4A file.",
   "audio.noAudio": "No audio yet — paste a URL to embed.",
-  "audio.addUrl": "Add audio URL"
+  "audio.addUrl": "Add audio URL",
+  "ui.textTruncated": "Text truncated",
+  "ui.fullscreen": "Fullscreen",
+  "ui.exitFullscreen": "Exit fullscreen",
+  "tree.rename": "Rename",
+  "tree.moreActions": "More actions",
+  "voice.startRecording": "Start voice dictation",
+  "voice.stopRecording": "Stop voice dictation"
 }

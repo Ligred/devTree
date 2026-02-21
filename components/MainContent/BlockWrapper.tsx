@@ -55,7 +55,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Check, Columns2, GripVertical, Maximize2, Pencil, Plus, Tag, Trash2, X } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -215,6 +215,7 @@ type BlockWrapperProps = Readonly<{
   onAddAfter: (type: BlockType) => void;
   onToggleColSpan: () => void;
   onTagsChange: (tags: string[]) => void;
+  onClearCreatedNowFlag: () => void;
   controlsSide?: 'left' | 'right';
   /** When false, the BlockTagRow is hidden (controlled by global settings). */
   showBlockTags?: boolean;
@@ -227,6 +228,7 @@ export function BlockWrapper({
   onAddAfter,
   onToggleColSpan,
   onTagsChange,
+  onClearCreatedNowFlag,
   controlsSide = 'left',
   showBlockTags = true,
 }: BlockWrapperProps) {
@@ -236,11 +238,18 @@ export function BlockWrapper({
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   const { t } = useI18n();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(block.createdNow ?? false);
   const isHalf = block.colSpan === 1;
   const isRight = controlsSide === 'right';
   // Desktop side placement for the controls badge (avoids nested ternary at call site)
   const sideViewCls = isRight ? 'sm:left-0 sm:-translate-x-1' : 'sm:right-0 sm:translate-x-1';
+
+  // Clear the createdNow flag after the component mounts with edit mode enabled
+  useEffect(() => {
+    if (block.createdNow) {
+      onClearCreatedNowFlag();
+    }
+  }, [block.createdNow, onClearCreatedNowFlag]);
 
   return (
     <div

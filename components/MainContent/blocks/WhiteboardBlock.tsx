@@ -50,11 +50,12 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Eraser, Pen, Trash2 } from 'lucide-react';
+import { Eraser, Pen, Trash2, Maximize2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { FullscreenBlockOverlay } from './FullscreenBlockOverlay';
 import type { WhiteboardBlockContent } from '../types';
 
 // ─── Drawing constants ────────────────────────────────────────────────────────
@@ -130,6 +131,7 @@ export function WhiteboardBlock({
   const [tool, setTool] = useState<Tool>('pen');
   const [color, setColor] = useState<string>(palette[0]);
   const [strokeWidth, setStrokeWidth] = useState<number>(STROKE_WIDTHS[1]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   /**
    * (Re-)draw the saved content onto the canvas when:
@@ -263,6 +265,150 @@ export function WhiteboardBlock({
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
+  // eslint-disable-next-line react/no-unstable-nested-components
+  const CanvasContent = ({ fullscreen = false }) => (
+    <div style={{ aspectRatio: fullscreen ? 'auto' : '16 / 9' }} className={fullscreen ? 'h-full' : 'relative'}>
+      <canvas
+        ref={canvasRef}
+        width={CANVAS_WIDTH}
+        height={CANVAS_HEIGHT}
+        className={cn(
+          'h-full w-full',
+          isEditing ? 'cursor-crosshair' : 'cursor-default',
+        )}
+        style={{ backgroundColor: bgColor }}
+        /* Mouse events */
+        onMouseDown={startStroke}
+        onMouseMove={continueStroke}
+        onMouseUp={endStroke}
+        onMouseLeave={endStroke}
+        /* Touch events (mobile / stylus) */
+        onTouchStart={startStroke}
+        onTouchMove={continueStroke}
+        onTouchEnd={endStroke}
+      />
+
+      {/* Empty state overlay */}
+      {!content.dataUrl && !isEditing && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 flex items-center justify-center"
+        >
+          <p className="text-sm text-muted-foreground/40 italic">
+            {t('whiteboard.empty')}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  // If fullscreen, render using FullscreenBlockOverlay
+  if (isFullscreen) {
+    return (
+      <FullscreenBlockOverlay
+        isOpen={isFullscreen}
+        onClose={() => setIsFullscreen(false)}
+        title="Whiteboard"
+      >
+        <div className="flex flex-col h-full bg-background">
+          {/* Toolbar for fullscreen */}
+          {isEditing && (
+            <div className="flex flex-wrap items-center gap-3 border-b border-border bg-muted/30 px-3 py-2">
+              {/* Tool selector */}
+              <div className="flex gap-0.5 rounded-md bg-muted/70 p-0.5">
+                {(['pen', 'eraser'] as Tool[]).map((t_) => (
+                  <button
+                    key={t_}
+                    type="button"
+                    className={cn(
+                      'flex h-7 w-7 items-center justify-center rounded px-1.5 transition-colors',
+                      tool === t_
+                        ? 'bg-card text-foreground shadow-sm'
+                        : 'text-muted-foreground hover:text-foreground',
+                    )}
+                    title={t_ === 'pen' ? t('whiteboard.pen') : t('whiteboard.eraser')}
+                    aria-label={t_ === 'pen' ? t('whiteboard.pen') : t('whiteboard.eraser')}
+                    onClick={() => setTool(t_)}
+                  >
+                    {t_ === 'pen' ? <Pen size={13} /> : <Eraser size={13} />}
+                  </button>
+                ))}
+              </div>
+
+              {/* Colour palette */}
+              <div className="flex items-center gap-1" aria-label="Pen colour">
+                {palette.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    aria-label={`Colour ${c}`}
+                    title={c}
+                    className={cn(
+                      'h-5 w-5 rounded-full border-2 transition-transform hover:scale-110',
+                      color === c && tool === 'pen'
+                        ? 'scale-110 border-foreground'
+                        : 'border-transparent',
+                    )}
+                    style={{ backgroundColor: c }}
+                    onClick={() => { setColor(c); setTool('pen'); }}
+                  />
+                ))}
+              </div>
+
+              {/* Stroke width */}
+              <div className="flex items-center gap-1" aria-label="Stroke width">
+                {STROKE_WIDTHS.map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    aria-label={`Stroke width ${w}`}
+                    title={`Stroke ${w}px`}
+                    className={cn(
+                      'flex h-6 w-6 items-center justify-center rounded border transition-colors',
+                      strokeWidth === w
+                        ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/30'
+                        : 'border-border hover:border-muted-foreground',
+                    )}
+                    onClick={() => setStrokeWidth(w)}
+                  >
+                    <span
+                      aria-hidden
+                      className="rounded-full bg-foreground"
+                      style={{
+                        width: Math.min(w * 1.8, 14),
+                        height: Math.min(w * 1.8, 14),
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex-1" />
+
+              {/* Clear */}
+              <button
+                type="button"
+                className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/50 dark:hover:text-red-400"
+                onClick={clearCanvas}
+                title={t('whiteboard.clear')}
+              >
+                <Trash2 size={12} />
+                {t('whiteboard.clear')}
+              </button>
+            </div>
+          )}
+
+          {/* Canvas in fullscreen - flex-1 to take remaining space */}
+          <div className="flex-1 overflow-auto">
+            <CanvasContent fullscreen />
+          </div>
+        </div>
+      </FullscreenBlockOverlay>
+    );
+  }
+
+  // ─── Normal render (non-fullscreen) ─────────────────────────────────────
+
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card">
 
@@ -341,6 +487,17 @@ export function WhiteboardBlock({
 
           <div className="flex-1" />
 
+          {/* Fullscreen button */}
+          <button
+            type="button"
+            className="flex items-center gap-1.5 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            onClick={() => setIsFullscreen(true)}
+            title={t('ui.fullscreen')}
+          >
+            <Maximize2 size={12} />
+            {t('ui.fullscreen')}
+          </button>
+
           {/* Clear */}
           <button
             type="button"
@@ -355,39 +512,7 @@ export function WhiteboardBlock({
       )}
 
       {/* ── Canvas area ─────────────────────────────────────────── */}
-      <div className="relative" style={{ aspectRatio: '16 / 9' }}>
-        <canvas
-          ref={canvasRef}
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
-          className={cn(
-            'h-full w-full',
-            isEditing ? 'cursor-crosshair' : 'cursor-default',
-          )}
-          style={{ backgroundColor: bgColor }}
-          /* Mouse events */
-          onMouseDown={startStroke}
-          onMouseMove={continueStroke}
-          onMouseUp={endStroke}
-          onMouseLeave={endStroke}
-          /* Touch events (mobile / stylus) */
-          onTouchStart={startStroke}
-          onTouchMove={continueStroke}
-          onTouchEnd={endStroke}
-        />
-
-        {/* Empty state overlay */}
-        {!content.dataUrl && !isEditing && (
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          >
-            <p className="text-sm text-muted-foreground/40 italic">
-              {t('whiteboard.empty')}
-            </p>
-          </div>
-        )}
-      </div>
+      <CanvasContent />
     </div>
   );
 }

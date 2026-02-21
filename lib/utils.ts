@@ -7,6 +7,7 @@
  *   predictable: any component that needs `cn()` knows to import from `@/lib/utils`.
  */
 
+import { useEffect, useState } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -38,4 +39,61 @@ import { twMerge } from 'tailwind-merge';
  */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * `useTextTruncation` — hook to detect if text is visually truncated in a container.
+ *
+ * Compares `scrollWidth` vs `clientWidth` of a ref'd element. If scrollWidth
+ * exceeds clientWidth, the text is truncated and tooltip should be shown.
+ *
+ * Usage:
+ *   const ref = useRef(null);
+ *   const isTruncated = useTextTruncation(ref);
+ *
+ *   return (
+ *     <Tooltip delayDuration={200}>
+ *       <TooltipTrigger asChild>
+ *         <div ref={ref} className="truncate">{text}</div>
+ *       </TooltipTrigger>
+ *       {isTruncated && <TooltipContent>{text}</TooltipContent>}
+ *     </Tooltip>
+ *   );
+ */
+
+export function useTextTruncation(
+  elementRef: React.RefObject<HTMLElement | null>
+): boolean {
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const checkTruncation = () => {
+      if (elementRef.current) {
+        const element = elementRef.current;
+        const isTruncatedNow = element.scrollWidth > element.clientWidth;
+        setIsTruncated(isTruncatedNow);
+      }
+    };
+
+    checkTruncation();
+
+    // Re-check on window resize
+    window.addEventListener('resize', checkTruncation);
+    // Also re-check if content changes (MutationObserver)
+    const observer = new MutationObserver(checkTruncation);
+    if (elementRef.current) {
+      observer.observe(elementRef.current, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+      });
+    }
+
+    return () => {
+      window.removeEventListener('resize', checkTruncation);
+      observer.disconnect();
+    };
+  }, [elementRef]);
+
+  return isTruncated;
 }

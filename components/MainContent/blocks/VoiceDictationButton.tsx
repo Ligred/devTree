@@ -15,6 +15,7 @@ import { Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useRecordingStore } from '@/lib/recordingStore';
 import { useSettingsStore } from '@/lib/settingsStore';
+import { useI18n } from '@/lib/i18n';
 import { attemptStartRecording } from './recordingHelpers';
 import { useConfirmation } from '@/lib/confirmationContext';
 import { getSpeechRecognitionApi, isChromeBasedBrowser, DICTATION_LANGUAGE_CODES } from './voiceDictationUtils';
@@ -33,6 +34,7 @@ export function VoiceDictationButton({
   language = 'en',
   blockId = '',
 }: VoiceDictationButtonProps) {
+  const { t } = useI18n();
   const { startRecording, stopRecording } = useRecordingStore();
   const { dictationFormattingEnabled } = useSettingsStore();
   const { confirm } = useConfirmation();
@@ -218,7 +220,7 @@ export function VoiceDictationButton({
   return (
     <button
       type="button"
-      title={listening ? 'Stop voice dictation' : 'Start voice dictation'}
+      title={listening ? t('voice.stopRecording') : t('voice.startRecording')}
       onMouseDown={handleToggleRecording}
       className={cn(
         'flex h-7 w-7 items-center justify-center rounded text-sm transition-colors',

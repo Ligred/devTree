@@ -46,7 +46,8 @@
  */
 
 import React from 'react';
-import { FilePlus, FolderPlus, Trash2 } from 'lucide-react';
+import { FilePlus, FolderPlus, Trash2, Edit2, MoreVertical } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 
 import type { TreeDataItem } from '@/components/ui/tree-view';
 
@@ -81,6 +82,8 @@ type BuildTreeDataParams = {
   selectedPageId: string | null;
   ancestorPathIds: string[];
   t: TFunction;
+  editingFolderId: string | null;
+  setEditingFolderId: (id: string | null) => void;
 };
 
 /**
@@ -95,22 +98,23 @@ type BuildTreeDataParams = {
  * IMPROVEMENT: For very deep trees (> 50 levels), convert to an explicit stack
  * to avoid stack overflow. In practice, users won't create that many levels.
  */
-function nodeToTreeDataItem(
-  node: TreeNode,
+function createNodeToTreeDataItem(
   onCreateFile: (parentId: string) => void,
   onCreateFolder: (parentId: string) => void,
   onDelete: (nodeId: string) => void,
   selectedPageId: string | null,
   ancestorPathIds: string[],
   t: TFunction,
-): TreeDataItem {
+  editingState: { folderId: string | null; setFolderId: (id: string | null) => void },
+) {
+  return function nodeToTreeDataItem(node: TreeNode): TreeDataItem {
   // A node is a folder if it has a children array but no pageId.
   // A file (page) has a pageId but no children array.
   const isFolder = isFolderNode(node);
 
   const children = isFolder
     ? [...node.children!].sort(compareTreeNodes).map((n) =>
-        nodeToTreeDataItem(n, onCreateFile, onCreateFolder, onDelete, selectedPageId, ancestorPathIds, t),
+        nodeToTreeDataItem(n),
       )
     : undefined;
 
@@ -141,6 +145,7 @@ function nodeToTreeDataItem(
 
   /** Delete icon button — shown for both files and folders. */
   const deleteButton = (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
     <span
       role="button"
       tabIndex={0}
@@ -156,47 +161,180 @@ function nodeToTreeDataItem(
     </span>
   );
 
-  /**
-   * Action buttons rendered to the right of each tree row on hover.
-   *
-   * Folders get two extra actions: "New file" and "New folder" (to create
-   * children). Files only get "Delete".
-   */
-  const actions = (
-    <div className="flex items-center gap-0.5">
-      {isFolder && (
-        <>
+  /** Rename icon button — folders only. */
+  const renameButton = isFolder ? (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={t('tree.rename')}
+      className="cursor-pointer rounded p-1 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
+      onClick={(e) => {
+        e.stopPropagation();
+        editingState.setFolderId(node.id);
+      }}
+      onKeyDown={(e) => handleKeyDown(e, () => editingState.setFolderId(node.id))}
+    >
+      <Edit2 size={14} />
+    </span>
+  ) : null;
+
+  /** Create file button — folders only. */
+  const newFileButton = isFolder ? (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={t('tree.newFile')}
+      className="cursor-pointer rounded p-1 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
+      onClick={(e) => {
+        e.stopPropagation();
+        onCreateFile(node.id);
+      }}
+      onKeyDown={(e) => handleKeyDown(e, () => onCreateFile(node.id))}
+    >
+      <FilePlus size={14} />
+    </span>
+  ) : null;
+
+  /** Create folder button — folders only. */
+  const newFolderButton = isFolder ? (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+    <span
+      role="button"
+      tabIndex={0}
+      aria-label={t('tree.newFolder')}
+      className="cursor-pointer rounded p-1 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
+      onClick={(e) => {
+        e.stopPropagation();
+        onCreateFolder(node.id);
+      }}
+      onKeyDown={(e) => handleKeyDown(e, () => onCreateFolder(node.id))}
+    >
+      <FolderPlus size={14} />
+    </span>
+  ) : null;
+
+  // Map of button type → element with stable keys
+  const buttonMap: Record<string, React.ReactNode | null> = {
+    delete: deleteButton,
+    rename: renameButton,
+    newfile: newFileButton,
+    newfolder: newFolderButton,
+  };
+
+  // Filter and create array with explicit keys
+  const activeButtonsWithKeys = Object.entries(buttonMap)
+    .filter(([_, btn]) => btn !== null)
+    .map(([key, btn]) => React.cloneElement(btn as React.ReactElement, { key }));
+
+  const actionCount = activeButtonsWithKeys.length;
+
+  // If more than 2 actions, render overflow menu; otherwise render inline
+  const actions =
+    actionCount > 2 ? (
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
           <span
             role="button"
             tabIndex={0}
-            aria-label={t('tree.newFile')}
-            className="cursor-pointer rounded p-1 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCreateFile(node.id);
+            aria-label={t('tree.moreActions')}
+            className="cursor-pointer rounded p-1 hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+              }
             }}
-            onKeyDown={(e) => handleKeyDown(e, () => onCreateFile(node.id))}
           >
-            <FilePlus size={14} />
+            <MoreVertical size={14} />
           </span>
-          <span
-            role="button"
-            tabIndex={0}
-            aria-label={t('tree.newFolder')}
-            className="cursor-pointer rounded p-1 hover:bg-accent focus:outline-none focus:ring-2 focus:ring-primary/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              onCreateFolder(node.id);
-            }}
-            onKeyDown={(e) => handleKeyDown(e, () => onCreateFolder(node.id))}
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            className="z-50 min-w-40 rounded-md border border-border bg-card p-1 shadow-md"
+            onClick={(e) => e.stopPropagation()}
           >
-            <FolderPlus size={14} />
-          </span>
-        </>
-      )}
-      {deleteButton}
-    </div>
-  );
+            {deleteButton && (
+              <DropdownMenu.Item
+                key="delete"
+                asChild
+                onSelect={() => {
+                  onDelete(node.id);
+                }}
+              >
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-foreground hover:bg-accent focus:outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Trash2 size={14} />
+                  {t('tree.delete')}
+                </button>
+              </DropdownMenu.Item>
+            )}
+            {renameButton && (
+              <DropdownMenu.Item
+                key="rename"
+                asChild
+                onSelect={() => {
+                  editingState.setFolderId(node.id);
+                }}
+              >
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-foreground hover:bg-accent focus:outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Edit2 size={14} />
+                  {t('tree.rename')}
+                </button>
+              </DropdownMenu.Item>
+            )}
+            {newFileButton && (
+              <DropdownMenu.Item
+                key="newfile"
+                asChild
+                onSelect={() => {
+                  onCreateFile(node.id);
+                }}
+              >
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-foreground hover:bg-accent focus:outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <FilePlus size={14} />
+                  {t('tree.newFile')}
+                </button>
+              </DropdownMenu.Item>
+            )}
+            {newFolderButton && (
+              <DropdownMenu.Item
+                key="newfolder"
+                asChild
+                onSelect={() => {
+                  onCreateFolder(node.id);
+                }}
+              >
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-xs text-foreground hover:bg-accent focus:outline-none"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <FolderPlus size={14} />
+                  {t('tree.newFolder')}
+                </button>
+              </DropdownMenu.Item>
+            )}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
+    ) : (
+      <div className="flex items-center gap-0.5">{activeButtonsWithKeys}</div>
+    );
 
   return {
     id: node.id,
@@ -206,6 +344,7 @@ function nodeToTreeDataItem(
     draggable: true,
     droppable: true,
     ...(rowClassName ? { className: rowClassName } : {}),
+  };
   };
 }
 
@@ -224,8 +363,19 @@ export function buildTreeDataWithActions({
   selectedPageId,
   ancestorPathIds,
   t,
+  editingFolderId,
+  setEditingFolderId,
 }: BuildTreeDataParams): TreeDataItem[] {
+  const nodeToTreeDataItem = createNodeToTreeDataItem(
+    onCreateFile,
+    onCreateFolder,
+    onDelete,
+    selectedPageId,
+    ancestorPathIds,
+    t,
+    { folderId: editingFolderId, setFolderId: setEditingFolderId },
+  );
   return [...root.children].sort(compareTreeNodes).map((node) =>
-    nodeToTreeDataItem(node, onCreateFile, onCreateFolder, onDelete, selectedPageId, ancestorPathIds, t),
+    nodeToTreeDataItem(node),
   );
 }

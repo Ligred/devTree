@@ -197,5 +197,12 @@
   "audio.captionPlaceholder": "Опишіть це аудіо\u2026",
   "audio.urlHint": "Вставте пряме посилання на файл MP3, OGG, WAV або M4A.",
   "audio.noAudio": "Аудіо ще немає — вставте URL для вбудовування.",
-  "audio.addUrl": "Додати URL аудіо"
+  "audio.addUrl": "Додати URL аудіо",
+  "ui.textTruncated": "Текст скорочений",
+  "ui.fullscreen": "На весь екран",
+  "ui.exitFullscreen": "Вихід з повноекранного режиму",
+  "tree.rename": "Перейменувати",
+  "tree.moreActions": "Більше дій",
+  "voice.startRecording": "Почати голосовий диктант",
+  "voice.stopRecording": "Зупинити голосовий диктант"
 }
