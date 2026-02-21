@@ -361,7 +361,7 @@ export function getAncestorPath(root: TreeRoot, nodeId: string): string[] {
  */
 export function getParentId(root: TreeRoot, nodeId: string): string {
   const path = getAncestorPath(root, nodeId);
-  return path.length > 0 ? path[path.length - 1]! : root.id;
+  return path.at(-1) ?? root.id;
 }
 
 /**
@@ -386,4 +386,72 @@ export function replaceNodeId(root: TreeRoot, oldId: string, newId: string): Tre
     });
   }
   return { ...root, children: replaceInChildren(root.children) };
+}
+
+/** Normalize a name for duplicate checks in a scope (trim + case-insensitive). */
+export function normalizeScopeName(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
+/** Get direct children for a parent scope (folder id or root id). */
+export function getScopeChildren(root: TreeRoot, parentId: string): TreeNode[] {
+  if (parentId === root.id) return root.children;
+  const parent = findNodeInRoot(root, parentId);
+  if (!parent || !Array.isArray(parent.children)) return [];
+  return parent.children;
+}
+
+/** Get normalized sibling names in a scope (excluding optional node id). */
+export function getNormalizedSiblingNames(
+  root: TreeRoot,
+  parentId: string,
+  excludeNodeId?: string,
+): Set<string> {
+  const names = new Set<string>();
+  for (const child of getScopeChildren(root, parentId)) {
+    if (excludeNodeId && child.id === excludeNodeId) continue;
+    names.add(normalizeScopeName(child.name));
+  }
+  return names;
+}
+
+/** True when candidate name already exists among siblings in scope. */
+export function isNameTakenInScope(
+  root: TreeRoot,
+  parentId: string,
+  candidateName: string,
+  excludeNodeId?: string,
+): boolean {
+  const normalized = normalizeScopeName(candidateName);
+  if (!normalized) return false;
+  return getNormalizedSiblingNames(root, parentId, excludeNodeId).has(normalized);
+}
+
+/** Generate a unique display name in scope using pattern: Base, Base 2, Base 3... */
+export function generateUniqueNameInScope(
+  root: TreeRoot,
+  parentId: string,
+  baseName: string,
+): string {
+  const base = baseName.trim() || 'Untitled';
+  const normalizedSiblings = getNormalizedSiblingNames(root, parentId);
+  if (!normalizedSiblings.has(normalizeScopeName(base))) return base;
+
+  let index = 2;
+  while (true) {
+    const candidate = `${base} ${index}`;
+    if (!normalizedSiblings.has(normalizeScopeName(candidate))) return candidate;
+    index += 1;
+  }
+}
+
+/** Find the first page id inside a node subtree (depth-first), or null if none. */
+export function findFirstPageIdInSubtree(node: TreeNode): string | null {
+  if (node.pageId) return node.pageId;
+  if (!Array.isArray(node.children)) return null;
+  for (const child of node.children) {
+    const pageId = findFirstPageIdInSubtree(child);
+    if (pageId) return pageId;
+  }
+  return null;
 }

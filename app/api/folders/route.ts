@@ -4,6 +4,10 @@ import type { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
+function normalizeName(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
 // ─── GET /api/folders ─────────────────────────────────────────────────────────
 // Returns all folders (with page stubs) owned by the authenticated user.
 
@@ -67,6 +71,27 @@ export async function POST(req: NextRequest) {
     _max: { order: true },
   });
   const order = (maxOrder._max.order ?? -1) + 1;
+
+  const [siblingFolders, siblingPages] = await Promise.all([
+    prisma.folder.findMany({
+      where: { ownerId: userId, parentId },
+      select: { name: true },
+    }),
+    prisma.page.findMany({
+      where: { ownerId: userId, folderId: parentId },
+      select: { title: true },
+    }),
+  ]);
+
+  const targetName = normalizeName(name);
+  const hasDuplicateFolder = siblingFolders.some((f) => normalizeName(f.name) === targetName);
+  const hasDuplicatePage = siblingPages.some((p) => normalizeName(p.title) === targetName);
+  if (hasDuplicateFolder || hasDuplicatePage) {
+    return NextResponse.json(
+      { error: 'Name already exists in this folder', code: 'DUPLICATE_NAME' },
+      { status: 409 },
+    );
+  }
 
   try {
     const folder = await prisma.folder.create({

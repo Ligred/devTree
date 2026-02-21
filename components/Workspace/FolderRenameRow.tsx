@@ -50,7 +50,7 @@ type FolderRenameRowParams = Readonly<{
   item: TreeDataItem;
   isLeaf: boolean;
   isSelected: boolean;
-  onRenameFolder: (id: string, name: string) => void;
+  onRenameFolder: (id: string, name: string) => boolean;
   editingFolderId: string | null;
   setEditingFolderId: (id: string | null) => void;
 }>;
@@ -64,6 +64,7 @@ export function FolderRenameRow({
   setEditingFolderId,
 }: FolderRenameRowParams) {
   const [editName, setEditName] = useState(item.name);
+  const [hasError, setHasError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isEditing = !isLeaf && editingFolderId === item.id;
   const { t } = useI18n();
@@ -79,14 +80,20 @@ export function FolderRenameRow({
   const handleCommit = () => {
     const trimmed = editName.trim();
     if (trimmed && trimmed !== item.name) {
-      onRenameFolder(item.id, trimmed);
+      const success = onRenameFolder(item.id, trimmed);
+      if (!success) {
+        setHasError(true);
+        return;
+      }
     }
+    setHasError(false);
     setEditingFolderId(null);
   };
 
   const startEdit = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();
     setEditName(item.name); // Sync to current name at the moment editing begins
+    setHasError(false);
     setEditingFolderId(item.id);
   };
 
@@ -107,9 +114,15 @@ export function FolderRenameRow({
       <input
         ref={inputRef}
         type="text"
-        className="min-w-0 flex-1 rounded border border-primary/30 bg-background px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+        aria-invalid={hasError}
+        className={hasError
+          ? 'min-w-0 flex-1 rounded border border-destructive bg-background px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-destructive/20'
+          : 'min-w-0 flex-1 rounded border border-primary/30 bg-background px-1 py-0.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary'}
         value={editName}
-        onChange={(e) => setEditName(e.target.value)}
+        onChange={(e) => {
+          setEditName(e.target.value);
+          if (hasError) setHasError(false);
+        }}
         onBlur={handleCommit}
           onKeyDown={(e) => {
           if (e.key === 'Enter') handleCommit();

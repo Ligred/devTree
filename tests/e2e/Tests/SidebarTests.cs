@@ -75,14 +75,12 @@ public class SidebarTests : E2ETestBase
     [Test]
     public async Task CreateMultiplePages_AllAppearInSidebar()
     {
-        // Create two pages; they'll be named "Untitled" in sidebar
+        // Create two pages; second one gets unique default name.
         await App.Sidebar.CreatePageAsync();
         await App.Sidebar.CreatePageAsync();
 
-        // Check that at least 2 "Untitled" items exist (from multiple creates)
-        var items = Page.GetByText("Untitled");
-        var count = await items.CountAsync();
-        Assert.That(count, Is.GreaterThanOrEqualTo(2));
+        await Expect(Page.GetByText("Untitled").First).ToBeVisibleAsync();
+        await Expect(Page.GetByText("Untitled 2").First).ToBeVisibleAsync();
     }
 
     // ── Folder creation ──────────────────────────────────────────────────────

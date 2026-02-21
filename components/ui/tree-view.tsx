@@ -91,6 +91,8 @@ export type TreeRenderItemParams = {
 type TreeProps = React.HTMLAttributes<HTMLDivElement> & {
   data: TreeDataItem[] | TreeDataItem;
   initialSelectedItemId?: string;
+  selectedItemId?: string;
+  expandedItemIds?: string[];
   onSelectChange?: (item: TreeDataItem | undefined) => void;
   expandAll?: boolean;
   defaultNodeIcon?: React.ComponentType<{ className?: string }>;
@@ -107,6 +109,8 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
     {
       data,
       initialSelectedItemId,
+      selectedItemId: controlledSelectedItemId,
+      expandedItemIds: controlledExpandedItemIds,
       onSelectChange,
       expandAll,
       defaultLeafIcon,
@@ -120,9 +124,13 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
     ref
   ) => {
     const [selectedItemId, setSelectedItemId] = React.useState<string | undefined>(
-      initialSelectedItemId
+      controlledSelectedItemId ?? initialSelectedItemId
     );
     const [draggedItem, setDraggedItem] = React.useState<TreeDataItem | null>(null);
+
+    React.useEffect(() => {
+      setSelectedItemId(controlledSelectedItemId ?? undefined);
+    }, [controlledSelectedItemId]);
 
     const handleSelectChange = React.useCallback(
       (item: TreeDataItem | undefined) => {
@@ -157,6 +165,7 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
      * all ancestor ids — these should be expanded to reveal the selected item.
      */
     const expandedItemIds = React.useMemo(() => {
+      if (controlledExpandedItemIds) return controlledExpandedItemIds;
       if (!initialSelectedItemId) return [] as string[];
       const ids: string[] = [];
 
@@ -177,7 +186,7 @@ export const TreeView = React.forwardRef<HTMLDivElement, TreeProps>(
 
       walk(data, initialSelectedItemId);
       return ids;
-    }, [data, expandAll, initialSelectedItemId]);
+    }, [controlledExpandedItemIds, data, expandAll, initialSelectedItemId]);
 
     return (
       <div
@@ -348,6 +357,12 @@ const TreeNode = ({
   const hasChildren = !!item.children?.length;
   const isSelected = selectedItemId === item.id;
   const isOpen = value.includes(item.id);
+
+  React.useEffect(() => {
+    if (expandedItemIds.includes(item.id)) {
+      setValue([item.id]);
+    }
+  }, [expandedItemIds, item.id]);
 
   const onDragStart = (e: React.DragEvent) => {
     if (!item.draggable) { e.preventDefault(); return; }

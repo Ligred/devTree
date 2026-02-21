@@ -39,6 +39,8 @@ const I18N_EXPORT_MARKDOWN = 'main.exportMarkdown';
 
 type MainContentProps = Readonly<{
   page: Page | null;
+  breadcrumbs?: Array<{ id: string; label: string; isCurrent: boolean }>;
+  onBreadcrumbClick?: (id: string) => void;
   onSave?: () => void;
   saved?: boolean;
   /**
@@ -49,6 +51,7 @@ type MainContentProps = Readonly<{
   onTitleChange?: (title: string) => void;
   /** Called when the title input loses focus — persists the title to the server. */
   onTitleBlur?: () => void;
+  titleHasError?: boolean;
   onBlocksChange?: (blocks: Block[]) => void;
   /** Called when the user adds or removes a tag on the current page. */
   onTagsChange?: (tags: string[]) => void;
@@ -58,11 +61,14 @@ type MainContentProps = Readonly<{
 
 export function MainContent({
   page,
+  breadcrumbs = [],
+  onBreadcrumbClick,
   onSave,
   saved = false,
   isDirty = false,
   onTitleChange,
   onTitleBlur,
+  titleHasError = false,
   onBlocksChange,
   onTagsChange,
   onMobileSidebarToggle,
@@ -138,9 +144,35 @@ export function MainContent({
               <Menu size={20} />
             </button>
           )}
-          <span className="min-w-0 truncate text-sm font-medium text-foreground">
-            {page?.title ?? t('main.selectPage')}
-          </span>
+          <span className="sr-only">{page?.title ?? t('main.selectPage')}</span>
+          {breadcrumbs.length > 0 ? (
+            <nav aria-label="Breadcrumb" className="min-w-0">
+              <ol className="flex min-w-0 items-center gap-1 text-sm">
+                {breadcrumbs.map((crumb, index) => (
+                  <li key={crumb.id} className="flex min-w-0 items-center gap-1">
+                    {index > 0 && <span className="text-muted-foreground">/</span>}
+                    <button
+                      type="button"
+                      className={cn(
+                        'min-w-0 truncate rounded px-1 py-0.5',
+                        crumb.isCurrent
+                          ? 'font-medium text-foreground'
+                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                      )}
+                      onClick={() => onBreadcrumbClick?.(crumb.id)}
+                      aria-current={crumb.isCurrent ? 'page' : undefined}
+                    >
+                      {crumb.label}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          ) : (
+            <span className="min-w-0 truncate text-sm font-medium text-foreground">
+              {page?.title ?? t('main.selectPage')}
+            </span>
+          )}
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -184,6 +216,7 @@ export function MainContent({
                 readOnly={!onTitleChange}
                 onTitleChange={onTitleChange}
                 onTitleBlur={onTitleBlur}
+                invalid={titleHasError}
               />
 
               {/* Page-level tag bar — hidden when tagsPerPageEnabled is false */}

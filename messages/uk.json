@@ -34,6 +34,7 @@
   "tree.newFolder": "Нова папка",
   "tree.delete": "Видалити",
   "tree.renameHint": "Двічі клацніть, щоб перейменувати",
+  "tree.duplicateNameError": "Така назва вже існує в цій папці.",
   "tree.dropToRoot": "Перетягніть сюди, щоб перемістити в корінь",
   "settings.title": "Налаштування",
   "settings.description": "Керуйте налаштуваннями робочого простору",

@@ -34,6 +34,7 @@
   "tree.newFolder": "New folder",
   "tree.delete": "Delete",
   "tree.renameHint": "Double-click to rename",
+  "tree.duplicateNameError": "This name already exists in this folder.",
   "tree.dropToRoot": "Drop here to move to root",
   "settings.title": "Settings",
   "settings.description": "Manage your workspace preferences",

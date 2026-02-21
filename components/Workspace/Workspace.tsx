@@ -37,6 +37,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, FilePlus, FolderPlus, Search, X } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { FileExplorer } from '@/components/FileExplorer/FileExplorer';
 import { MainContent, type Page, type Block } from '@/components/MainContent';
@@ -56,8 +57,11 @@ import {
   addFolderUnder,
   collectPageIdsInSubtree,
   countDescendants,
+  findFirstPageIdInSubtree,
   findNodeInRoot,
+  generateUniqueNameInScope,
   getAncestorPath,
+  isNameTakenInScope,
   getParentId,
   moveNode,
   newPageId,
@@ -81,6 +85,7 @@ import {
   deleteFolder as apiDeleteFolder,
   moveFolder as apiMoveFolder,
   apiPageToPage,
+  WorkspaceApiError,
   type ApiPage,
   type ApiFolder,
 } from './workspaceApi';
@@ -147,12 +152,11 @@ function swapPageId(pages: Page[], oldId: string, newId: string): Page[] {
   return pages.map((p) => (p.id === oldId ? { ...p, id: newId } : p));
 }
 
-/** Sort pages by `order` without mutating the source array. */
-function sortByOrder(pages: ApiPage[]): ApiPage[] {
-  return [...pages].sort((a, b) => a.order - b.order);
-}
+type WorkspaceProps = Readonly<{
+  initialRoutePageId?: string;
+}>;
 
-export function Workspace() {
+export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   // ─── Core data state ────────────────────────────────────────────────────────
 
   /** Whether the initial data load from the server is in progress. */
@@ -184,6 +188,10 @@ export function Workspace() {
 
   /** The id of the page currently displayed in the editor. null = none selected. */
   const [activePageId, setActivePageId] = useState<string | null>(null);
+  const [titleHasError, setTitleHasError] = useState(false);
+
+  const router = useRouter();
+  const pathname = usePathname();
 
   // ─── UI state ────────────────────────────────────────────────────────────────
 
@@ -212,6 +220,7 @@ export function Workspace() {
 
   /** "Saved" feedback: true for 2 seconds after the user saves. */
   const [saveFeedback, setSaveFeedback] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
   /**
    * Whether the current page has unsaved changes.
@@ -271,6 +280,23 @@ export function Workspace() {
   const { t } = useI18n();
   const tagsPerPageEnabled = useSettingsStore((s) => s.tagsPerPageEnabled);
 
+  const routePageId = useMemo(() => {
+    if (!pathname) return initialRoutePageId ?? null;
+    if (!pathname.startsWith('/p/')) return null;
+    const candidate = pathname.slice(3).trim();
+    return candidate ? decodeURIComponent(candidate) : null;
+  }, [pathname, initialRoutePageId]);
+
+  const routePageExists = useMemo(
+    () => (routePageId ? pages.some((p) => p.id === routePageId) : false),
+    [pages, routePageId],
+  );
+  const isPageRoute = useMemo(() => (pathname ? pathname.startsWith('/p/') : false), [pathname]);
+
+  const showErrorToast = useCallback((message: string) => {
+    setErrorToast(message);
+  }, []);
+
   // When page tags are disabled, clear the sidebar tag filter so we don't filter by tags invisibly.
   useEffect(() => {
     if (!tagsPerPageEnabled) setActiveTags([]);
@@ -301,6 +327,18 @@ export function Workspace() {
     () => (activePageId ? getAncestorPath(treeRoot, activePageId) : []),
     [treeRoot, activePageId],
   );
+
+  const breadcrumbs = useMemo(() => {
+    if (!activePageId || !activePage) return [] as Array<{ id: string; label: string; isCurrent: boolean }>;
+    const folderCrumbs = ancestorPathIds
+      .map((ancestorId) => {
+        const node = findNodeInRoot(treeRoot, ancestorId);
+        if (!node) return null;
+        return { id: node.id, label: node.name, isCurrent: false };
+      })
+      .filter((item): item is { id: string; label: string; isCurrent: boolean } => item !== null);
+    return [...folderCrumbs, { id: activePage.id, label: activePage.title, isCurrent: true }];
+  }, [activePageId, activePage, ancestorPathIds, treeRoot]);
 
   /**
    * Pages filtered by the current search query.
@@ -395,21 +433,26 @@ export function Workspace() {
    *   invalidating the treeData memo every time.
    */
   const createFolder = useCallback((parentId: string) => {
+    const folderName = generateUniqueNameInScope(treeRoot, parentId, t('tree.newFolder'));
+
     // Optimistic update
-    setTreeRoot((root) => addFolderUnder(root, parentId, 'New folder'));
+    setTreeRoot((root) => addFolderUnder(root, parentId, folderName));
 
     // Determine the DB parent folder id (parentId might be ROOT_ID)
     const dbParentId = dbFolderIds.current.has(parentId) ? parentId : null;
 
-    void apiCreateFolder('New folder', dbParentId).then((created) => {
+    void apiCreateFolder(folderName, dbParentId).then((created) => {
       // Register the new folder id so future moves can reference it
       dbFolderIds.current.set(created.id, created.id);
     }).catch((err) => {
       console.error('[createFolder]', err);
+      if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
+        showErrorToast(t('tree.duplicateNameError'));
+      }
       // Revert: reload from server
       void fetchFolders().then(() => {/* silently ignore */});
     });
-  }, []);
+  }, [showErrorToast, t, treeRoot]);
 
   /**
    * Create a new page under the given parent.
@@ -420,7 +463,8 @@ export function Workspace() {
    */
   const createFile = useCallback((parentId: string) => {
     const localPageId = newPageId();
-    const newPage: Page = { id: localPageId, title: 'Untitled', blocks: [] };
+    const fileTitle = generateUniqueNameInScope(treeRoot, parentId, 'Untitled');
+    const newPage: Page = { id: localPageId, title: fileTitle, blocks: [] };
     const shouldAutoOpenNewPage = activePageId == null;
 
     // Optimistic update
@@ -433,7 +477,7 @@ export function Workspace() {
     // Determine the DB folder id for the parent
     const dbFolderId = dbFolderIds.current.has(parentId) ? parentId : null;
 
-    void apiCreatePage('Untitled', dbFolderId).then((created) => {
+    void apiCreatePage(fileTitle, dbFolderId).then((created) => {
       // Swap the optimistic local id with the server-assigned id everywhere.
       // This ensures all subsequent API calls (block create/update/delete) use
       // the correct pageId that exists in the database.
@@ -446,8 +490,11 @@ export function Workspace() {
       serverPagesRef.current.delete(localPageId);
     }).catch((err) => {
       console.error('[createFile]', err);
+      if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
+        showErrorToast(t('tree.duplicateNameError'));
+      }
     });
-  }, [activePageId]);
+  }, [activePageId, showErrorToast, t, treeRoot]);
 
   /**
    * Open the delete-confirmation dialog for a node.
@@ -597,13 +644,23 @@ export function Workspace() {
 
   const handleRenameFolder = useCallback(
     (folderId: string, name: string) => {
+      const parentId = getParentId(treeRoot, folderId);
+      if (isNameTakenInScope(treeRoot, parentId, name, folderId)) {
+        showErrorToast(t('tree.duplicateNameError'));
+        return false;
+      }
+
       setTreeRoot((root) => renameNode(root, folderId, name));
       setEditingFolderId(null);
-      void apiUpdateFolder(folderId, { name }).catch((err) =>
-        console.error('[renameFolder]', err),
-      );
+      void apiUpdateFolder(folderId, { name }).catch((err) => {
+        console.error('[renameFolder]', err);
+        if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
+          showErrorToast(t('tree.duplicateNameError'));
+        }
+      });
+      return true;
     },
-    [],
+    [showErrorToast, t, treeRoot],
   );
 
   /**
@@ -635,25 +692,35 @@ export function Workspace() {
 
   /** Select a page when the user clicks on a tree leaf node. */
   const handleSelect = useCallback(
+    (pageId: string) => {
+      if (pageId === activePageId) return;
+      if (isDirty) {
+        setPendingNavId(pageId);
+        return;
+      }
+      setTitleHasError(false);
+      setActivePageId(pageId);
+      setMobileSidebarOpen(false);
+    },
+    [activePageId, isDirty],
+  );
+
+  /** Select a page when the user clicks on a tree leaf node. */
+  const handleTreeSelect = useCallback(
     (item: TreeDataItem | undefined) => {
       if (!item) return;
       const isFile = pages.some((p) => p.id === item.id);
-      if (!isFile || item.id === activePageId) return;
-      // Guard: if the current page has unsaved changes, ask the user first.
-      if (isDirty) {
-        setPendingNavId(item.id);
-        return;
-      }
-      setActivePageId(item.id);
-      setMobileSidebarOpen(false);
+      if (!isFile) return;
+      handleSelect(item.id);
     },
-    [pages, activePageId, isDirty],
+    [handleSelect, pages],
   );
 
   /** Sync page title changes into local state only — no API call yet. */
   const handleTitleChange = useCallback(
     (title: string) => {
       if (!activePageId) return;
+      setTitleHasError(false);
       setPages((prev) =>
         prev.map((p) => (p.id === activePageId ? { ...p, title } : p)),
       );
@@ -668,6 +735,15 @@ export function Workspace() {
     if (!activePageId) return;
     const page = pages.find((p) => p.id === activePageId);
     if (!page) return;
+
+    const parentId = getParentId(treeRoot, activePageId);
+    if (isNameTakenInScope(treeRoot, parentId, page.title, activePageId)) {
+      setTitleHasError(true);
+      showErrorToast(t('tree.duplicateNameError'));
+      return;
+    }
+
+    setTitleHasError(false);
     void apiUpdatePage(activePageId, { title: page.title })
       .then(() => {
         const oldSnap = serverPagesRef.current.get(activePageId);
@@ -677,9 +753,29 @@ export function Workspace() {
         );
       })
       .catch((err) =>
-        console.error('[titleBlur]', err),
+        {
+          console.error('[titleBlur]', err);
+          if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
+            setTitleHasError(true);
+            showErrorToast(t('tree.duplicateNameError'));
+          }
+        },
       );
-  }, [activePageId, pages]);
+  }, [activePageId, pages, showErrorToast, t, treeRoot]);
+
+  const handleBreadcrumbClick = useCallback((nodeId: string) => {
+    const node = findNodeInRoot(treeRoot, nodeId);
+    if (!node) return;
+
+    if (node.pageId) {
+      handleSelect(node.pageId);
+      return;
+    }
+
+    const nextPageId = findFirstPageIdInSubtree(node);
+    if (!nextPageId) return;
+    handleSelect(nextPageId);
+  }, [handleSelect, treeRoot]);
 
   /**
    * Block changes are kept purely in local state until the user explicitly saves.
@@ -910,9 +1006,7 @@ export function Workspace() {
         const root = buildTreeRootFromApi(apiFolders, apiPages);
         setTreeRoot(root);
 
-        // Select the first page if available
-        const firstPage = sortByOrder(apiPages)[0];
-        if (firstPage) setActivePageId(firstPage.id);
+        // Keep selection route-driven; root route stays in empty state.
       } catch (err) {
         console.error('[Workspace] Failed to load data:', err);
       } finally {
@@ -939,6 +1033,63 @@ export function Workspace() {
     const timer = setTimeout(() => setSaveFeedback(false), 2000);
     return () => clearTimeout(timer);
   }, [saveFeedback]);
+
+  useEffect(() => {
+    if (!errorToast) return;
+    const timer = setTimeout(() => setErrorToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [errorToast]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!isPageRoute) return;
+    if (!routePageId) return;
+    if (routePageExists) {
+      setActivePageId(routePageId);
+      setTitleHasError(false);
+      return;
+    }
+    setActivePageId(null);
+  }, [isPageRoute, loading, routePageExists, routePageId]);
+
+  useEffect(() => {
+    if (loading || !pathname) return;
+    if (activePageId) {
+      const targetPath = `/p/${encodeURIComponent(activePageId)}`;
+      if (pathname !== targetPath) router.push(targetPath);
+      return;
+    }
+    if (isPageRoute && routePageId && !routePageExists) {
+      router.push('/');
+    }
+  }, [activePageId, isPageRoute, loading, pathname, routePageExists, routePageId, router]);
+
+  /**
+   * Browser back/forward navigation guard: when routePageId changes (via back/forward)
+   * and we have unsaved changes, show the unsaved-changes dialog.
+   * This prevents data loss from browser navigation while editing.
+   */
+  useEffect(() => {
+    // Skip during initial load or if no route page ID change
+    if (loading) return;
+    if (!isPageRoute) return;
+    
+    // Check if routePageId changed and differs from activePageId
+    const routePageChanged = routePageId && routePageId !== activePageId;
+    if (!routePageChanged) return;
+    
+    // If dirty, show dialog and set pending navigation target
+    if (isDirty) {
+      setPendingNavId(routePageId);
+      return;
+    }
+    
+    // Otherwise, apply the new route page ID
+    if (routePageExists) {
+      setActivePageId(routePageId);
+      setTitleHasError(false);
+    }
+  }, [isPageRoute, loading, routePageId, activePageId, isDirty, routePageExists]);
 
   /**
    * Keyboard shortcut: Cmd/Ctrl+K focuses the search input.
@@ -1187,9 +1338,11 @@ export function Workspace() {
                 </p>
                 <FileExplorer
                   data={treeData}
-                  onSelect={handleSelect}
+                  onSelect={handleTreeSelect}
                   onDocumentDrag={handleDocumentDrag}
                   renderItem={renderTreeItem}
+                  selectedItemId={activePageId ?? undefined}
+                  expandedItemIds={ancestorPathIds}
                   rootDropLabel={t('tree.dropToRoot')}
                 />
               </>
@@ -1219,8 +1372,7 @@ export function Workspace() {
                           : 'text-foreground hover:bg-accent/50',
                       )}
                       onClick={() => {
-                        setActivePageId(page.id);
-                        setMobileSidebarOpen(false);
+                        handleSelect(page.id);
                         setSearchQuery('');
                         setActiveTags([]);
                       }}
@@ -1250,15 +1402,24 @@ export function Workspace() {
       {/* ─── Main content area ───────────────────────────────────────────────── */}
       <MainContent
         page={activePage}
+        breadcrumbs={breadcrumbs}
+        onBreadcrumbClick={handleBreadcrumbClick}
         onSave={handleSave}
         saved={saveFeedback}
         isDirty={isDirty}
         onTitleChange={handleTitleChange}
         onTitleBlur={handleTitleBlur}
+        titleHasError={titleHasError}
         onBlocksChange={handleBlocksChange}
         onTagsChange={handleTagsChange}
         onMobileSidebarToggle={() => setMobileSidebarOpen((v) => !v)}
       />
+
+      {errorToast && (
+        <div className="pointer-events-none fixed bottom-4 right-4 z-50 rounded-md border border-destructive/30 bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground shadow-lg">
+          {errorToast}
+        </div>
+      )}
 
       <DeleteConfirmDialog
         open={deleteDialog !== null}

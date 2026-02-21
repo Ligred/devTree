@@ -17,6 +17,8 @@ type FileExplorerProps = Readonly<{
   onSelect: (item: TreeDataItem | undefined) => void;
   onDocumentDrag?: (sourceItem: TreeDataItem, targetItem: TreeDataItem) => void;
   renderItem?: (params: TreeRenderItemParams) => React.ReactNode;
+  selectedItemId?: string;
+  expandedItemIds?: string[];
   rootDropLabel?: string;
 }>;
 
@@ -25,6 +27,8 @@ export function FileExplorer({
   onSelect,
   onDocumentDrag,
   renderItem,
+  selectedItemId,
+  expandedItemIds,
   rootDropLabel,
 }: FileExplorerProps) {
   return (
@@ -34,6 +38,8 @@ export function FileExplorer({
         onSelectChange={onSelect}
         onDocumentDrag={onDocumentDrag}
         renderItem={renderItem}
+        selectedItemId={selectedItemId}
+        expandedItemIds={expandedItemIds}
         rootDropLabel={rootDropLabel}
         defaultNodeIcon={Folder}
         defaultLeafIcon={FileCode}

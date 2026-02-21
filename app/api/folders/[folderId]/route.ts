@@ -4,6 +4,10 @@ import type { NextRequest } from 'next/server';
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
+function normalizeName(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
 type Params = { params: Promise<{ folderId: string }> };
 
 async function getOwnedFolder(folderId: string, userId: string) {
@@ -42,6 +46,33 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+  }
+
+  if (updates.name) {
+    const [siblingFolders, siblingPages] = await Promise.all([
+      prisma.folder.findMany({
+        where: {
+          ownerId: auth.userId,
+          parentId: folder.parentId,
+          id: { not: folder.id },
+        },
+        select: { name: true },
+      }),
+      prisma.page.findMany({
+        where: { ownerId: auth.userId, folderId: folder.parentId },
+        select: { title: true },
+      }),
+    ]);
+
+    const targetName = normalizeName(updates.name);
+    const hasDuplicateFolder = siblingFolders.some((f) => normalizeName(f.name) === targetName);
+    const hasDuplicatePage = siblingPages.some((p) => normalizeName(p.title) === targetName);
+    if (hasDuplicateFolder || hasDuplicatePage) {
+      return NextResponse.json(
+        { error: 'Name already exists in this folder', code: 'DUPLICATE_NAME' },
+        { status: 409 },
+      );
+    }
   }
 
   try {

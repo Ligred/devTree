@@ -6,12 +6,17 @@ import {
   addFolderUnder,
   collectPageIdsInSubtree,
   countDescendants,
+  findFirstPageIdInSubtree,
   findNodeInRoot,
+  generateUniqueNameInScope,
+  getNormalizedSiblingNames,
   getAncestorPath,
   getParentId,
+  isNameTakenInScope,
   moveNode,
   newFolderId,
   newPageId,
+  normalizeScopeName,
   removeNode,
   renameNode,
 } from './treeUtils';
@@ -298,5 +303,54 @@ describe('moveNode', () => {
   it('returns original root when moving a node to itself', () => {
     const updated = moveNode(root, 'p1', 'p1');
     expect(updated).toBe(root);
+  });
+});
+
+describe('name scope helpers', () => {
+  it('normalizes names with trim + lowercase', () => {
+    expect(normalizeScopeName('  My Name  ')).toBe('my name');
+  });
+
+  it('detects duplicate names at root scope', () => {
+    expect(isNameTakenInScope(root, ROOT_ID, ' page 1 ')).toBe(true);
+  });
+
+  it('detects duplicate names in nested folder scope', () => {
+    expect(isNameTakenInScope(root, 'f1', 'page 2')).toBe(true);
+  });
+
+  it('ignores the excluded node id while checking duplicates', () => {
+    expect(isNameTakenInScope(root, ROOT_ID, 'Page 1', 'p1')).toBe(false);
+  });
+
+  it('returns normalized sibling names set', () => {
+    const names = getNormalizedSiblingNames(root, ROOT_ID);
+    expect(names.has('page 1')).toBe(true);
+    expect(names.has('folder 1')).toBe(true);
+  });
+
+  it('generates unique names with numeric suffix', () => {
+    const duplicateRoot: TreeRoot = {
+      id: ROOT_ID,
+      name: 'root',
+      children: [
+        { id: 'a', name: 'Untitled', pageId: 'a' },
+        { id: 'b', name: 'Untitled 2', pageId: 'b' },
+      ],
+    };
+    expect(generateUniqueNameInScope(duplicateRoot, ROOT_ID, 'Untitled')).toBe('Untitled 3');
+  });
+});
+
+describe('findFirstPageIdInSubtree', () => {
+  it('returns first nested page id in depth-first order', () => {
+    const node = findNodeInRoot(root, 'f1');
+    expect(node).not.toBeNull();
+    expect(findFirstPageIdInSubtree(node!)).toBe('p2');
+  });
+
+  it('returns null when subtree has no pages', () => {
+    const emptyFolder: TreeNode = { id: 'empty', name: 'Empty', children: [] };
+    expect(findFirstPageIdInSubtree(emptyFolder)).toBeNull();
   });
 });

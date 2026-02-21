@@ -48,7 +48,7 @@ export async function proxy(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
+    loginUrl.searchParams.set('callbackUrl', `${pathname}${req.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);
   }
 
@@ -59,7 +59,7 @@ export const config = {
   // Don't run auth for Next.js internals (all _next/*), static assets, or favicon.
   // Otherwise JS chunk requests get redirected to /login and browser gets HTML instead of JS.
   matcher: [
-    '/((?!_next|api/auth|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?)$).*)',
+    '/((?!_next|api/auth|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|css|js|map)$).*)',
   ],
 };
 

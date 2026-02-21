@@ -7,6 +7,36 @@
 
 import type { Block, Page } from '@/components/MainContent';
 
+export class WorkspaceApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(message: string, status: number, code?: string) {
+    super(message);
+    this.name = 'WorkspaceApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+async function assertOk(res: Response, fallbackMessage: string): Promise<void> {
+  if (res.ok) return;
+  let message = fallbackMessage;
+  let code: string | undefined;
+  try {
+    const payload = await res.json() as { error?: unknown; code?: unknown };
+    if (typeof payload.error === 'string' && payload.error.trim()) {
+      message = payload.error;
+    }
+    if (typeof payload.code === 'string' && payload.code.trim()) {
+      code = payload.code;
+    }
+  } catch {
+    // ignore non-JSON errors
+  }
+  throw new WorkspaceApiError(message, res.status, code);
+}
+
 // ─── Shape of data returned from the server ───────────────────────────────────
 
 export type ApiBlock = {
@@ -69,7 +99,7 @@ export function apiPageToPage(p: ApiPage): Page {
 
 export async function fetchPages(): Promise<ApiPage[]> {
   const res = await fetch('/api/pages');
-  if (!res.ok) throw new Error(`GET /api/pages → ${res.status}`);
+  await assertOk(res, `GET /api/pages → ${res.status}`);
   return res.json() as Promise<ApiPage[]>;
 }
 
@@ -82,7 +112,7 @@ export async function createPage(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ title, folderId }),
   });
-  if (!res.ok) throw new Error(`POST /api/pages → ${res.status}`);
+  await assertOk(res, `POST /api/pages → ${res.status}`);
   return res.json() as Promise<ApiPage>;
 }
 
@@ -95,13 +125,13 @@ export async function updatePage(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`PUT /api/pages/${pageId} → ${res.status}`);
+  await assertOk(res, `PUT /api/pages/${pageId} → ${res.status}`);
   return res.json() as Promise<ApiPage>;
 }
 
 export async function deletePage(pageId: string): Promise<void> {
   const res = await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`DELETE /api/pages/${pageId} → ${res.status}`);
+  await assertOk(res, `DELETE /api/pages/${pageId} → ${res.status}`);
 }
 
 export async function movePage(
@@ -113,7 +143,7 @@ export async function movePage(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`PUT /api/pages/${pageId}/move → ${res.status}`);
+  await assertOk(res, `PUT /api/pages/${pageId}/move → ${res.status}`);
   return res.json() as Promise<ApiPage>;
 }
 
@@ -135,7 +165,7 @@ export async function createBlock(
       tags: block.tags ?? [],
     }),
   });
-  if (!res.ok) throw new Error(`POST /api/pages/${pageId}/blocks → ${res.status}`);
+  await assertOk(res, `POST /api/pages/${pageId}/blocks → ${res.status}`);
   return res.json() as Promise<ApiBlock>;
 }
 
@@ -149,13 +179,13 @@ export async function updateBlock(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`PUT /api/pages/${pageId}/blocks/${blockId} → ${res.status}`);
+  await assertOk(res, `PUT /api/pages/${pageId}/blocks/${blockId} → ${res.status}`);
   return res.json() as Promise<ApiBlock>;
 }
 
 export async function deleteBlock(pageId: string, blockId: string): Promise<void> {
   const res = await fetch(`/api/pages/${pageId}/blocks/${blockId}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`DELETE /api/pages/${pageId}/blocks/${blockId} → ${res.status}`);
+  await assertOk(res, `DELETE /api/pages/${pageId}/blocks/${blockId} → ${res.status}`);
 }
 
 export async function reorderBlocks(
@@ -167,14 +197,14 @@ export async function reorderBlocks(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entries),
   });
-  if (!res.ok) throw new Error(`PUT /api/pages/${pageId}/blocks (reorder) → ${res.status}`);
+  await assertOk(res, `PUT /api/pages/${pageId}/blocks (reorder) → ${res.status}`);
 }
 
 // ─── Folders ──────────────────────────────────────────────────────────────────
 
 export async function fetchFolders(): Promise<ApiFolder[]> {
   const res = await fetch('/api/folders');
-  if (!res.ok) throw new Error(`GET /api/folders → ${res.status}`);
+  await assertOk(res, `GET /api/folders → ${res.status}`);
   return res.json() as Promise<ApiFolder[]>;
 }
 
@@ -187,7 +217,7 @@ export async function createFolder(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, parentId }),
   });
-  if (!res.ok) throw new Error(`POST /api/folders → ${res.status}`);
+  await assertOk(res, `POST /api/folders → ${res.status}`);
   return res.json() as Promise<ApiFolder>;
 }
 
@@ -200,13 +230,13 @@ export async function updateFolder(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`PUT /api/folders/${folderId} → ${res.status}`);
+  await assertOk(res, `PUT /api/folders/${folderId} → ${res.status}`);
   return res.json() as Promise<ApiFolder>;
 }
 
 export async function deleteFolder(folderId: string): Promise<void> {
   const res = await fetch(`/api/folders/${folderId}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`DELETE /api/folders/${folderId} → ${res.status}`);
+  await assertOk(res, `DELETE /api/folders/${folderId} → ${res.status}`);
 }
 
 export async function moveFolder(
@@ -218,6 +248,6 @@ export async function moveFolder(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`PUT /api/folders/${folderId}/move → ${res.status}`);
+  await assertOk(res, `PUT /api/folders/${folderId}/move → ${res.status}`);
   return res.json() as Promise<ApiFolder>;
 }

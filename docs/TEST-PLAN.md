@@ -105,6 +105,7 @@ Component tests render a component into a virtual DOM (happy-dom) and simulate u
 | Editable mode | Shows `<input>` when `onTitleChange` is provided |
 | `onTitleChange` fires | Typing in the input fires `onTitleChange` with the new value |
 | `onTitleBlur` fires | Clicking away from the title input calls `onTitleBlur` |
+| Duplicate-name invalid state | Duplicate title keeps input invalid (`aria-invalid=true`) and does not persist |
 | Empty title placeholder | Shows placeholder text when title is empty in edit mode |
 
 **Key design note — why `onTitleBlur` instead of debounce?**
@@ -168,6 +169,18 @@ These are *block-level* inline forms. "Apply" signals "apply these settings to t
 | Empty state shows "no audio yet" | Placeholder text for empty URL |
 | "Add audio URL" button triggers edit mode | `enterEdit` callback is called |
 | Apply button is disabled when URL is empty | Cannot save an empty URL |
+
+### `components/Workspace/treeUtils.ts`
+
+**File:** [`components/Workspace/treeUtils.test.ts`](../components/Workspace/treeUtils.test.ts)
+
+| Test | What it verifies |
+|------|-----------------|
+| Scope name normalization | Duplicate checks use trim + case-insensitive matching |
+| Duplicate detection in root and folder scope | Sibling-name collisions are detected in both scopes |
+| Excluding current node on rename | Renaming current node to same name is allowed |
+| Unique default names | Generates `Untitled`, `Untitled 2`, `Untitled 3` format |
+| First page in subtree | Breadcrumb folder click can resolve a target page id |
 | Apply button is enabled after typing a URL | Becomes enabled once URL is non-empty |
 | Apply saves with trimmed URL | Whitespace stripped from URL |
 | Apply saves with caption | Caption is included in the `onChange` payload |
@@ -239,9 +252,10 @@ E2E tests launch a real browser, navigate the app, and assert visible DOM change
 
 | Test | Journey |
 |------|---------|
-| Create page | Click "+" → "Untitled" appears in tree |
+| Create page | Click "+" → unique default name appears in tree (`Untitled`, `Untitled 2`, …) |
 | Select page | Click page → editor header shows page title |
 | Rename page | Double-click → type new name → blur → title updated  |
+| Duplicate rename blocked | Enter duplicate sibling name → toast + invalid frame + no save |
 | Delete page | Delete button → confirm → page gone from tree |
 | Create folder | "New folder" button → folder appears in tree |
 | Move page into folder | Drag page onto folder → nested in tree |

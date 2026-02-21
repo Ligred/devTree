@@ -246,6 +246,7 @@ The tree stores *where* pages live (folder hierarchy). The pages array stores *w
 ```mermaid
 sequenceDiagram
     participant User
+    participant Router
     participant Workspace
     participant Sidebar
     participant MainContent
@@ -254,6 +255,8 @@ sequenceDiagram
     User->>Sidebar: Clicks page in tree
     Sidebar->>Workspace: onSelect(item)
     Workspace->>Workspace: setActivePageId(item.id)
+    Workspace->>Router: push('/p/:pageId')
+    Router->>Workspace: route params hydrate selected page
     Workspace->>MainContent: page={activePage} (re-render)
     MainContent->>BlockEditor: blocks={page.blocks}
 
@@ -263,6 +266,8 @@ sequenceDiagram
     Workspace->>Workspace: setPages(prev => prev.map(...))
     Note over Workspace: Only the edited page is updated
 ```
+
+Route selection is URL-driven: `activePageId` syncs with `/p/[pageId]`. Opening a deep link expands the selected page's folder ancestry in the tree and highlights the corresponding row. Invalid page ids keep the workspace in empty-state mode.
 
 **Immutability pattern**
 

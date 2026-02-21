@@ -50,4 +50,18 @@ describe('FileExplorer', () => {
     const { container } = render(<FileExplorer data={[]} onSelect={onSelect} />);
     expect(container).toBeInTheDocument();
   });
+
+  it('expands folder from controlled expandedItemIds', () => {
+    const onSelect = vi.fn();
+    render(
+      <FileExplorer
+        data={treeData}
+        onSelect={onSelect}
+        expandedItemIds={['1']}
+        selectedItemId="2"
+      />,
+    );
+
+    expect(screen.getByText('File A')).toBeInTheDocument();
+  });
 });

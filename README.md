@@ -11,7 +11,9 @@ A **personal knowledge base** built as a learning project to explore modern full
 | Feature | Description |
 |---------|-------------|
 | 📝 **Block editor** | 10 block types: Text (rich text), Code (Monaco), Table, Checklist, Link, Image, Audio, Diagram, Video, Whiteboard |
-| 🗂️ **File explorer** | Sidebar tree with folders, drag-and-drop reordering, rename, delete |
+| 🗂️ **File explorer** | Sidebar tree with folders, drag-and-drop reordering, rename, delete, duplicate-name validation |
+| 🔗 **Deep links** | Open a page directly by URL (`/p/[pageId]`) and share links to specific notes |
+| 🧭 **Breadcrumbs** | Clickable breadcrumb path in header for fast folder/page navigation |
 | 🎨 **Themes** | Light / Dark / System via `next-themes` |
 | 🌍 **Internationalisation** | English and Ukrainian; persisted in cookie and `localStorage` (correct language on refresh) |
 | 📱 **Responsive** | Mobile-first layout with a slide-in sidebar drawer |
