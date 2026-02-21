@@ -282,27 +282,27 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   const { t } = useI18n();
   const tagsPerPageEnabled = useSettingsStore((s) => s.tagsPerPageEnabled);
 
-  const routePageId = useMemo(() => {
-    if (!pathname) return initialRoutePageId ?? null;
-    if (pathname.startsWith('/pages/')) {
-      const candidate = pathname.slice('/pages/'.length).trim();
-      return candidate ? decodeURIComponent(candidate) : null;
-    }
-    if (pathname.startsWith('/p/')) {
-      const candidate = pathname.slice('/p/'.length).trim();
-      return candidate ? decodeURIComponent(candidate) : null;
-    }
-    return null;
-  }, [pathname, initialRoutePageId]);
-
-  const routePageExists = useMemo(
-    () => (routePageId ? pages.some((p) => p.id === routePageId) : false),
-    [pages, routePageId],
-  );
-  const isPageRoute = useMemo(
-    () => (pathname ? pathname.startsWith('/pages/') || pathname.startsWith('/p/') : false),
-    [pathname],
-  );
+  /**
+   * ═════════════════════════════════════════════════════════════════════════
+   * ROUTE PAGE ID EXTRACTION
+   * ═════════════════════════════════════════════════════════════════════════
+   *
+   * The initialRoutePageId prop comes from the root page.tsx component,
+   * which reads it from the URL query parameter (?page=xyz).
+   *
+   * FLOW:
+   * 1. URL changes to /?page=abc123 (via router.push or back button)
+   * 2. app/page.tsx's useSearchParams() detects change
+   * 3. DevTreeApp component re-renders with new pageId value
+   * 4. Workspace receives new initialRoutePageId prop
+   * 5. This effect triggers, loading the new page
+   *
+   * MEMOIZATION:
+   * - Prevents unnecessary effect re-runs when other props change
+   * - Only recomputes when initialRoutePageId actually changes
+   * - Returns null when no page is selected (empty state)
+   */
+  const routePageId = useMemo(() => initialRoutePageId || null, [initialRoutePageId]);
 
   const showErrorToast = useCallback((message: string) => {
     setErrorToast(message);
@@ -1074,56 +1074,114 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     return () => clearTimeout(timer);
   }, [errorToast]);
 
-  useEffect(() => {
-    if (loading) return;
-    if (!isPageRoute) return;
-    if (!routePageId) return;
-    if (routePageExists) {
-      setActivePageId(routePageId);
-      setTitleHasError(false);
-      return;
-    }
-    setActivePageId(null);
-  }, [isPageRoute, loading, routePageExists, routePageId]);
-
-  useEffect(() => {
-    if (loading || !pathname) return;
-    if (activePageId) {
-      const targetPath = `/pages/${encodeURIComponent(activePageId)}`;
-      if (pathname !== targetPath) router.push(targetPath);
-      return;
-    }
-    if (isPageRoute && routePageId && !routePageExists) {
-      router.push('/');
-    }
-  }, [activePageId, isPageRoute, loading, pathname, routePageExists, routePageId, router]);
-
   /**
-   * Browser back/forward navigation guard: when routePageId changes (via back/forward)
-   * and we have unsaved changes, show the unsaved-changes dialog.
-   * This prevents data loss from browser navigation while editing.
+   * ═════════════════════════════════════════════════════════════════════════
+   * EFFECT 1: LOAD PAGE FROM URL (Deep-linking & Browser Navigation)
+   * ═════════════════════════════════════════════════════════════════════════
+   *
+   * PURPOSE:
+   * Synchronizes internal activePageId state with the URL query parameter.
+   * This effect handles:
+   * - Initial page load with ?page=xyz in URL (deep-linking)
+   * - Browser back/forward button navigation
+   * - External URL changes (bookmarks, shared links)
+   *
+   * WHEN IT RUNS:
+   * - On component mount (if routePageId is set)
+   * - When routePageId prop changes (URL query param changed)
+   * - When pages array loads (initial data fetch completes)
+   *
+   * FLOW:
+   * 1. User navigates to /?page=abc123 (via bookmark, back button, etc.)
+   * 2. routePageId becomes 'abc123'
+   * 3. Effect checks if page exists in pages array
+   * 4. If exists and not already active → setActivePageId('abc123')
+   * 5. MainContent re-renders with the new page data
+   *
+   * GUARDS:
+   * - Skip if data still loading (pages array empty)
+   * - Skip if no routePageId (URL has no ?page= param)
+   * - Skip if already on that page (prevents unnecessary state updates)
+   * - Skip if page doesn't exist (prevents errors)
+   *
+   * WHY activePageId CHECK:
+   * Prevents infinite loop: URL change → state update → URL change → ...
+   * Only update state if URL differs from current state.
    */
   useEffect(() => {
-    // Skip during initial load or if no route page ID change
-    if (loading) return;
-    if (!isPageRoute) return;
-    
-    // Check if routePageId changed and differs from activePageId
-    const routePageChanged = routePageId && routePageId !== activePageId;
-    if (!routePageChanged) return;
-    
-    // If dirty, show dialog and set pending navigation target
-    if (isDirty) {
-      setPendingNavId(routePageId);
-      return;
-    }
-    
-    // Otherwise, apply the new route page ID
-    if (routePageExists) {
+    if (loading || !routePageId) return;
+    const pageExists = pages.some((p) => p.id === routePageId);
+    if (pageExists && activePageId !== routePageId) {
       setActivePageId(routePageId);
       setTitleHasError(false);
     }
-  }, [isPageRoute, loading, routePageId, activePageId, isDirty, routePageExists]);
+  }, [loading, routePageId, pages, activePageId]);
+
+  /**
+   * ═════════════════════════════════════════════════════════════════════════
+   * EFFECT 2: UPDATE URL WHEN USER SELECTS PAGE (Bookmarkable URLs)
+   * ═════════════════════════════════════════════════════════════════════════
+   *
+   * PURPOSE:
+   * Keep URL query parameter in sync with internal page selection state.
+   * This makes every page selection bookmarkable and shareable.
+   *
+   * WHEN IT RUNS:
+   * - When user clicks a page in the sidebar
+   * - When activePageId state changes for any reason
+   * - NOT on initial load (handled by effect above)
+   *
+   * FLOW:
+   * 1. User clicks "React Hooks" page in sidebar
+   * 2. handleTreeSelect() calls setActivePageId('abc123')
+   * 3. activePageId state updates
+   * 4. This effect runs
+   * 5. Checks current URL query param
+   * 6. If different → calls router.push('/?page=abc123')
+   * 7. Next.js router updates browser URL
+   * 8. useSearchParams() in app/page.tsx detects change
+   * 9. Workspace receives new prop (but state already matches, so no-op)
+   *
+   * WHY THIS DOESN'T CAUSE PAGE REFRESH:
+   * - router.push() with SAME ROUTE PATH but different query param
+   * - Next.js treats this as shallow navigation
+   * - URL updates, but route doesn't change ('/' → '/')
+   * - No Server Component re-execution
+   * - No page.tsx remount
+   * - Only query param listener (useSearchParams) re-renders
+   * - Workspace already mounted, just receives new prop
+   *
+   * THE MAGIC OF QUERY PARAMS:
+   * In Next.js App Router:
+   * - Path changes (/pages/a → /pages/b) = new route = unmount/remount
+   * - Query changes (/?page=a → /?page=b) = same route = stay mounted
+   * This is the KEY to our SPA architecture!
+   *
+   * GUARDS:
+   * - Skip if still loading data
+   * - Skip if no active page (empty state)
+   * - Skip if URL already matches (prevents redundant router calls)
+   *
+   * OPTIONS:
+   * - { scroll: false } prevents auto-scroll to top on navigation
+   * - Preserves user's scroll position in MainContent
+   *
+   * URL ENCODING:
+   * - encodeURIComponent() handles special characters safely
+   * - Example: "My Page" → "My%20Page"
+   * - Handles unicode, spaces, special chars correctly
+   */
+  useEffect(() => {
+    if (loading || !activePageId) return;
+    
+    // Check if URL already has the correct page parameter
+    const currentPageParam = new URLSearchParams(window.location.search).get('page');
+    if (currentPageParam !== activePageId) {
+      // Update URL with new page ID
+      // Key: Route stays '/', so no unmounting occurs
+      router.push(`/?page=${encodeURIComponent(activePageId)}`, { scroll: false });
+    }
+  }, [activePageId, loading, router]);
 
   /**
    * Keyboard shortcut: Cmd/Ctrl+K focuses the search input.
