@@ -22,20 +22,39 @@ model User {
   accounts Account[]
   sessions Session[]
   pages    Page[]
+  folders  Folder[]
+}
+
+model Folder {
+  id        String   @id @default(cuid())
+  name      String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner    User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId  String
+
+  parent   Folder?  @relation("FolderToChildren", fields: [parentId], references: [id])
+  parentId String?
+  children Folder[] @relation("FolderToChildren")
+
+  pages    Page[]
 }
 
 model Page {
   id        String   @id @default(cuid())
   title     String
+  order     Int      @default(0)
+  tags      String[]  @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  owner   User   @relation(fields: [ownerId], references: [id])
-  ownerId String
+  owner    User    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId  String
 
-  parent   Page?   @relation("PageToChildren", fields: [parentId], references: [id])
-  parentId String?
-  children Page[]  @relation("PageToChildren")
+  folder   Folder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folderId String?
 
   blocks Block[]
 }
@@ -44,11 +63,13 @@ model Block {
   id        String   @id @default(cuid())
   type      String
   order     Int
+  colSpan   Int      @default(2)
+  tags      String[] @default([])
   content   Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  page   Page   @relation(fields: [pageId], references: [id])
+  page   Page   @relation(fields: [pageId], references: [id], onDelete: Cascade)
   pageId String
 }
 

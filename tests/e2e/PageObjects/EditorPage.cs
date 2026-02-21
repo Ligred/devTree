@@ -15,7 +15,6 @@ public class EditorPage(IPage page)
         ["Link"] = "link",
         ["Checklist"] = "agenda",
         ["Image"] = "image",
-        ["Audio"] = "audio",
         ["Diagram"] = "diagram",
         ["Video"] = "video",
         ["Whiteboard"] = "whiteboard",
@@ -168,18 +167,6 @@ public class EditorPage(IPage page)
         var urlInput = _page.GetByPlaceholder("https://example.com/image.png");
         await urlInput.FillAsync(url);
         await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
-    }
-
-    // ── Audio block ────────────────────────────────────────────────────────
-
-    /// <summary>Sets the URL and saves the audio block form (paste-URL flow).</summary>
-    public async Task SetAudioUrlAsync(string url)
-    {
-        var urlInput = _page.GetByPlaceholder("https://example.com/audio.mp3");
-        await urlInput.FillAsync(url);
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Save" }).Last.ClickAsync();
-        // Wait for the audio element to load and render
-        await _page.WaitForTimeoutAsync(500);
     }
 
     // ── Video block ────────────────────────────────────────────────────────

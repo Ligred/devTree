@@ -56,10 +56,10 @@ export type BlockType =
   | 'table'
   | 'agenda'
   | 'image'
-  | 'audio'
   | 'diagram'
   | 'video'
-  | 'whiteboard';
+  | 'whiteboard'
+  | 'audio';
 
 // ─── Content shapes ───────────────────────────────────────────────────────────
 
@@ -151,18 +151,6 @@ export type ImageBlockContent = {
 };
 
 /**
- * AudioBlockContent — recorded or uploaded audio note.
- *
- * Max 5MB per record (enforced on upload). Supports recording via MediaRecorder
- * or file upload. URL is either a data URL (inline) or a path from the upload API.
- */
-export type AudioBlockContent = {
-  url: string;
-  /** Caption shown below the audio player. */
-  caption?: string;
-};
-
-/**
  * DiagramBlockContent — Mermaid.js diagram source code.
  *
  * WHY store raw Mermaid syntax instead of a rendered SVG?
@@ -205,6 +193,21 @@ export type WhiteboardBlockContent = {
 };
 
 /**
+ * AudioBlockContent — an audio file embedded by external URL.
+ *
+ * WHY URL-only and not file upload?
+ *   File uploads require server-side storage (S3, Cloudinary, etc.). Embedding
+ *   by URL works for any publicly hosted MP3/OGG/WAV/M4A without additional
+ *   infrastructure. Common sources: podcast feeds, lecture recordings, CDN-
+ *   hosted sound files, SoundCloud direct audio links.
+ */
+export type AudioBlockContent = {
+  url: string;
+  /** Short description shown below the player. */
+  caption?: string;
+};
+
+/**
  * The full union of all possible block content types.
  *
  * WHY a union instead of `Record<string, unknown>`?
@@ -219,10 +222,10 @@ export type BlockContent =
   | TableBlockContent
   | AgendaBlockContent
   | ImageBlockContent
-  | AudioBlockContent
   | DiagramBlockContent
   | VideoBlockContent
-  | WhiteboardBlockContent;
+  | WhiteboardBlockContent
+  | AudioBlockContent;
 
 /**
  * A single content block on a page.
@@ -377,19 +380,6 @@ export function isImageBlockContent(
   );
 }
 
-/** Audio blocks have `url`; distinguished from link/image by type. */
-export function isAudioBlockContent(
-  content: BlockContent,
-  type: BlockType,
-): content is AudioBlockContent {
-  return (
-    type === 'audio' &&
-    typeof content === 'object' &&
-    content !== null &&
-    'url' in content
-  );
-}
-
 /**
  * Diagram blocks have `code` but NOT `language`.
  *
@@ -428,3 +418,15 @@ export function isVideoBlockContent(
   );
 }
 
+/** Audio blocks have a URL (external audio source). The type discriminant is the primary check. */
+export function isAudioBlockContent(
+  content: BlockContent,
+  type: BlockType,
+): content is AudioBlockContent {
+  return (
+    type === 'audio' &&
+    typeof content === 'object' &&
+    content !== null &&
+    'url' in content
+  );
+}

@@ -80,8 +80,8 @@ import { useCallback, useId, useState } from 'react';
 import { BlockPicker } from './BlockPicker';
 import { BlockWrapper } from './BlockWrapper';
 import { AgendaBlock } from './blocks/AgendaBlock';
-import { CodeBlock } from './blocks/CodeBlock';
 import { AudioBlock } from './blocks/AudioBlock';
+import { CodeBlock } from './blocks/CodeBlock';
 import { DiagramBlock } from './blocks/DiagramBlock';
 import { ImageBlock } from './blocks/ImageBlock';
 import { LinkBlock } from './blocks/LinkBlock';
@@ -91,12 +91,12 @@ import { VideoBlock } from './blocks/VideoBlock';
 import { WhiteboardBlock } from './blocks/WhiteboardBlock';
 import {
   type AgendaBlockContent,
+  type AudioBlockContent,
   type Block,
   type BlockContent,
   type BlockType,
   type CodeBlockContent,
   type DiagramBlockContent,
-  type AudioBlockContent,
   type ImageBlockContent,
   type LinkBlockContent,
   type TableBlockContent,
@@ -156,14 +156,14 @@ function createBlock(type: BlockType): Block {
       };
     case 'image':
       return { id, type, content: { url: '', alt: '', caption: '' }, colSpan: 2 };
-    case 'audio':
-      return { id, type, content: { url: '', caption: '' }, colSpan: 2 };
     case 'diagram':
       return { id, type, content: { code: '' }, colSpan: 2 };
     case 'video':
       return { id, type, content: { url: '' }, colSpan: 2 };
     case 'whiteboard':
       return { id, type, content: { dataUrl: '' }, colSpan: 2 };
+    case 'audio':
+      return { id, type, content: { url: '' }, colSpan: 2 };
   }
 }
 
@@ -508,6 +508,12 @@ function BlockContent({
       return <AgendaBlock content={content as AgendaBlockContent} onChange={onChange} isEditing={isEditing} />;
     case 'image':
       return <ImageBlock content={content as ImageBlockContent} onChange={onChange} />;
+    case 'diagram':
+      return <DiagramBlock content={content as DiagramBlockContent} onChange={onChange} isEditing={isEditing} />;
+    case 'video':
+      return <VideoBlock content={content as VideoBlockContent} onChange={onChange} />;
+    case 'whiteboard':
+      return <WhiteboardBlock content={content as WhiteboardBlockContent} onChange={onChange} isEditing={isEditing} />;
     case 'audio':
       return (
         <AudioBlock
@@ -518,12 +524,6 @@ function BlockContent({
           exitEdit={exitEdit}
         />
       );
-    case 'diagram':
-      return <DiagramBlock content={content as DiagramBlockContent} onChange={onChange} isEditing={isEditing} />;
-    case 'video':
-      return <VideoBlock content={content as VideoBlockContent} onChange={onChange} />;
-    case 'whiteboard':
-      return <WhiteboardBlock content={content as WhiteboardBlockContent} onChange={onChange} isEditing={isEditing} />;
     default:
       warnUnknownBlockType(type);
       return null;

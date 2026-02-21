@@ -199,16 +199,16 @@ function blockToMarkdown(block: Block): string {
       return c.caption ? `${img}\n\n*${c.caption}*` : img;
     }
 
-    case 'audio': {
-      const c = content as AudioBlockContent;
-      const link = `[Audio](${c.url})`;
-      return c.caption ? `${link}\n\n*${c.caption}*` : link;
-    }
-
     case 'diagram': {
       const c = content as DiagramBlockContent;
       // Mermaid diagrams are embedded as fenced code blocks with 'mermaid' language
       return `\`\`\`mermaid\n${c.code}\n\`\`\``;
+    }
+
+    case 'audio': {
+      const c = content as AudioBlockContent;
+      const link = `[🎵 Audio](${c.url})`;
+      return c.caption ? `${link}\n\n*${c.caption}*` : link;
     }
 
     default:

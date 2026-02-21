@@ -30,7 +30,6 @@
  *   and re-render only the affected subtree.
  *
  * IMPROVEMENT IDEAS:
- *   - Persist state to localStorage or a backend database.
  *   - Add an undo/redo stack using the command pattern.
  *   - Support real-time collaboration via WebSockets (e.g. Liveblocks, Yjs).
  *   - Add page tags/labels for better organisation at scale.
@@ -49,7 +48,6 @@ import { cn } from '@/lib/utils';
 import { buildTreeDataWithActions } from './buildTreeData';
 import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { FolderRenameRow } from './FolderRenameRow';
-import { samplePages } from './samplePages';
 import type { TreeRoot } from './treeTypes';
 import { ROOT_DROP_TARGET_ID, ROOT_ID } from './treeTypes';
 import {
@@ -64,25 +62,72 @@ import {
   newPageId,
   removeNode,
   renameNode,
+  replaceNodeId,
 } from './treeUtils';
+import {
+  fetchPages,
+  fetchFolders,
+  createPage as apiCreatePage,
+  updatePage as apiUpdatePage,
+  deletePage as apiDeletePage,
+  movePage as apiMovePage,
+  createBlock as apiCreateBlock,
+  updateBlock as apiUpdateBlock,
+  deleteBlock as apiDeleteBlock,
+  reorderBlocks as apiReorderBlocks,
+  createFolder as apiCreateFolder,
+  updateFolder as apiUpdateFolder,
+  deleteFolder as apiDeleteFolder,
+  moveFolder as apiMoveFolder,
+  apiPageToPage,
+  type ApiPage,
+  type ApiFolder,
+} from './workspaceApi';
 
 /**
- * Initial tree structure bootstrapped from sample pages.
+ * Build the tree root from API folders/pages data.
  *
- * WHY build from samplePages?
- *   The tree and the page list must stay in sync (every tree leaf node must have
- *   a corresponding page in the `pages` array). Deriving the initial tree from
- *   samplePages ensures they always match without manual duplication.
+ * Folders become non-leaf nodes; pages get placed inside their folder (if any)
+ * or at the root level.
  */
-const initialTreeRoot: TreeRoot = {
-  id: ROOT_ID,
-  name: 'My learning',
-  children: samplePages.map((p) => ({
-    id: p.id,
-    name: p.title,
-    pageId: p.id,
-  })),
-};
+function buildTreeRootFromApi(folders: ApiFolder[], pages: ApiPage[]): TreeRoot {
+  const rootPages = pages.filter((p) => !p.folderId);
+  const folderNodes = folders
+    .filter((f) => !f.parentId)
+    .map((f) => buildFolderNode(f, folders, pages));
+
+  return {
+    id: ROOT_ID,
+    name: 'My workspace',
+    children: [
+      ...folderNodes,
+      ...rootPages.map((p) => ({ id: p.id, name: p.title, pageId: p.id })),
+    ],
+  };
+}
+
+function buildFolderNode(
+  folder: ApiFolder,
+  allFolders: ApiFolder[],
+  allPages: ApiPage[],
+): import('./treeTypes').TreeNode {
+  const childFolders = allFolders
+    .filter((f) => f.parentId === folder.id)
+    .map((f) => buildFolderNode(f, allFolders, allPages));
+
+  const folderPages = allPages
+    .filter((p) => p.folderId === folder.id)
+    .map((p) => ({ id: p.id, name: p.title, pageId: p.id }));
+
+  return {
+    id: folder.id,
+    name: folder.name,
+    children: [...childFolders, ...folderPages],
+  };
+}
+
+/** Blank initial tree shown while data is loading. */
+const emptyTreeRoot: TreeRoot = { id: ROOT_ID, name: 'My workspace', children: [] };
 
 /** Create a blank page with the given id and title. */
 const emptyPage = (id: string, title: string): Page => ({
@@ -93,8 +138,24 @@ const emptyPage = (id: string, title: string): Page => ({
 
 const I18N_CLEAR_TAG_FILTER = 'sidebar.clearTagFilter';
 
+/** Id ref → pageId mapping so we can find which page a folder-page belongs to. */
+type DbIdToPageId = Map<string, string>;
+
+/** Swap a page id in an array (used to reconcile optimistic local ids with server ids). */
+function swapPageId(pages: Page[], oldId: string, newId: string): Page[] {
+  return pages.map((p) => (p.id === oldId ? { ...p, id: newId } : p));
+}
+
+/** Sort pages by `order` without mutating the source array. */
+function sortByOrder(pages: ApiPage[]): ApiPage[] {
+  return [...pages].sort((a, b) => a.order - b.order);
+}
+
 export function Workspace() {
   // ─── Core data state ────────────────────────────────────────────────────────
+
+  /** Whether the initial data load from the server is in progress. */
+  const [loading, setLoading] = useState(true);
 
   /**
    * `pages` — flat array of all page data (id, title, blocks).
@@ -104,7 +165,7 @@ export function Workspace() {
    *   look-up O(n) and avoids the complexity of deep-nesting block mutations.
    *   The hierarchy is expressed separately in `treeRoot`.
    */
-  const [pages, setPages] = useState<Page[]>(samplePages);
+  const [pages, setPages] = useState<Page[]>([]);
 
   /**
    * `treeRoot` — the sidebar file-tree structure (folders + page references).
@@ -115,12 +176,13 @@ export function Workspace() {
    *   the actual page data. This separation keeps the tree manipulation logic
    *   independent of block-editing logic.
    */
-  const [treeRoot, setTreeRoot] = useState<TreeRoot>(initialTreeRoot);
+  const [treeRoot, setTreeRoot] = useState<TreeRoot>(emptyTreeRoot);
+
+  /** Stores the DB folder id for each tree node id. */
+  const dbFolderIds = useRef<DbIdToPageId>(new Map());
 
   /** The id of the page currently displayed in the editor. null = none selected. */
-  const [activePageId, setActivePageId] = useState<string | null>(
-    samplePages[0]?.id ?? null,
-  );
+  const [activePageId, setActivePageId] = useState<string | null>(null);
 
   // ─── UI state ────────────────────────────────────────────────────────────────
 
@@ -167,6 +229,16 @@ export function Workspace() {
   const [activeTags, setActiveTags] = useState<string[]>([]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  /** Debounce timer for persisting tag changes (800 ms). */
+  const tagsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * Server-side snapshot of each page's blocks (keyed by pageId).
+   * Populated on initial load and updated after every successful save.
+   * Used by handleSave to diff what needs to be created / updated / deleted.
+   */
+  const serverBlocksRef = useRef<Map<string, Block[]>>(new Map());
 
   const { t } = useI18n();
   const tagsPerPageEnabled = useSettingsStore((s) => s.tagsPerPageEnabled);
@@ -295,7 +367,20 @@ export function Workspace() {
    *   invalidating the treeData memo every time.
    */
   const createFolder = useCallback((parentId: string) => {
+    // Optimistic update
     setTreeRoot((root) => addFolderUnder(root, parentId, 'New folder'));
+
+    // Determine the DB parent folder id (parentId might be ROOT_ID)
+    const dbParentId = dbFolderIds.current.has(parentId) ? parentId : null;
+
+    void apiCreateFolder('New folder', dbParentId).then((created) => {
+      // Register the new folder id so future moves can reference it
+      dbFolderIds.current.set(created.id, created.id);
+    }).catch((err) => {
+      console.error('[createFolder]', err);
+      // Revert: reload from server
+      void fetchFolders().then(() => {/* silently ignore */});
+    });
   }, []);
 
   /**
@@ -306,11 +391,30 @@ export function Workspace() {
    *   `treeRoot`. Both must be updated atomically to keep them in sync.
    */
   const createFile = useCallback((parentId: string) => {
-    const pageId = newPageId();
-    const newPage = emptyPage(pageId, 'Untitled');
+    const localPageId = newPageId();
+    const newPage: Page = { id: localPageId, title: 'Untitled', blocks: [] };
+
+    // Optimistic update
     setPages((prev) => [...prev, newPage]);
-    setTreeRoot((root) => addFileUnder(root, parentId, pageId, newPage.title));
-    setActivePageId(pageId);
+    setTreeRoot((root) => addFileUnder(root, parentId, localPageId, newPage.title));
+    setActivePageId(localPageId);
+    serverBlocksRef.current.set(localPageId, []);
+
+    // Determine the DB folder id for the parent
+    const dbFolderId = dbFolderIds.current.has(parentId) ? parentId : null;
+
+    void apiCreatePage('Untitled', dbFolderId).then((created) => {
+      // Swap the optimistic local id with the server-assigned id everywhere.
+      // This ensures all subsequent API calls (block create/update/delete) use
+      // the correct pageId that exists in the database.
+      setPages((prev) => swapPageId(prev, localPageId, created.id));
+      setTreeRoot((root) => replaceNodeId(root, localPageId, created.id));
+      setActivePageId((current) => (current === localPageId ? created.id : current));
+      serverBlocksRef.current.set(created.id, []);
+      serverBlocksRef.current.delete(localPageId);
+    }).catch((err) => {
+      console.error('[createFile]', err);
+    });
   }, []);
 
   /**
@@ -379,15 +483,26 @@ export function Workspace() {
     if (!deleteDialog) return;
     const { nodeId } = deleteDialog;
 
-    // Compute outside the setter to avoid deeply nested callbacks (sonarjs)
     const { root: nextRoot, removed } = removeNode(treeRoot, nodeId);
     if (!removed) return;
     const pageIdsToRemove = collectPageIdsInSubtree(removed);
 
+    // Optimistic update
     setTreeRoot(nextRoot);
     setPages((prevPages) => prevPages.filter((p) => !pageIdsToRemove.includes(p.id)));
     setActivePageId((current) => (pageIdsToRemove.includes(current ?? '') ? null : current));
     setDeleteDialog(null);
+
+    // Determine if we are deleting a page or a folder
+    const isFolder = dbFolderIds.current.has(nodeId);
+    if (isFolder) {
+      void apiDeleteFolder(nodeId).catch((err) => console.error('[deleteFolder]', err));
+    } else {
+      // Delete each page. Pages cascade-delete blocks on the server.
+      for (const pid of pageIdsToRemove) {
+        void apiDeletePage(pid).catch((err) => console.error('[deletePage]', err));
+      }
+    }
   }, [deleteDialog, treeRoot]);
 
   /**
@@ -400,17 +515,45 @@ export function Workspace() {
    */
   const handleDocumentDrag = useCallback(
     (sourceItem: TreeDataItem, targetItem: TreeDataItem) => {
+      // Capture tree snapshot before the functional `setTreeRoot` update so we
+      // can compute the resolved targetId for the server call.
       setTreeRoot((root) => {
-        const targetId =
-          targetItem.id === ROOT_DROP_TARGET_ID
-            ? targetItem.id
-            : (() => {
-                const node = findNodeInRoot(root, targetItem.id);
-                // Redirect to parent if dropping onto a leaf (page)
-                if (node?.pageId != null) return getParentId(root, targetItem.id);
-                return targetItem.id;
-              })();
-        return moveNode(root, sourceItem.id, targetId);
+        const isTargetRoot = targetItem.id === ROOT_DROP_TARGET_ID;
+        const targetId = isTargetRoot
+          ? targetItem.id
+          : (() => {
+              const node = findNodeInRoot(root, targetItem.id);
+              // Redirect to parent if dropping onto a leaf (page)
+              if (node?.pageId != null) return getParentId(root, targetItem.id);
+              return targetItem.id;
+            })();
+
+        const nextRoot = moveNode(root, sourceItem.id, targetId);
+
+        // Determine whether source is a page or a folder and call the API.
+        const sourceNode = findNodeInRoot(root, sourceItem.id);
+        const isPage = sourceNode?.pageId != null;
+        const resolvedFolderId =
+          isTargetRoot || targetId === ROOT_DROP_TARGET_ID ? null : targetId;
+
+        // Compute order among siblings in the new parent
+        const siblings = isTargetRoot
+          ? nextRoot.children
+          : (findNodeInRoot(nextRoot, targetId)?.children ?? []);
+        const order = siblings.findIndex((c) => c.id === sourceItem.id);
+
+        if (isPage) {
+          void apiMovePage(sourceItem.id, { folderId: resolvedFolderId, order }).catch(
+            (err) => console.error('[movePage]', err),
+          );
+        } else {
+          void apiMoveFolder(sourceItem.id, {
+            parentId: resolvedFolderId,
+            order,
+          }).catch((err) => console.error('[moveFolder]', err));
+        }
+
+        return nextRoot;
       });
     },
     [],
@@ -420,6 +563,9 @@ export function Workspace() {
     (folderId: string, name: string) => {
       setTreeRoot((root) => renameNode(root, folderId, name));
       setEditingFolderId(null);
+      void apiUpdateFolder(folderId, { name }).catch((err) =>
+        console.error('[renameFolder]', err),
+      );
     },
     [],
   );
@@ -465,7 +611,7 @@ export function Workspace() {
     [pages],
   );
 
-  /** Sync page title changes into both the pages array and the tree node name. */
+  /** Sync page title changes into local state only — no API call yet. */
   const handleTitleChange = useCallback(
     (title: string) => {
       if (!activePageId) return;
@@ -477,11 +623,31 @@ export function Workspace() {
     [activePageId],
   );
 
+  /** Persist the title when the input loses focus. */
+  const handleTitleBlur = useCallback(() => {
+    if (!activePageId) return;
+    const page = pages.find((p) => p.id === activePageId);
+    if (!page) return;
+    void apiUpdatePage(activePageId, { title: page.title }).catch((err) =>
+      console.error('[titleBlur]', err),
+    );
+  }, [activePageId, pages]);
+
+  /**
+   * Block changes are kept purely in local state until the user explicitly saves.
+   *
+   * WHY no immediate API call?
+   *   The server assigns new UUIDs to created blocks. If we fire
+   *   POST immediately, subsequent PUT/DELETE calls would use the client's
+   *   temporary id (e.g. "block-abc") which the server doesn't know → 404.
+   *   Deferring all writes to handleSave lets us reconcile server-assigned
+   *   ids before we ever call PUT or DELETE.
+   */
   const handleBlocksChange = useCallback(
     (blocks: Block[]) => {
       if (!activePageId) return;
-      setPages((prev) =>
-        prev.map((p) => (p.id === activePageId ? { ...p, blocks } : p)),
+      setPages((pages) =>
+        pages.map((p) => (p.id === activePageId ? { ...p, blocks } : p)),
       );
     },
     [activePageId],
@@ -494,16 +660,157 @@ export function Workspace() {
       setPages((prev) =>
         prev.map((p) => (p.id === activePageId ? { ...p, tags } : p)),
       );
+      if (tagsDebounceRef.current) clearTimeout(tagsDebounceRef.current);
+      tagsDebounceRef.current = setTimeout(() => {
+        void apiUpdatePage(activePageId, { tags }).catch((err) =>
+          console.error('[tagsChange]', err),
+        );
+      }, 800);
     },
     [activePageId],
   );
 
-  /** Show "Saved!" feedback for 2 seconds then reset. */
-  const handleSave = useCallback(() => {
+  /**
+   * Persist the current page to the server.
+   *
+   * Diff strategy:
+   *   1. Delete blocks that were removed since last save.
+   *   2. Create new blocks (POST) and record the server-assigned ids.
+   *   3. Update blocks whose content/colSpan/tags changed.
+   *   4. Swap client temporary ids → server ids in local state.
+   *   5. Bulk-reorder so the DB order matches the UI order.
+   *   6. Update the server snapshot so the next save diffs correctly.
+   */
+  const handleSave = useCallback(async () => {
+    if (!activePageId) return;
+    const page = pages.find((p) => p.id === activePageId);
+    if (!page) return;
+
+    // Always persist the current title on save (cheap, guarantees consistency)
+    await apiUpdatePage(activePageId, { title: page.title }).catch((err) =>
+      console.error('[save:title]', err),
+    );
+
+    const serverBlocks = serverBlocksRef.current.get(activePageId) ?? [];
+    const localBlocks = page.blocks;
+    const serverIdSet = new Set(serverBlocks.map((b) => b.id));
+    const localIdSet = new Set(localBlocks.map((b) => b.id));
+
+    // 1. Delete removed blocks
+    const toDelete = serverBlocks.filter((b) => !localIdSet.has(b.id));
+    await Promise.all(
+      toDelete.map((b) =>
+        apiDeleteBlock(activePageId, b.id).catch((err) =>
+          console.error('[save:delete]', b.id, err),
+        ),
+      ),
+    );
+
+    // 2. Create new blocks sequentially so order is preserved
+    const idMap = new Map<string, string>(); // localId → serverId
+    for (const b of localBlocks) {
+      if (!serverIdSet.has(b.id)) {
+        const order = localBlocks.indexOf(b);
+        try {
+          const created = await apiCreateBlock(activePageId, b, order);
+          idMap.set(b.id, created.id);
+        } catch (err) {
+          console.error('[save:create]', b.id, err);
+        }
+      }
+    }
+
+    // 3. Update changed existing blocks
+    await Promise.all(
+      localBlocks
+        .filter((b) => serverIdSet.has(b.id))
+        .map((b) => {
+          const old = serverBlocks.find((s) => s.id === b.id);
+          const changed =
+            JSON.stringify(b.content) !== JSON.stringify(old?.content) ||
+            b.colSpan !== old?.colSpan ||
+            JSON.stringify(b.tags) !== JSON.stringify(old?.tags);
+          if (!changed) return Promise.resolve();
+          return apiUpdateBlock(activePageId, b.id, {
+            content: b.content,
+            colSpan: b.colSpan,
+            tags: b.tags,
+          }).catch((err) => console.error('[save:update]', b.id, err));
+        }),
+    );
+
+    // 4. Reconcile local ids with server-assigned ids
+    const reconciledBlocks = localBlocks.map((b) =>
+      idMap.has(b.id) ? { ...b, id: idMap.get(b.id)! } : b,
+    );
+    if (idMap.size > 0) {
+      setPages((prev) =>
+        prev.map((p) =>
+          p.id === activePageId ? { ...p, blocks: reconciledBlocks } : p,
+        ),
+      );
+    }
+
+    // 5. Bulk reorder
+    if (reconciledBlocks.length > 0) {
+      await apiReorderBlocks(
+        activePageId,
+        reconciledBlocks.map((b, i) => ({ id: b.id, order: i })),
+      ).catch((err) => console.error('[save:reorder]', err));
+    }
+
+    // 6. Update server snapshot
+    serverBlocksRef.current.set(activePageId, reconciledBlocks);
+
     setSaveFeedback(true);
-  }, []);
+  }, [activePageId, pages]);
 
   // ─── Effects ─────────────────────────────────────────────────────────────────
+
+  /**
+   * Load pages and folders from the server on mount.
+   *
+   * Optimistic strategy: pages/tree start empty (loading spinner), populated
+   * once both fetches resolve. On error we log and leave the workspace empty
+   * so the user can still see the UI and retry by refreshing.
+   */
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadData() {
+      try {
+        const [apiPages, apiFolders] = await Promise.all([fetchPages(), fetchFolders()]);
+        if (cancelled) return;
+
+        const uiPages = apiPages.map(apiPageToPage);
+        setPages(uiPages);
+
+        // Snapshot server state so handleSave can diff correctly
+        for (const p of uiPages) {
+          serverBlocksRef.current.set(p.id, [...p.blocks]);
+        }
+
+        // Build folder id lookup for drag-and-drop move operations
+        dbFolderIds.current = new Map(apiFolders.map((f) => [f.id, f.id]));
+
+        const root = buildTreeRootFromApi(apiFolders, apiPages);
+        setTreeRoot(root);
+
+        // Select the first page if available
+        const firstPage = sortByOrder(apiPages)[0];
+        if (firstPage) setActivePageId(firstPage.id);
+      } catch (err) {
+        console.error('[Workspace] Failed to load data:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadData();
+    return () => { cancelled = true; };
+    // Run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   /**
    * Reset the save feedback after a short delay.
@@ -548,6 +855,15 @@ export function Workspace() {
      * (sidebar tree, page content) overflow and scroll independently.
      */
     <div className="flex h-screen overflow-hidden bg-background font-sans text-foreground">
+      {/* Loading overlay — shown while the initial data fetch is in progress. */}
+      {loading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3 text-muted-foreground">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary" />
+            <span className="text-sm">{t('app.loading')}</span>
+          </div>
+        </div>
+      )}
       {/**
        * Mobile backdrop — dims the page content when the sidebar drawer is open.
        *
@@ -823,6 +1139,7 @@ export function Workspace() {
         onSave={handleSave}
         saved={saveFeedback}
         onTitleChange={handleTitleChange}
+        onTitleBlur={handleTitleBlur}
         onBlocksChange={handleBlocksChange}
         onTagsChange={handleTagsChange}
         onMobileSidebarToggle={() => setMobileSidebarOpen((v) => !v)}

@@ -63,7 +63,7 @@ export function parseVideoUrl(rawUrl: string): ParsedVideoUrl {
     return { provider: 'youtube', embedUrl: null };
   }
 
-  const embed = new URL(`https://www.youtube-nocookie.com/embed/${safeVideoId}`);
+  const embed = new URL(`https://www.youtube.com/embed/${safeVideoId}`);
   const start = parsed.searchParams.get('t') ?? parsed.searchParams.get('start');
   if (start) embed.searchParams.set('start', start.replaceAll(/\D/g, ''));
 

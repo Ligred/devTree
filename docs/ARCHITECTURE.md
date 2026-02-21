@@ -550,7 +550,7 @@ graph TD
 
 | Layer | Count | Speed | Confidence | Cost |
 |-------|-------|-------|-----------|------|
-| Unit tests | ~134 | ~3s | Component logic | Low |
+| Unit tests | ~229 | ~3s | Component logic | Low |
 | Storybook stories | ~20 | Manual | Visual appearance | Low |
 | E2E tests | ~32 | ~60s | Full user journeys | High |
 

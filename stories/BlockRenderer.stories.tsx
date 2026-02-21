@@ -57,19 +57,19 @@ const blocks: Block[] = [
     colSpan: 2,
   },
   {
-    id: 'aud1',
-    type: 'audio',
-    content: {
-      url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      caption: 'Sample audio note',
-    },
-    colSpan: 2,
-  },
-  {
     id: 'vid1',
     type: 'video',
     content: {
       url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    },
+    colSpan: 2,
+  },
+  {
+    id: 'aud1',
+    type: 'audio',
+    content: {
+      url: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Audio_MP3_Beethoven_5th_Symphony%2C_1st_Movement.mp3',
+      caption: 'Beethoven — Symphony No. 5, 1st Movement (public domain)',
     },
     colSpan: 2,
   },

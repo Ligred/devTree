@@ -101,13 +101,25 @@ describe('MainContent type guards', () => {
 
   describe('isAudioBlockContent', () => {
     it('returns true for object with url and type "audio"', () => {
-      expect(isAudioBlockContent(as({ url: '/uploads/audio/abc.webm' }), 'audio')).toBe(true);
-      expect(isAudioBlockContent(as({ url: 'https://example.com/sound.mp3' }), 'audio')).toBe(true);
+      expect(isAudioBlockContent(as({ url: 'https://example.com/audio.mp3' }), 'audio')).toBe(true);
+    });
+
+    it('returns true when optional caption is present', () => {
+      expect(
+        isAudioBlockContent(as({ url: 'https://example.com/a.mp3', caption: 'Episode 1' }), 'audio'),
+      ).toBe(true);
     });
 
     it('returns false for wrong type', () => {
-      expect(isAudioBlockContent(as({ url: 'x' }), 'link')).toBe(false);
-      expect(isAudioBlockContent(as({ url: 'x' }), 'image')).toBe(false);
+      expect(isAudioBlockContent(as({ url: 'https://example.com/a.mp3' }), 'link')).toBe(false);
+    });
+
+    it('returns false for missing url key', () => {
+      expect(isAudioBlockContent(as({ caption: 'no url' }), 'audio')).toBe(false);
+    });
+
+    it('returns false for null content', () => {
+      expect(isAudioBlockContent(as(null), 'audio')).toBe(false);
     });
   });
 });

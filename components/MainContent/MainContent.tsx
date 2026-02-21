@@ -42,6 +42,8 @@ type MainContentProps = Readonly<{
   onSave?: () => void;
   saved?: boolean;
   onTitleChange?: (title: string) => void;
+  /** Called when the title input loses focus — persists the title to the server. */
+  onTitleBlur?: () => void;
   onBlocksChange?: (blocks: Block[]) => void;
   /** Called when the user adds or removes a tag on the current page. */
   onTagsChange?: (tags: string[]) => void;
@@ -54,6 +56,7 @@ export function MainContent({
   onSave,
   saved = false,
   onTitleChange,
+  onTitleBlur,
   onBlocksChange,
   onTagsChange,
   onMobileSidebarToggle,
@@ -173,6 +176,7 @@ export function MainContent({
                 page={page}
                 readOnly={!onTitleChange}
                 onTitleChange={onTitleChange}
+                onTitleBlur={onTitleBlur}
               />
 
               {/* Page-level tag bar — hidden when tagsPerPageEnabled is false */}

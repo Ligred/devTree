@@ -363,3 +363,27 @@ export function getParentId(root: TreeRoot, nodeId: string): string {
   const path = getAncestorPath(root, nodeId);
   return path.length > 0 ? path[path.length - 1]! : root.id;
 }
+
+/**
+ * Replace a node's id (and pageId for leaf nodes) throughout the tree.
+ *
+ * Used after an optimistic page creation to reconcile the local temporary id
+ * with the server-assigned id returned by POST /api/pages.
+ */
+export function replaceNodeId(root: TreeRoot, oldId: string, newId: string): TreeRoot {
+  function replaceInChildren(children: TreeNode[]): TreeNode[] {
+    return children.map((node) => {
+      if (node.id === oldId) {
+        const isLeaf = node.pageId !== undefined;
+        return isLeaf
+          ? { ...node, id: newId, pageId: newId }
+          : { ...node, id: newId };
+      }
+      if (node.children !== undefined) {
+        return { ...node, children: replaceInChildren(node.children) };
+      }
+      return node;
+    });
+  }
+  return { ...root, children: replaceInChildren(root.children) };
+}

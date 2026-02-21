@@ -1,52 +1,86 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
+import { fn } from 'storybook/test';
 
-import { ConfirmationProvider } from '@/lib/confirmationContext';
-import { AudioBlock } from '@/components/MainContent/blocks/AudioBlock';
+import { AudioBlock } from '@/components/MainContent';
+import type { AudioBlockContent } from '@/components/MainContent';
 
 const meta: Meta<typeof AudioBlock> = {
   title: 'Components/Blocks/AudioBlock',
   component: AudioBlock,
-  parameters: { layout: 'centered' },
+  parameters: { layout: 'padded' },
   argTypes: {
-    content: { control: false },
-    onChange: { action: 'contentChange' },
+    onChange: { action: 'change' },
+    enterEdit: { action: 'enterEdit' },
+    exitEdit: { action: 'exitEdit' },
+    isEditing: { control: 'boolean' },
   },
-  decorators: [
-    (Story) => (
-      <ConfirmationProvider>
-        <Story />
-      </ConfirmationProvider>
-    ),
-  ],
 };
 
 export default meta;
-
 type Story = StoryObj<typeof AudioBlock>;
 
-export const Empty: Story = {
+const emptyContent: AudioBlockContent = { url: '' };
+
+const audioContent: AudioBlockContent = {
+  url: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Audio_MP3_Beethoven_5th_Symphony%2C_1st_Movement.mp3',
+};
+
+const audioWithCaption: AudioBlockContent = {
+  url: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Audio_MP3_Beethoven_5th_Symphony%2C_1st_Movement.mp3',
+  caption: 'Beethoven — Symphony No. 5, 1st Movement (public domain)',
+};
+
+/** Empty state — no URL set. Shows the "Add audio URL" prompt. */
+export const EmptyState: Story = {
   args: {
-    content: { url: '', caption: '' },
-    onChange: () => {},
+    content: emptyContent,
+    onChange: fn(),
+    enterEdit: fn(),
+    exitEdit: fn(),
+    isEditing: false,
   },
 };
 
-export const WithUrl: Story = {
+/** Edit mode with empty URL — shows the URL input form. */
+export const EditModeEmpty: Story = {
   args: {
-    content: {
-      url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      caption: '',
-    },
-    onChange: () => {},
+    content: emptyContent,
+    onChange: fn(),
+    enterEdit: fn(),
+    exitEdit: fn(),
+    isEditing: true,
   },
 };
 
-export const WithCaption: Story = {
+/** Edit mode with an existing URL — form is pre-filled. */
+export const EditModeWithUrl: Story = {
   args: {
-    content: {
-      url: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      caption: 'Meeting notes from Monday standup',
-    },
-    onChange: () => {},
+    content: audioWithCaption,
+    onChange: fn(),
+    enterEdit: fn(),
+    exitEdit: fn(),
+    isEditing: true,
+  },
+};
+
+/** Player view — audio URL is set, native browser controls are shown. */
+export const Player: Story = {
+  args: {
+    content: audioContent,
+    onChange: fn(),
+    enterEdit: fn(),
+    exitEdit: fn(),
+    isEditing: false,
+  },
+};
+
+/** Player with caption — displayed below the audio controls. */
+export const PlayerWithCaption: Story = {
+  args: {
+    content: audioWithCaption,
+    onChange: fn(),
+    enterEdit: fn(),
+    exitEdit: fn(),
+    isEditing: false,
   },
 };

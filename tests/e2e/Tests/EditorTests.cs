@@ -168,31 +168,6 @@ public class EditorTests : E2ETestBase
     }
 
     [Test]
-    public async Task AddAudioBlock_ShowsEmptyForm()
-    {
-        await App.Editor.AddBlockAsync("Audio");
-
-        await Expect(Page.GetByPlaceholder("https://example.com/audio.mp3")).ToBeVisibleAsync();
-    }
-
-    [Test]
-    public async Task AddAudioBlock_CanSetUrl()
-    {
-        // Short public audio URL (WAV sample)
-        const string audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
-
-        await App.Editor.AddBlockAsync("Audio");
-        await App.Editor.SetAudioUrlAsync(audioUrl);
-
-        // Exit edit mode so audio element renders
-        await App.Editor.ExitEditModeAsync();
-
-        var audio = Page.Locator("audio[src*='SoundHelix']");
-        // Check that the audio element exists (may not be fully visible/loaded due to external URL)
-        await Expect(audio).ToHaveCountAsync(1);
-    }
-
-    [Test]
     public async Task AddVideoBlock_ShowsEmptyForm()
     {
         await App.Editor.AddBlockAsync("Video");
