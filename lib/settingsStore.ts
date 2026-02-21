@@ -85,11 +85,19 @@ type SettingsState = {
    */
   recordingStartSoundEnabled: boolean;
 
+  /**
+   * Whether to apply local punctuation and sentence casing to dictated text.
+   * When true, recognized speech is normalized before insertion into text blocks.
+   * When false, raw transcript is inserted as-is.
+   */
+  dictationFormattingEnabled: boolean;
+
   // ─── Actions ──────────────────────────────────────────────────────────────
 
   setTagsPerPage: (enabled: boolean) => void;
   setTagsPerBlock: (enabled: boolean) => void;
   setRecordingStartSound: (enabled: boolean) => void;
+  setDictationFormatting: (enabled: boolean) => void;
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -100,10 +108,12 @@ export const useSettingsStore = create<SettingsState>()(
       tagsPerPageEnabled: true,
       tagsPerBlockEnabled: true,
       recordingStartSoundEnabled: true,
+      dictationFormattingEnabled: true,
 
       setTagsPerPage: (tagsPerPageEnabled) => set({ tagsPerPageEnabled }),
       setTagsPerBlock: (tagsPerBlockEnabled) => set({ tagsPerBlockEnabled }),
       setRecordingStartSound: (recordingStartSoundEnabled) => set({ recordingStartSoundEnabled }),
+      setDictationFormatting: (dictationFormattingEnabled) => set({ dictationFormattingEnabled }),
     }),
     {
       /**

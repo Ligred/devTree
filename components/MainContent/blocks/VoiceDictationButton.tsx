@@ -13,31 +13,42 @@
 import { useEffect, useState, useRef, useCallback, useId } from 'react';
 import { Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type Locale } from '@/lib/i18n';
 import { useRecordingStore } from '@/lib/recordingStore';
+import { useSettingsStore } from '@/lib/settingsStore';
 import { attemptStartRecording } from './recordingHelpers';
 import { useConfirmation } from '@/lib/confirmationContext';
 import { getSpeechRecognitionApi, isChromeBasedBrowser, DICTATION_LANGUAGE_CODES } from './voiceDictationUtils';
+import { formatInterimDictationTextWithPunctuation } from './dictationTextFormatter';
 
 type VoiceDictationButtonProps = Readonly<{
   onTextRecognized: (text: string) => void;
-  language?: Locale;
+  onInterimText?: (text: string) => void;
+  language?: 'en' | 'uk';
   blockId?: string;
 }>;
 
 export function VoiceDictationButton({
   onTextRecognized,
+  onInterimText,
   language = 'en',
   blockId = '',
 }: VoiceDictationButtonProps) {
   const { startRecording, stopRecording } = useRecordingStore();
+  const { dictationFormattingEnabled } = useSettingsStore();
   const { confirm } = useConfirmation();
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
   const transcriptRef = useRef<string>('');
+  const languageRef = useRef<'en' | 'uk'>(language);
+  const formattingEnabledRef = useRef<boolean>(dictationFormattingEnabled);
   const initRef = useRef(false);
   const generatedId = useId();
   const resolvedBlockId = blockId || generatedId;
+
+  // Sync formattingEnabledRef with dictationFormattingEnabled changes
+  useEffect(() => {
+    formattingEnabledRef.current = dictationFormattingEnabled;
+  }, [dictationFormattingEnabled]);
 
   // Initialize SpeechRecognition only once on mount
   useEffect(() => {
@@ -51,6 +62,13 @@ export function VoiceDictationButton({
       try {
         const recognition = new SpeechRecognitionAPI();
         
+        // Enable continuous recognition and interim results
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        
+        // Set maximum alternatives to get best transcription
+        recognition.maxAlternatives = 1;
+        
         recognition.onstart = () => {
           setListening(true);
           startRecording(resolvedBlockId, () => {
@@ -62,21 +80,62 @@ export function VoiceDictationButton({
           });
         };
         
-        recognition.onend = () => {
+        recognition.onend = async () => {
           setListening(false);
           stopRecording(resolvedBlockId);
           if (transcriptRef.current.trim()) {
-            onTextRecognized(transcriptRef.current.trim());
+            let finalTranscript: string;
+            
+            if (formattingEnabledRef.current) {
+              try {
+                // Use enhanced punctuation service (async)
+                const { formatDictationTextWithPunctuation } = await import('./dictationTextFormatter');
+                finalTranscript = await formatDictationTextWithPunctuation(
+                  transcriptRef.current,
+                  languageRef.current,
+                );
+              } catch (error) {
+                console.error('[VoiceDictation] Punctuation failed, using basic formatting:', error);
+                // Fallback to basic formatting
+                const { formatDictationText } = await import('./dictationTextFormatter');
+                finalTranscript = formatDictationText(transcriptRef.current);
+              }
+            } else {
+              finalTranscript = transcriptRef.current.trim();
+            }
+            
+            if (finalTranscript) {
+              onTextRecognized(finalTranscript);
+            }
             transcriptRef.current = '';
           }
         };
         
         recognition.onresult = (event) => {
+          let interimTranscript = '';
+          let hasFinalResult = false;
+          
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
               transcriptRef.current += (transcriptRef.current ? ' ' : '') + transcript;
+              hasFinalResult = true;
+            } else {
+              interimTranscript += transcript;
             }
+          }
+          
+          // Clear interim display when text becomes final
+          if (hasFinalResult && onInterimText) {
+            onInterimText('');
+          }
+          
+          // Show only current interim text (not accumulated) for real-time display
+          if (interimTranscript && onInterimText) {
+            const displayText = formattingEnabledRef.current
+              ? formatInterimDictationTextWithPunctuation(interimTranscript, languageRef.current)
+              : interimTranscript.trim();
+            onInterimText(displayText);
           }
         };
         
@@ -91,6 +150,8 @@ export function VoiceDictationButton({
         console.error('Failed to initialize SpeechRecognition:', error);
       }
     }
+    // Note: onInterimText is intentionally omitted from deps as it's optional and changes frequently
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedBlockId, startRecording, stopRecording, onTextRecognized]);
 
   // Clean up and stop recording when component unmounts or when exiting edit mode
@@ -109,12 +170,19 @@ export function VoiceDictationButton({
 
   // Update language and continuous mode when they change
   useEffect(() => {
+    languageRef.current = language;
+
     if (!recognitionRef.current) return;
     
     recognitionRef.current.lang = DICTATION_LANGUAGE_CODES[language];
     recognitionRef.current.continuous = true;
     recognitionRef.current.interimResults = true;
   }, [language]);
+
+  // Update formatting setting when it changes
+  useEffect(() => {
+    formattingEnabledRef.current = dictationFormattingEnabled;
+  }, [dictationFormattingEnabled]);
 
   const handleToggleRecording = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault();

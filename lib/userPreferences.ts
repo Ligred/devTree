@@ -12,6 +12,7 @@ export type UserPreferencesPayload = {
   tagsPerPageEnabled?: boolean;
   tagsPerBlockEnabled?: boolean;
   recordingStartSoundEnabled?: boolean;
+  dictationFormattingEnabled?: boolean;
 };
 
 /**

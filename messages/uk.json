@@ -55,6 +55,8 @@
   "settings.tagsPerBlockDescription": "Показувати теги на окремих блоках вмісту для детальних приміток",
   "settings.recordingStartSound": "Звук початку запису",
   "settings.recordingStartSoundDescription": "Відтворювати короткий звук-сповіщення, коли починається запис",
+  "settings.dictationFormatting": "Авто-форматування диктування",
+  "settings.dictationFormattingDescription": "Автоматично додавати пунктуацію та писати з великої літери на початку речень у голосовому диктуванні",
   "settings.sectionAccount": "Обліковий запис",
   "settings.profile": "Профіль",
   "settings.profileDescription": "Ваше ім'я та аватар",

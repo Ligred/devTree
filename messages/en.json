@@ -55,6 +55,8 @@
   "settings.tagsPerBlockDescription": "Show tag labels on individual content blocks for fine-grained annotation",
   "settings.recordingStartSound": "Recording start sound",
   "settings.recordingStartSoundDescription": "Play a short notification sound when recording starts",
+  "settings.dictationFormatting": "Auto-format dictation",
+  "settings.dictationFormattingDescription": "Automatically add punctuation and capitalize sentences in voice dictation",
   "settings.sectionAccount": "Account",
   "settings.profile": "Profile",
   "settings.profileDescription": "Your name and avatar",

@@ -141,9 +141,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     tagsPerPageEnabled,
     tagsPerBlockEnabled,
     recordingStartSoundEnabled,
+    dictationFormattingEnabled,
     setTagsPerPage,
     setTagsPerBlock,
     setRecordingStartSound,
+    setDictationFormatting,
   } =
     useSettingsStore();
 
@@ -559,6 +561,20 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     void saveUserPreferences({ recordingStartSoundEnabled: v });
                   }}
                   label={t('settings.recordingStartSound')}
+                />
+              </SettingRow>
+
+              <SettingRow
+                label={t('settings.dictationFormatting')}
+                description={t('settings.dictationFormattingDescription')}
+              >
+                <Switch
+                  checked={dictationFormattingEnabled}
+                  onChange={(v) => {
+                    setDictationFormatting(v);
+                    void saveUserPreferences({ dictationFormattingEnabled: v });
+                  }}
+                  label={t('settings.dictationFormatting')}
                 />
               </SettingRow>
                 </div>

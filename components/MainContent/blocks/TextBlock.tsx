@@ -128,6 +128,7 @@ export function TextBlock({ content, onChange, isEditing = false, blockId }: Tex
   const [commentOpen, setCommentOpen] = useState(false);
   const [commentTooltip, setCommentTooltip] = useState<{ text: string; left: number; top: number } | null>(null);
   const [dictationLanguage, setDictationLanguage] = useState<Locale>(locale);
+  const [interimText, setInterimText] = useState<string>('');
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -224,15 +225,23 @@ export function TextBlock({ content, onChange, isEditing = false, blockId }: Tex
 
   const handleVoiceTextRecognized = (voiceText: string) => {
     if (!editor) return;
-    // Move to the end of the document and add the recognized text with a space before it
+    
+    // Clear interim text display
+    setInterimText('');
+    
+    // Insert final text into editor
     const currentContent = editor.getHTML();
     const textToAdd = currentContent === '<p></p>' ? voiceText : ` ${voiceText}`;
-    
     editor
       .chain()
       .focus('end')
       .insertContent(textToAdd)
       .run();
+  };
+
+  const handleInterimText = (text: string) => {
+    // Simply update interim text state - don't insert into editor
+    setInterimText(text);
   };
 
   if (!editor) return null;
@@ -617,7 +626,12 @@ export function TextBlock({ content, onChange, isEditing = false, blockId }: Tex
           <span className="mx-1 h-5 w-px bg-border" />
 
           {/* Voice Dictation and Language */}
-          <VoiceDictationButton onTextRecognized={handleVoiceTextRecognized} language={dictationLanguage} blockId={resolvedBlockId} />
+          <VoiceDictationButton 
+            onTextRecognized={handleVoiceTextRecognized} 
+            onInterimText={handleInterimText}
+            language={dictationLanguage} 
+            blockId={resolvedBlockId} 
+          />
           <VoiceDictationLanguageButton onLanguageChange={setDictationLanguage} />
 
           <span className="mx-1 h-5 w-px bg-border" />
@@ -652,6 +666,12 @@ export function TextBlock({ content, onChange, isEditing = false, blockId }: Tex
             !isEditing && 'cursor-default select-text',
           )}
         />
+        {/* Display interim dictation text inline after editor content */}
+        {interimText && isEditing && (
+          <div className="px-4 pb-3 text-sm text-foreground opacity-60">
+            {interimText}
+          </div>
+        )}
       </div>
 
       {/* Comment tooltip is portaled to document.body so it isn't clipped by overflow and stays above other content. */}
