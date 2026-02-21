@@ -125,6 +125,24 @@ public class SidebarPage(IPage page)
         await _page.WaitForTimeoutAsync(500);
     }
 
+    /// <summary>Clicks the last tree item with the given visible text.</summary>
+    public async Task SelectLastPageAsync(string title)
+    {
+        var sidebar = _page.Locator("aside");
+        await sidebar.WaitForAsync(new() { Timeout = 15_000 });
+
+        var matches = sidebar.GetByText(title, new() { Exact = true });
+        var count = await matches.CountAsync();
+        if (count == 0)
+        {
+            throw new InvalidOperationException($"No sidebar item found with title '{title}'.");
+        }
+
+        var last = matches.Nth(count - 1);
+        await last.ClickAsync();
+        await _page.WaitForTimeoutAsync(500);
+    }
+
     /// <summary>Collapses the sidebar.</summary>
     public Task HideAsync() => HideBtn.ClickAsync();
 

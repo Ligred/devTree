@@ -262,6 +262,12 @@ export function Workspace() {
    */
   const serverBlocksRef = useRef<Map<string, Block[]>>(new Map());
 
+  /**
+   * Server-side snapshot of each full page (title/tags/blocks), keyed by pageId.
+   * Used to restore the page when user chooses "Leave without saving".
+   */
+  const serverPagesRef = useRef<Map<string, Page>>(new Map());
+
   const { t } = useI18n();
   const tagsPerPageEnabled = useSettingsStore((s) => s.tagsPerPageEnabled);
 
@@ -406,7 +412,7 @@ export function Workspace() {
   }, []);
 
   /**
-   * Create a new page under the given parent and immediately select it.
+   * Create a new page under the given parent.
    *
    * WHY both setPages AND setTreeRoot?
    *   Page data (content) lives in `pages`; the tree entry (hierarchy) lives in
@@ -415,12 +421,14 @@ export function Workspace() {
   const createFile = useCallback((parentId: string) => {
     const localPageId = newPageId();
     const newPage: Page = { id: localPageId, title: 'Untitled', blocks: [] };
+    const shouldAutoOpenNewPage = activePageId == null;
 
     // Optimistic update
     setPages((prev) => [...prev, newPage]);
     setTreeRoot((root) => addFileUnder(root, parentId, localPageId, newPage.title));
-    setActivePageId(localPageId);
+    if (shouldAutoOpenNewPage) setActivePageId(localPageId);
     serverBlocksRef.current.set(localPageId, []);
+    serverPagesRef.current.set(localPageId, newPage);
 
     // Determine the DB folder id for the parent
     const dbFolderId = dbFolderIds.current.has(parentId) ? parentId : null;
@@ -434,10 +442,12 @@ export function Workspace() {
       setActivePageId((current) => (current === localPageId ? created.id : current));
       serverBlocksRef.current.set(created.id, []);
       serverBlocksRef.current.delete(localPageId);
+      serverPagesRef.current.set(created.id, { ...newPage, id: created.id });
+      serverPagesRef.current.delete(localPageId);
     }).catch((err) => {
       console.error('[createFile]', err);
     });
-  }, []);
+  }, [activePageId]);
 
   /**
    * Open the delete-confirmation dialog for a node.
@@ -513,6 +523,10 @@ export function Workspace() {
     setTreeRoot(nextRoot);
     setPages((prevPages) => prevPages.filter((p) => !pageIdsToRemove.includes(p.id)));
     setActivePageId((current) => (pageIdsToRemove.includes(current ?? '') ? null : current));
+    for (const pageId of pageIdsToRemove) {
+      serverBlocksRef.current.delete(pageId);
+      serverPagesRef.current.delete(pageId);
+    }
     setDeleteDialog(null);
 
     // Determine if we are deleting a page or a folder
@@ -654,9 +668,17 @@ export function Workspace() {
     if (!activePageId) return;
     const page = pages.find((p) => p.id === activePageId);
     if (!page) return;
-    void apiUpdatePage(activePageId, { title: page.title }).catch((err) =>
-      console.error('[titleBlur]', err),
-    );
+    void apiUpdatePage(activePageId, { title: page.title })
+      .then(() => {
+        const oldSnap = serverPagesRef.current.get(activePageId);
+        serverPagesRef.current.set(
+          activePageId,
+          oldSnap ? { ...oldSnap, title: page.title } : { ...page, blocks: [...page.blocks] },
+        );
+      })
+      .catch((err) =>
+        console.error('[titleBlur]', err),
+      );
   }, [activePageId, pages]);
 
   /**
@@ -689,9 +711,15 @@ export function Workspace() {
       );
       if (tagsDebounceRef.current) clearTimeout(tagsDebounceRef.current);
       tagsDebounceRef.current = setTimeout(() => {
-        void apiUpdatePage(activePageId, { tags }).catch((err) =>
-          console.error('[tagsChange]', err),
-        );
+        void apiUpdatePage(activePageId, { tags })
+          .then(() => {
+            const oldSnap = serverPagesRef.current.get(activePageId);
+            if (!oldSnap) return;
+            serverPagesRef.current.set(activePageId, { ...oldSnap, tags: [...tags] });
+          })
+          .catch((err) =>
+            console.error('[tagsChange]', err),
+          );
       }, 800);
     },
     [activePageId],
@@ -788,6 +816,11 @@ export function Workspace() {
 
     // 6. Update server snapshot
     serverBlocksRef.current.set(activePageId, reconciledBlocks);
+    serverPagesRef.current.set(activePageId, {
+      ...page,
+      blocks: reconciledBlocks,
+      tags: page.tags ? [...page.tags] : undefined,
+    });
 
     setIsDirty(false);
     setSaveFeedback(true);
@@ -812,10 +845,23 @@ export function Workspace() {
   const handleLeaveWithout = useCallback(() => {
     if (pendingNavId) {
       // Revert local edits to the server snapshot
-      const snap = serverBlocksRef.current.get(activePageId ?? '') ?? [];
-      setPages((prev) =>
-        prev.map((p) => (p.id === activePageId ? { ...p, blocks: snap } : p)),
-      );
+      const pageSnap = serverPagesRef.current.get(activePageId ?? '');
+      if (pageSnap && activePageId) {
+        const restored: Page = {
+          ...pageSnap,
+          blocks: [...pageSnap.blocks],
+          tags: pageSnap.tags ? [...pageSnap.tags] : undefined,
+        };
+        setPages((prev) =>
+          prev.map((p) => (p.id === activePageId ? restored : p)),
+        );
+        setTreeRoot((root) => renameNode(root, activePageId, restored.title));
+      } else {
+        const snap = serverBlocksRef.current.get(activePageId ?? '') ?? [];
+        setPages((prev) =>
+          prev.map((p) => (p.id === activePageId ? { ...p, blocks: snap } : p)),
+        );
+      }
       setIsDirty(false);
       setActivePageId(pendingNavId);
       setMobileSidebarOpen(false);
@@ -851,6 +897,11 @@ export function Workspace() {
         // Snapshot server state so handleSave can diff correctly
         for (const p of uiPages) {
           serverBlocksRef.current.set(p.id, [...p.blocks]);
+          serverPagesRef.current.set(p.id, {
+            ...p,
+            blocks: [...p.blocks],
+            tags: p.tags ? [...p.tags] : undefined,
+          });
         }
 
         // Build folder id lookup for drag-and-drop move operations

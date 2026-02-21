@@ -17,8 +17,6 @@ namespace DevTree.E2E.Tests;
 [Category("Save")]
 public class SaveTests : E2ETestBase
 {
-    private const string UnsavedPageName = "Unsaved Page";
-
     [SetUp]
     public async Task SetUpAsync()
     {
@@ -45,7 +43,7 @@ public class SaveTests : E2ETestBase
     [Test]
     public async Task SaveButton_BecomesEnabled_AfterTitleChange()
     {
-        var titleInput = Page.GetByTestId("page-title-input");
+        var titleInput = Page.GetByLabel("Page title");
         await titleInput.ClickAsync();
         await titleInput.FillAsync("My Edited Title");
 
@@ -62,6 +60,31 @@ public class SaveTests : E2ETestBase
         await App.Editor.AddBlockAsync("Text");
 
         var saveBtn = Page.GetByTestId("save-page-button");
+        await Expect(saveBtn).ToBeEnabledAsync();
+    }
+
+    /// <summary>
+    /// Creating a new page while current page has unsaved changes should NOT
+    /// redirect to the new page. User stays on the current page.
+    /// </summary>
+    [Test]
+    public async Task CreatePage_WhenDirty_DoesNotRedirect()
+    {
+        // Rename current page so we can reliably identify it
+        var titleInput = Page.GetByLabel("Page title");
+        await titleInput.ClickAsync();
+        await titleInput.FillAsync("Current Draft");
+
+        // Dirty state should enable save
+        var saveBtn = Page.GetByTestId("save-page-button");
+        await Expect(saveBtn).ToBeEnabledAsync();
+
+        // Create a new page in the sidebar
+        await App.Sidebar.CreatePageAsync();
+
+        // Must still be on the same page
+        var headerTitle = Page.Locator("header span").First;
+        await Expect(headerTitle).ToHaveTextAsync("Current Draft");
         await Expect(saveBtn).ToBeEnabledAsync();
     }
 
@@ -99,8 +122,7 @@ public class SaveTests : E2ETestBase
         await App.Sidebar.CreatePageAsync();
 
         // Navigate to the second page — dialog should appear
-        var secondPage = Page.Locator("[data-testid^='sidebar-page-']").Last;
-        await secondPage.ClickAsync();
+        await App.Sidebar.SelectLastPageAsync("Untitled");
 
         // The dialog should be visible
         var dialog = Page.GetByRole(AriaRole.Alertdialog);
@@ -124,8 +146,7 @@ public class SaveTests : E2ETestBase
 
         // Create second page and try to navigate to it
         await App.Sidebar.CreatePageAsync();
-        var secondPage = Page.Locator("[data-testid^='sidebar-page-']").Last;
-        await secondPage.ClickAsync();
+        await App.Sidebar.SelectLastPageAsync("Untitled");
 
         // Click Cancel
         await Page.GetByTestId("unsaved-cancel").ClickAsync();
@@ -145,14 +166,13 @@ public class SaveTests : E2ETestBase
     public async Task UnsavedDialog_LeaveWithoutSaving_NavigatesAway()
     {
         // Dirty the page with a title change
-        var titleInput = Page.GetByTestId("page-title-input");
+        var titleInput = Page.GetByLabel("Page title");
         await titleInput.ClickAsync();
         await titleInput.FillAsync("Discarded Title");
 
         // Create second page and try to navigate to it
         await App.Sidebar.CreatePageAsync();
-        var secondPage = Page.Locator("[data-testid^='sidebar-page-']").Last;
-        await secondPage.ClickAsync();
+        await App.Sidebar.SelectLastPageAsync("Untitled");
 
         // Click "Leave without saving"
         await Page.GetByTestId("unsaved-leave-without-saving").ClickAsync();
@@ -178,9 +198,8 @@ public class SaveTests : E2ETestBase
 
         // Create second page and try to navigate to it
         await App.Sidebar.CreatePageAsync();
-        var secondPage = Page.Locator("[data-testid^='sidebar-page-']").Last;
-        var targetTitle = await secondPage.TextContentAsync();
-        await secondPage.ClickAsync();
+        var targetTitle = "Untitled";
+        await App.Sidebar.SelectLastPageAsync(targetTitle);
 
         // Click "Save and leave"
         await Page.GetByTestId("unsaved-save-and-leave").ClickAsync();
