@@ -41,9 +41,10 @@ public class DiagramTests : E2ETestBase
     [Test]
     public async Task AddDiagramBlock_EditTabShowsTextarea()
     {
-        await App.Sidebar.CreatePageAsync();
-        await App.Sidebar.SelectPageAsync("Untitled");
-        await App.Editor.AddBlockAsync("Diagram");
+        var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
+        var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
+        await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
+        await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
         // Click the Edit tab
         await Page.GetByTestId("diagram-tab-edit").Last.ClickAsync();
@@ -58,9 +59,10 @@ public class DiagramTests : E2ETestBase
     [Test]
     public async Task DiagramTypePicker_OpensDropdownWithAllTypes()
     {
-        await App.Sidebar.CreatePageAsync();
-        await App.Sidebar.SelectPageAsync("Untitled");
-        await App.Editor.AddBlockAsync("Diagram");
+        var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
+        var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
+        await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
+        await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
         await Page.GetByTestId("diagram-type-picker").Last.ClickAsync();
 
@@ -72,9 +74,10 @@ public class DiagramTests : E2ETestBase
     [Test]
     public async Task DiagramTypePicker_SelectingTypeLoadsTemplate()
     {
-        await App.Sidebar.CreatePageAsync();
-        await App.Sidebar.SelectPageAsync("Untitled");
-        await App.Editor.AddBlockAsync("Diagram");
+        var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
+        var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
+        await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
+        await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
         await Page.GetByTestId("diagram-type-picker").Last.ClickAsync();
         await Page.GetByTestId("diagram-type-option-sequence").Last.ClickAsync();

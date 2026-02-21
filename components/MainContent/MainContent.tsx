@@ -151,19 +151,24 @@ export function MainContent({
                 {breadcrumbs.map((crumb, index) => (
                   <li key={crumb.id} className="flex min-w-0 items-center gap-1">
                     {index > 0 && <span className="text-muted-foreground">/</span>}
-                    <button
-                      type="button"
-                      className={cn(
-                        'min-w-0 truncate rounded px-1 py-0.5',
-                        crumb.isCurrent
-                          ? 'font-medium text-foreground'
-                          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                      )}
-                      onClick={() => onBreadcrumbClick?.(crumb.id)}
-                      aria-current={crumb.isCurrent ? 'page' : undefined}
-                    >
-                      {crumb.label}
-                    </button>
+                    {crumb.isCurrent ? (
+                      <span
+                        className="min-w-0 truncate rounded px-1 py-0.5 font-medium text-foreground"
+                        aria-current="page"
+                      >
+                        {crumb.label}
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className={cn(
+                          'min-w-0 truncate rounded px-1 py-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                        )}
+                        onClick={() => onBreadcrumbClick?.(crumb.id)}
+                      >
+                        {crumb.label}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ol>

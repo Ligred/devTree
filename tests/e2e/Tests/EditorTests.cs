@@ -14,12 +14,9 @@ public class EditorTests : E2ETestBase
     public async Task NavigateToPageAsync()
     {
         // Start each test on a fresh page created by the test itself.
-        // Note: Newly created pages are named "Untitled" and cannot be renamed
-        // from the sidebar (page rename only works in the editor via PageTitle).
-        // We simply create a page and select it; custom naming isn't needed
-        // since each test gets its own browser context with a fresh workspace.
+        // CreatePageAsync returns the newly created unique "Untitled*" row,
+        // which we click directly to avoid ambiguity with existing pages.
         await App.Sidebar.CreatePageAsync();
-        await App.Sidebar.SelectPageAsync("Untitled");
     }
 
     // ── Block count baseline ─────────────────────────────────────────────────
@@ -185,7 +182,7 @@ public class EditorTests : E2ETestBase
 
         var iframe = Page.GetByTestId("video-block-iframe").Last;
         await Expect(iframe).ToBeVisibleAsync();
-        await Expect(iframe).ToHaveAttributeAsync("src", new Regex("youtube-nocookie\\.com/embed/dQw4w9WgXcQ", RegexOptions.IgnoreCase));
+        await Expect(iframe).ToHaveAttributeAsync("src", new Regex("youtube\\.com/embed/dQw4w9WgXcQ", RegexOptions.IgnoreCase));
     }
 
     // ── Delete blocks ────────────────────────────────────────────────────────

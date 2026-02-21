@@ -255,7 +255,7 @@ sequenceDiagram
     User->>Sidebar: Clicks page in tree
     Sidebar->>Workspace: onSelect(item)
     Workspace->>Workspace: setActivePageId(item.id)
-    Workspace->>Router: push('/p/:pageId')
+    Workspace->>Router: push('/pages/:pageId')
     Router->>Workspace: route params hydrate selected page
     Workspace->>MainContent: page={activePage} (re-render)
     MainContent->>BlockEditor: blocks={page.blocks}
@@ -267,7 +267,7 @@ sequenceDiagram
     Note over Workspace: Only the edited page is updated
 ```
 
-Route selection is URL-driven: `activePageId` syncs with `/p/[pageId]`. Opening a deep link expands the selected page's folder ancestry in the tree and highlights the corresponding row. Invalid page ids keep the workspace in empty-state mode.
+Route selection is URL-driven: `activePageId` syncs with `/pages/[pageId]`. Opening a deep link expands the selected page's folder ancestry in the tree and highlights the corresponding row. Invalid page ids keep the workspace in empty-state mode.
 
 **Immutability pattern**
 

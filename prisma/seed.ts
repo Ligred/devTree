@@ -5,6 +5,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding database...');
+  const demoPassword = process.env.DEMO_PASSWORD ?? 'E2E!Passw0rd123';
 
   // ── Admin account (optional, only when ADMIN_PASSWORD is set) ───────────────
   const adminPassword = process.env.ADMIN_PASSWORD;
@@ -26,11 +27,16 @@ async function main() {
   }
 
   // ── Demo user ────────────────────────────────────────────────────────────────
+  const hashedDemoPassword = await hashPassword(demoPassword);
   const user = await prisma.user.upsert({
     where: { email: 'demo@devtree.local' },
-    update: {},
+    update: {
+      password: hashedDemoPassword,
+      name: 'Demo User',
+    },
     create: {
       email: 'demo@devtree.local',
+      password: hashedDemoPassword,
       name: 'Demo User',
     },
   });

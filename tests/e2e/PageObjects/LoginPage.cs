@@ -11,7 +11,7 @@ public class LoginPage(IPage page)
     private static string BaseUrl =>
         Environment.GetEnvironmentVariable("DEVTREE_BASE_URL") ?? "http://localhost:3000";
 
-    private string LoginUrl => BaseUrl.TrimEnd('/') + "/login";
+    private static string LoginUrl => BaseUrl.TrimEnd('/') + "/login";
 
     // ── Selectors (locale-agnostic) ───────────────────────────────────────────
 
@@ -21,7 +21,6 @@ public class LoginPage(IPage page)
     private ILocator RegisterSwitchButton => _page.GetByTestId("auth-switch-register");
     private ILocator LoginSwitchButton => _page.GetByTestId("auth-switch-login");
     private ILocator ErrorAlert    => _page.Locator("[role='alert']").Filter(new() { HasText = "" }).First;
-    private ILocator ForgotLink    => _page.GetByTestId("login-forgot-link");
 
     // ── Navigation ─────────────────────────────────────────────────────────
 
@@ -66,15 +65,37 @@ public class LoginPage(IPage page)
 
     public async Task SwitchToRegisterAsync()
     {
-        await RegisterSwitchButton.ClickAsync();
-        await _page.WaitForTimeoutAsync(200);
+        if (await RegisterSwitchButton.IsVisibleAsync())
+        {
+            await RegisterSwitchButton.ClickAsync();
+            await _page.WaitForTimeoutAsync(200);
+            return;
+        }
+
+        if (await LoginSwitchButton.IsVisibleAsync())
+        {
+            return;
+        }
+
+        throw new PlaywrightException("Unable to switch to register mode: auth mode toggle was not found.");
     }
 
     /// <summary>Switch from register back to login (click "Log in" link).</summary>
     public async Task SwitchToLoginAsync()
     {
-        await LoginSwitchButton.ClickAsync();
-        await _page.WaitForTimeoutAsync(200);
+        if (await LoginSwitchButton.IsVisibleAsync())
+        {
+            await LoginSwitchButton.ClickAsync();
+            await _page.WaitForTimeoutAsync(200);
+            return;
+        }
+
+        if (await RegisterSwitchButton.IsVisibleAsync())
+        {
+            return;
+        }
+
+        throw new PlaywrightException("Unable to switch to login mode: auth mode toggle was not found.");
     }
 
     /// <summary>Click language toggle: "EN" or "UA" (button text on the left panel; aria-label is "Language").</summary>

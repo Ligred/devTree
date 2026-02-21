@@ -55,9 +55,10 @@ export function addFolderUnder(
   root: TreeRoot,
   parentId: string,
   name: string,
+  folderId?: string,
 ): TreeRoot {
   const newFolder: TreeNode = {
-    id: newFolderId(),
+    id: folderId ?? newFolderId(),
     name: name.trim() || 'New folder',
     children: [],
   };

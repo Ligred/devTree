@@ -1,11 +1,14 @@
 namespace DevTree.E2E.PageObjects;
 
+using System.Text.RegularExpressions;
+
 /// <summary>
 /// Page object for the left sidebar / file-explorer panel.
 /// </summary>
 public class SidebarPage(IPage page)
 {
     private readonly IPage _page = page;
+    private static readonly Regex UntitledPattern = new("^Untitled(?:\\s+\\d+)?$", RegexOptions.Compiled);
 
     // ── Selectors ──────────────────────────────────────────────────────────
 
@@ -16,9 +19,28 @@ public class SidebarPage(IPage page)
 
     // ── Actions ────────────────────────────────────────────────────────────
 
+    private async Task<HashSet<string>> GetUntitledTitlesAsync()
+    {
+        var titles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var matches = _page.Locator("aside").GetByText(UntitledPattern);
+        var count = await matches.CountAsync();
+        for (var index = 0; index < count; index++)
+        {
+            var text = (await matches.Nth(index).InnerTextAsync()).Trim();
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                titles.Add(text);
+            }
+        }
+
+        return titles;
+    }
+
     /// <summary>Creates a new page and returns its title locator.</summary>
     public async Task<ILocator> CreatePageAsync(string title = "")
     {
+        var beforeUntitledTitles = await GetUntitledTitlesAsync();
+
         // Wait for the sidebar to be ready before trying to find the button
         // Use a longer timeout in case the app is taking time to load
         var sidebar = _page.Locator("aside");
@@ -50,11 +72,25 @@ public class SidebarPage(IPage page)
         // Wait for the new item to appear in the tree
         await _page.WaitForTimeoutAsync(300);
 
-        // NOTE: Pages are created as "Untitled" in the sidebar.
+        // NOTE: Pages are created as "Untitled", "Untitled 2", ... in the sidebar.
         // Optional `title` is intentionally ignored to keep API compatibility.
-        var locator = _page.GetByText("Untitled").First;
-        await locator.WaitForAsync(new() { Timeout = 5_000 });
-        return locator;
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var afterUntitledTitles = await GetUntitledTitlesAsync();
+            var newTitle = afterUntitledTitles.Except(beforeUntitledTitles).FirstOrDefault();
+            if (!string.IsNullOrWhiteSpace(newTitle))
+            {
+                var created = _page.Locator("aside").GetByText(newTitle, new() { Exact = true }).First;
+                await created.WaitForAsync(new() { Timeout = 5_000 });
+                return created;
+            }
+
+            await _page.WaitForTimeoutAsync(200);
+        }
+
+        var fallback = _page.Locator("aside").GetByText("Untitled", new() { Exact = true }).Last;
+        await fallback.WaitForAsync(new() { Timeout = 5_000 });
+        return fallback;
     }
 
     /// <summary>Creates a new folder and optionally renames it.</summary>
@@ -119,8 +155,27 @@ public class SidebarPage(IPage page)
         await sidebar.WaitForAsync(new() { Timeout = 15_000 });
 
         var locator = sidebar.GetByText(title, new() { Exact = true }).First;
-        await locator.WaitForAsync(new() { Timeout = 15_000 });
+
+        try
+        {
+            await locator.WaitForAsync(new() { Timeout = 3_000 });
+        }
+        catch (TimeoutException)
+        {
+            var searchInput = _page.GetByTestId("sidebar-search-input");
+            await searchInput.WaitForAsync(new() { Timeout = 5_000 });
+            await searchInput.FillAsync(title);
+            await locator.WaitForAsync(new() { Timeout = 10_000 });
+        }
+
         await locator.ClickAsync();
+
+        var clearSearchButton = _page.GetByTestId("sidebar-clear-search");
+        if (await clearSearchButton.IsVisibleAsync())
+        {
+            await clearSearchButton.ClickAsync();
+        }
+
         // After clicking, wait a bit for the page to load
         await _page.WaitForTimeoutAsync(500);
     }
@@ -135,7 +190,16 @@ public class SidebarPage(IPage page)
         var count = await matches.CountAsync();
         if (count == 0)
         {
-            throw new InvalidOperationException($"No sidebar item found with title '{title}'.");
+            var searchInput = _page.GetByTestId("sidebar-search-input");
+            await searchInput.WaitForAsync(new() { Timeout = 5_000 });
+            await searchInput.FillAsync(title);
+
+            matches = sidebar.GetByText(title, new() { Exact = true });
+            count = await matches.CountAsync();
+            if (count == 0)
+            {
+                throw new InvalidOperationException($"No sidebar item found with title '{title}'.");
+            }
         }
 
         var last = matches.Nth(count - 1);

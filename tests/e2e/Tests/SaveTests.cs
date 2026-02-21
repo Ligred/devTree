@@ -21,7 +21,6 @@ public class SaveTests : E2ETestBase
     public async Task SetUpAsync()
     {
         await App.Sidebar.CreatePageAsync();
-        await App.Sidebar.SelectPageAsync("Untitled");
     }
 
     // ── Save-button state ────────────────────────────────────────────────────
@@ -119,10 +118,11 @@ public class SaveTests : E2ETestBase
         await App.Editor.AddBlockAsync("Text");
 
         // Create a second page to navigate to
-        await App.Sidebar.CreatePageAsync();
+        var secondPage = await App.Sidebar.CreatePageAsync();
+        var secondPageTitle = (await secondPage.InnerTextAsync()).Trim();
 
         // Navigate to the second page — dialog should appear
-        await App.Sidebar.SelectLastPageAsync("Untitled");
+        await App.Sidebar.SelectLastPageAsync(secondPageTitle);
 
         // The dialog should be visible
         var dialog = Page.GetByRole(AriaRole.Alertdialog);
@@ -145,8 +145,9 @@ public class SaveTests : E2ETestBase
         var originalTitle = await headerTitle.TextContentAsync();
 
         // Create second page and try to navigate to it
-        await App.Sidebar.CreatePageAsync();
-        await App.Sidebar.SelectLastPageAsync("Untitled");
+        var secondPage = await App.Sidebar.CreatePageAsync();
+        var secondPageTitle = (await secondPage.InnerTextAsync()).Trim();
+        await App.Sidebar.SelectLastPageAsync(secondPageTitle);
 
         // Click Cancel
         await Page.GetByTestId("unsaved-cancel").ClickAsync();
@@ -171,8 +172,9 @@ public class SaveTests : E2ETestBase
         await titleInput.FillAsync("Discarded Title");
 
         // Create second page and try to navigate to it
-        await App.Sidebar.CreatePageAsync();
-        await App.Sidebar.SelectLastPageAsync("Untitled");
+        var secondPage = await App.Sidebar.CreatePageAsync();
+        var secondPageTitle = (await secondPage.InnerTextAsync()).Trim();
+        await App.Sidebar.SelectLastPageAsync(secondPageTitle);
 
         // Click "Leave without saving"
         await Page.GetByTestId("unsaved-leave-without-saving").ClickAsync();
@@ -197,8 +199,8 @@ public class SaveTests : E2ETestBase
         await App.Editor.AddBlockAsync("Text");
 
         // Create second page and try to navigate to it
-        await App.Sidebar.CreatePageAsync();
-        var targetTitle = "Untitled";
+        var secondPage = await App.Sidebar.CreatePageAsync();
+        var targetTitle = (await secondPage.InnerTextAsync()).Trim();
         await App.Sidebar.SelectLastPageAsync(targetTitle);
 
         // Click "Save and leave"

@@ -1,5 +1,7 @@
 namespace DevTree.E2E.PageObjects;
 
+using System.Text.RegularExpressions;
+
 /// <summary>
 /// Page object for the main content / block editor area.
 /// </summary>
@@ -164,9 +166,15 @@ public class EditorPage(IPage page)
     /// <summary>Sets the URL and applies the image block form.</summary>
     public async Task SetImageUrlAsync(string url)
     {
-        var urlInput = _page.GetByPlaceholder("https://example.com/image.png");
+        var urlInput = _page.GetByPlaceholder("https://example.com/image.png").Last;
         await urlInput.FillAsync(url);
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Apply" }).Last.ClickAsync();
+
+        var container = urlInput.Locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
+        var applyButton = container.GetByRole(
+            AriaRole.Button,
+            new() { NameRegex = new Regex("^(Apply|Застосувати)$", RegexOptions.IgnoreCase) }
+        );
+        await applyButton.ClickAsync();
     }
 
     // ── Video block ────────────────────────────────────────────────────────
@@ -174,9 +182,15 @@ public class EditorPage(IPage page)
     /// <summary>Sets the URL and applies the video block form.</summary>
     public async Task SetVideoUrlAsync(string url)
     {
-        var urlInput = _page.GetByPlaceholder("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        var urlInput = _page.GetByPlaceholder("https://www.youtube.com/watch?v=dQw4w9WgXcQ").Last;
         await urlInput.FillAsync(url);
-        await _page.GetByRole(AriaRole.Button, new() { Name = "Apply" }).Last.ClickAsync();
+
+        var container = urlInput.Locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
+        var applyButton = container.GetByRole(
+            AriaRole.Button,
+            new() { NameRegex = new Regex("^(Apply|Застосувати)$", RegexOptions.IgnoreCase) }
+        );
+        await applyButton.ClickAsync();
         await _page.WaitForTimeoutAsync(250);
     }
 

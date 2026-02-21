@@ -7,6 +7,12 @@ namespace DevTree.E2E.Tests;
 [Category("Settings")]
 public class SettingsTests : E2ETestBase
 {
+    [SetUp]
+    public async Task PrepareActivePageAsync()
+    {
+        await App.Sidebar.SelectPageAsync("React Hooks");
+    }
+
     // ── Open / close ─────────────────────────────────────────────────────────
 
     [Test]

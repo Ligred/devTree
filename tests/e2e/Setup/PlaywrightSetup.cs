@@ -7,10 +7,11 @@ namespace DevTree.E2E.Setup;
 /// and provides a ready-to-use <see cref="AppPage"/> for each test.
 /// </summary>
 [TestFixture]
-[Parallelizable(ParallelScope.Self)]
+[Parallelizable(ParallelScope.None)]
 public abstract class E2ETestBase : PageTest
 {
     private const string FallbackE2EPassword = "E2E!Passw0rd123";
+    private const string FallbackE2EEmail = "demo@devtree.local";
 
     /// <summary>The base URL of the running DevTree app.</summary>
     protected static string BaseUrl =>
@@ -47,7 +48,7 @@ public abstract class E2ETestBase : PageTest
 
                 var effectiveEmail = hasProvidedCredentials
                     ? email!
-                    : $"e2e.{Guid.NewGuid():N}@devtree.local";
+                    : FallbackE2EEmail;
                 var effectivePassword = hasProvidedCredentials
                     ? password!
                     : FallbackE2EPassword;
@@ -72,12 +73,15 @@ public abstract class E2ETestBase : PageTest
     private async Task EnsureAuthenticatedAsync(string email, string password, bool hasProvidedCredentials)
     {
         var loginPage = new LoginPage(Page);
+        var shouldTryLoginFirst = hasProvidedCredentials ||
+                                  string.Equals(email, FallbackE2EEmail, StringComparison.OrdinalIgnoreCase);
 
         if (!Page.Url.Contains("/login"))
             return;
 
-        // Try login first only when caller provided existing credentials.
-        if (hasProvidedCredentials)
+        // Try login first when explicit credentials were provided OR when using
+        // the default seeded demo account.
+        if (shouldTryLoginFirst)
         {
             try
             {
@@ -94,9 +98,15 @@ public abstract class E2ETestBase : PageTest
         // Register a user and then sign in. Retry once with a new email if needed.
         for (var attempt = 0; attempt < 2; attempt++)
         {
-            var registerEmail = hasProvidedCredentials && attempt == 0
-                ? email
-                : $"e2e.{Guid.NewGuid():N}@devtree.local";
+            string registerEmail;
+            if (hasProvidedCredentials)
+            {
+                registerEmail = attempt == 0 ? email : $"e2e.{Guid.NewGuid():N}@devtree.local";
+            }
+            else
+            {
+                registerEmail = attempt == 0 ? FallbackE2EEmail : $"e2e.{Guid.NewGuid():N}@devtree.local";
+            }
 
             try
             {

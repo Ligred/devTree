@@ -52,6 +52,24 @@ import type { TreeDataItem } from '@/components/ui/tree-view';
 
 import type { TreeRoot, TreeNode } from './treeTypes';
 
+const nameCollator = new Intl.Collator(undefined, {
+  sensitivity: 'base',
+  numeric: true,
+});
+
+function isFolderNode(node: TreeNode): boolean {
+  return Array.isArray(node.children) && node.pageId == null;
+}
+
+function compareTreeNodes(a: TreeNode, b: TreeNode): number {
+  const aIsFolder = isFolderNode(a);
+  const bIsFolder = isFolderNode(b);
+
+  if (aIsFolder && !bIsFolder) return -1;
+  if (!aIsFolder && bIsFolder) return 1;
+  return nameCollator.compare(a.name, b.name);
+}
+
 /** Signature of the i18n translation function, passed in to avoid a context dependency. */
 type TFunction = (key: string, params?: Record<string, string | number>) => string;
 
@@ -88,10 +106,10 @@ function nodeToTreeDataItem(
 ): TreeDataItem {
   // A node is a folder if it has a children array but no pageId.
   // A file (page) has a pageId but no children array.
-  const isFolder = Array.isArray(node.children) && node.pageId == null;
+  const isFolder = isFolderNode(node);
 
   const children = isFolder
-    ? node.children!.map((n) =>
+    ? [...node.children!].sort(compareTreeNodes).map((n) =>
         nodeToTreeDataItem(n, onCreateFile, onCreateFolder, onDelete, selectedPageId, ancestorPathIds, t),
       )
     : undefined;
@@ -207,7 +225,7 @@ export function buildTreeDataWithActions({
   ancestorPathIds,
   t,
 }: BuildTreeDataParams): TreeDataItem[] {
-  return root.children.map((node) =>
+  return [...root.children].sort(compareTreeNodes).map((node) =>
     nodeToTreeDataItem(node, onCreateFile, onCreateFolder, onDelete, selectedPageId, ancestorPathIds, t),
   );
 }

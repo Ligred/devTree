@@ -114,6 +114,7 @@ Open `TestResults/e2e-report.html` in a browser. If you prefer, open `TestResult
 ## Authentication
 
 - The app requires login. **Sidebar, Editor, and Settings** tests run after signing in with **DEVTREE_E2E_EMAIL** and **DEVTREE_E2E_PASSWORD** (set in the environment or `.runsettings`). Use an account created via `pnpm db:seed` (e.g. default admin) or register one.
+- If those env vars are not provided, E2E setup now defaults to the seeded demo account (`demo@devtree.local` / `E2E!Passw0rd123`) and only falls back to auto-register when needed.
 - **Login** tests run against the login page only; they do not require valid credentials except for the optional `LoginPage_ValidCredentials_RedirectsToApp` test (marked `[Explicit]`).
 - OAuth (Google/GitHub) is **not** covered by E2E tests.
 

@@ -2,7 +2,7 @@ namespace DevTree.E2E.Tests;
 
 /// <summary>
 /// E2E tests for page deep-linking and breadcrumb navigation:
-/// - Deep-link routing via /p/[pageId] URL parameters
+/// - Deep-link routing via /pages/[pageId] URL parameters
 /// - Breadcrumb rendering and click navigation
 /// - Tree auto-expansion on route load
 /// - Browser back/forward with unsaved-changes safeguards
@@ -28,14 +28,14 @@ public class RouteTests : E2ETestBase
         
         // Wait for the page to load and extract the URL to find the page ID
         var currentUrl = Page.Url;
-        var pageIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"/p/([a-f0-9]+)");
-        Assert.That(pageIdMatch.Success, Is.True, "URL should contain /p/[pageId] after page selection");
-        
+        var pageIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"/pages/([^/?#]+)");
+        Assert.That(pageIdMatch.Success, Is.True, "URL should contain /pages/[pageId] after page selection");
+
         var pageId = pageIdMatch.Groups[1].Value;
         Assert.That(pageId, Is.Not.Empty, "Page ID should be extracted from URL");
-        
+
         // Now navigate directly via deep-link URL
-        var deepLinkUrl = $"{BaseUrl}/p/{pageId}";
+        var deepLinkUrl = $"{BaseUrl}/pages/{pageId}";
         await Page.GotoAsync(deepLinkUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
         
         // Verify the correct page is loaded by checking the title in header
@@ -46,34 +46,24 @@ public class RouteTests : E2ETestBase
     [Test]
     public async Task DeepLink_ExpandsAncestorFolders_InTree()
     {
-        // Create a nested folder structure
-        await App.Sidebar.CreateFolderAsync("Parent Folder");
-        await App.Sidebar.RenameLastItemAsync("Parent Folder");
-        
-        // Create a page inside the parent
-        // Currently, pages are only created at root level in the UI
-        // This test verifies that if a page exists in a nested folder,
-        // navigating via deep-link expands the parent folders.
-        
-        // Create a page to get its ID
-        await App.Sidebar.CreatePageAsync();
+        // Use a seeded page known to be inside a folder.
+        await App.Sidebar.SelectPageAsync("React Hooks");
         var currentUrl = Page.Url;
-        var pageIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"/p/([a-f0-9]+)");
-        Assert.That(pageIdMatch.Success, Is.True, "URL should contain /p/[pageId]");
-        
+        var pageIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"/pages/([^/?#]+)");
+        Assert.That(pageIdMatch.Success, Is.True, "URL should contain /pages/[pageId]");
+
         var pageId = pageIdMatch.Groups[1].Value;
-        
-        // Navigate to a different page first to reset state
-        await App.Sidebar.SelectPageAsync("TypeScript Tips");
-        
-        // Now deep-link back to our created page
-        var deepLinkUrl = $"{BaseUrl}/p/{pageId}";
+        var deepLinkUrl = $"{BaseUrl}/pages/{pageId}";
         await Page.GotoAsync(deepLinkUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
-        
-        // Verify the page loaded
+
+        // Verify both folder and page context are visible in the tree.
+        await Expect(Page.Locator("aside").GetByText("Frontend", new() { Exact = true }).First).ToBeVisibleAsync();
+        await Expect(Page.Locator("aside").GetByText("React Hooks", new() { Exact = true }).First).ToBeVisibleAsync();
+
+        // Verify selected page loaded
         var headerSpan = Page.Locator("header span").First;
-        await Expect(headerSpan).ToContainTextAsync("Untitled");
-        
+        await Expect(headerSpan).ToContainTextAsync("React Hooks");
+
         // Verify the page is highlighted in the tree
         var selectedItem = Page.Locator("[aria-selected='true']");
         await Expect(selectedItem).ToBeVisibleAsync();
@@ -84,9 +74,9 @@ public class RouteTests : E2ETestBase
     {
         // Load a valid page first
         await App.Sidebar.SelectPageAsync("React Hooks");
-        
+
         // Try to navigate to an invalid page ID
-        var invalidDeepLink = $"{BaseUrl}/p/invalid-id-does-not-exist-12345";
+        var invalidDeepLink = $"{BaseUrl}/pages/invalid-id-does-not-exist-12345";
         await Page.GotoAsync(invalidDeepLink, new() { WaitUntil = WaitUntilState.NetworkIdle });
         
         // The app should not load a page or should load the default page
@@ -101,9 +91,9 @@ public class RouteTests : E2ETestBase
     {
         // Navigate to a sample page
         await App.Sidebar.SelectPageAsync("React Hooks");
-        
-        // Wait for breadcrumb to appear (it renders when breadcrumbs.length > 0)
-        var breadcrumbNav = Page.Locator("nav:has-text('/')");
+
+        // Wait for breadcrumb to appear
+        var breadcrumbNav = Page.Locator("nav[aria-label='Breadcrumb']");
         await breadcrumbNav.WaitForAsync(new() { Timeout = 5_000 });
         
         // Verify breadcrumb contains the page title
@@ -115,9 +105,9 @@ public class RouteTests : E2ETestBase
     {
         // Navigate to a page
         await App.Sidebar.SelectPageAsync("React Hooks");
-        
+
         // Wait for breadcrumb
-        var breadcrumbNav = Page.Locator("nav:has-text('/')");
+        var breadcrumbNav = Page.Locator("nav[aria-label='Breadcrumb']");
         await breadcrumbNav.WaitForAsync(new() { Timeout = 5_000 });
         
         // Get a different page from the tree
@@ -126,19 +116,18 @@ public class RouteTests : E2ETestBase
         // Verify we're on TypeScript Tips
         var headerSpan = Page.Locator("header span").First;
         await Expect(headerSpan).ToContainTextAsync("TypeScript Tips");
-        
-        // Go back to React Hooks and click the breadcrumb (verifies breadcrumb click)
+
+        // Go back to React Hooks and click the folder breadcrumb.
         await App.Sidebar.SelectPageAsync("React Hooks");
         
         // Wait for breadcrumb to re-render
         await Page.WaitForTimeoutAsync(200);
-        
-        // Get the breadcrumb button text for React Hooks
-        var breadcrumbBtn = Page.Locator("nav:has-text('/') button")
-            .Filter(new LocatorFilterOptions { HasText = "React Hooks" });
+
+        var breadcrumbBtn = Page.Locator("nav[aria-label='Breadcrumb'] button")
+            .Filter(new LocatorFilterOptions { HasText = "Frontend" });
         await breadcrumbBtn.ClickAsync();
-        
-        // Verify we're still on React Hooks (breadcrumb click navigated to same page)
+
+        // Clicking folder breadcrumb resolves to first page inside that folder.
         await Expect(headerSpan).ToContainTextAsync("React Hooks");
     }
 
@@ -151,8 +140,8 @@ public class RouteTests : E2ETestBase
         
         // Navigate to a page in root
         await App.Sidebar.SelectPageAsync("React Hooks");
-        
-        var breadcrumbNav = Page.Locator("nav:has-text('/')");
+
+        var breadcrumbNav = Page.Locator("nav[aria-label='Breadcrumb']");
         await breadcrumbNav.WaitForAsync(new() { Timeout = 5_000 });
         
         // Breadcrumb contains the root page

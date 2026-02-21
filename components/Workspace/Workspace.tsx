@@ -64,6 +64,7 @@ import {
   isNameTakenInScope,
   getParentId,
   moveNode,
+  newFolderId,
   newPageId,
   removeNode,
   renameNode,
@@ -182,6 +183,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
    *   independent of block-editing logic.
    */
   const [treeRoot, setTreeRoot] = useState<TreeRoot>(emptyTreeRoot);
+  const treeRootRef = useRef<TreeRoot>(emptyTreeRoot);
 
   /** Stores the DB folder id for each tree node id. */
   const dbFolderIds = useRef<DbIdToPageId>(new Map());
@@ -282,16 +284,25 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
 
   const routePageId = useMemo(() => {
     if (!pathname) return initialRoutePageId ?? null;
-    if (!pathname.startsWith('/p/')) return null;
-    const candidate = pathname.slice(3).trim();
-    return candidate ? decodeURIComponent(candidate) : null;
+    if (pathname.startsWith('/pages/')) {
+      const candidate = pathname.slice('/pages/'.length).trim();
+      return candidate ? decodeURIComponent(candidate) : null;
+    }
+    if (pathname.startsWith('/p/')) {
+      const candidate = pathname.slice('/p/'.length).trim();
+      return candidate ? decodeURIComponent(candidate) : null;
+    }
+    return null;
   }, [pathname, initialRoutePageId]);
 
   const routePageExists = useMemo(
     () => (routePageId ? pages.some((p) => p.id === routePageId) : false),
     [pages, routePageId],
   );
-  const isPageRoute = useMemo(() => (pathname ? pathname.startsWith('/p/') : false), [pathname]);
+  const isPageRoute = useMemo(
+    () => (pathname ? pathname.startsWith('/pages/') || pathname.startsWith('/p/') : false),
+    [pathname],
+  );
 
   const showErrorToast = useCallback((message: string) => {
     setErrorToast(message);
@@ -301,6 +312,10 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   useEffect(() => {
     if (!tagsPerPageEnabled) setActiveTags([]);
   }, [tagsPerPageEnabled]);
+
+  useEffect(() => {
+    treeRootRef.current = treeRoot;
+  }, [treeRoot]);
 
   // ─── Derived values ──────────────────────────────────────────────────────────
 
@@ -433,17 +448,31 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
    *   invalidating the treeData memo every time.
    */
   const createFolder = useCallback((parentId: string) => {
+    const localFolderId = newFolderId();
     const folderName = generateUniqueNameInScope(treeRoot, parentId, t('tree.newFolder'));
 
     // Optimistic update
-    setTreeRoot((root) => addFolderUnder(root, parentId, folderName));
+    setTreeRoot((root) => addFolderUnder(root, parentId, folderName, localFolderId));
 
     // Determine the DB parent folder id (parentId might be ROOT_ID)
     const dbParentId = dbFolderIds.current.has(parentId) ? parentId : null;
 
     void apiCreateFolder(folderName, dbParentId).then((created) => {
+      const latestNode = findNodeInRoot(treeRootRef.current, localFolderId);
+      const latestName = latestNode?.name?.trim();
+
+      setTreeRoot((root) => replaceNodeId(root, localFolderId, created.id));
       // Register the new folder id so future moves can reference it
       dbFolderIds.current.set(created.id, created.id);
+
+      if (latestName && latestName !== created.name) {
+        void apiUpdateFolder(created.id, { name: latestName }).catch((err) => {
+          console.error('[createFolder:syncRename]', err);
+          if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
+            showErrorToast(t('tree.duplicateNameError'));
+          }
+        });
+      }
     }).catch((err) => {
       console.error('[createFolder]', err);
       if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
@@ -652,6 +681,11 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
 
       setTreeRoot((root) => renameNode(root, folderId, name));
       setEditingFolderId(null);
+
+      if (!dbFolderIds.current.has(folderId)) {
+        return true;
+      }
+
       void apiUpdateFolder(folderId, { name }).catch((err) => {
         console.error('[renameFolder]', err);
         if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
@@ -1055,7 +1089,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   useEffect(() => {
     if (loading || !pathname) return;
     if (activePageId) {
-      const targetPath = `/p/${encodeURIComponent(activePageId)}`;
+      const targetPath = `/pages/${encodeURIComponent(activePageId)}`;
       if (pathname !== targetPath) router.push(targetPath);
       return;
     }

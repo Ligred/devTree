@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation';
+import { Workspace } from '@/components/Workspace';
 
 type PageProps = {
   params: Promise<{ pageId: string }>;
@@ -6,5 +6,5 @@ type PageProps = {
 
 export default async function PageByIdRoute({ params }: Readonly<PageProps>) {
   const { pageId } = await params;
-  redirect(`/pages/${encodeURIComponent(pageId)}`);
+  return <Workspace initialRoutePageId={pageId} />;
 }
