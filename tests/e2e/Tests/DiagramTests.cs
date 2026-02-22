@@ -61,6 +61,15 @@ public class DiagramTests : E2ETestBase
     // ── Fullscreen toggle ─────────────────────────────────────────────────────
 
     [Test]
+    public async Task ViewMode_FullscreenButtonIsVisible()
+    {
+        // TypeScript Tips page has a pre-loaded diagram block in view mode.
+        // The overlay button (absolute-positioned) should be visible without editing.
+        var fullscreenBtn = Page.Locator("button[title*='ullscreen']").First;
+        await Expect(fullscreenBtn).ToBeVisibleAsync(new() { Timeout = 15_000 });
+    }
+
+    [Test]
     public async Task EditMode_FullscreenButtonIsVisible()
     {
         var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
@@ -68,8 +77,8 @@ public class DiagramTests : E2ETestBase
         await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
         await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
-        // The fullscreen toggle is injected into Excalidraw's top-right toolbar
-        // area via renderTopRightUI; its title attribute contains "fullscreen".
+        // In edit mode the fullscreen toggle lives inside Excalidraw's toolbar
+        // (via renderTopRightUI). Title attribute contains "ullscreen".
         var fullscreenBtn = Page.Locator("button[title*='ullscreen']").Last;
         await Expect(fullscreenBtn).ToBeVisibleAsync(new() { Timeout = 15_000 });
     }

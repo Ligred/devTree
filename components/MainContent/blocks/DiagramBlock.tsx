@@ -534,7 +534,7 @@ function DiagramContent({
           /**
            * renderTopRightUI injects the fullscreen toggle button into
            * Excalidraw's own top-right toolbar area so it looks native.
-           * Only shown in edit mode; in view mode the toolbar isn't visible.
+           * Only rendered in edit mode where the toolbar is visible.
            */
           renderTopRightUI={
             isEditing
@@ -552,6 +552,20 @@ function DiagramContent({
           }
         />
       </div>
+
+      {/* Fullscreen button overlay in view mode — Excalidraw's toolbar is hidden
+          in viewModeEnabled=true so renderTopRightUI never mounts. We render the
+          button ourselves, positioned at the top-right corner of the canvas. */}
+      {!isEditing && (
+        <button
+          type="button"
+          onClick={onFullscreenToggle}
+          title={fullscreen ? t('ui.exitFullscreen') : t('ui.fullscreen')}
+          className="absolute right-3 top-3 z-10 rounded-md bg-background/90 p-2 text-muted-foreground shadow-md transition-colors hover:bg-accent hover:text-foreground"
+        >
+          {fullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+        </button>
+      )}
     </div>
   );
 }

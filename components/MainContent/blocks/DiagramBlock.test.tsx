@@ -345,6 +345,35 @@ describe('DiagramBlock', () => {
     expect(isDiagramBlockContent({ code: 'x', language: 'js' } as never, 'diagram')).toBe(false);
     expect(isDiagramBlockContent({ code: '' }, 'code' as never)).toBe(false);
   });
+
+  // ── Fullscreen button visibility ──────────────────────────────────────────
+
+  it('shows fullscreen button in view mode (not editing)', async () => {
+    // isEditing defaults to false, so the overlay button should render
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+    expect(screen.getByTitle('Fullscreen')).toBeInTheDocument();
+  });
+
+  it('shows fullscreen button in edit mode', async () => {
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} isEditing />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+    // In edit mode the button is rendered via renderTopRightUI prop on Excalidraw.
+    // Our mock doesn't call renderTopRightUI, but we can verify the prop is provided.
+    expect(typeof capturedExcalidrawProps.renderTopRightUI).toBe('function');
+  });
+
+  it('fullscreen button in view mode opens the fullscreen overlay', async () => {
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTitle('Fullscreen'));
+
+    // After clicking, the FullscreenBlockOverlay renders its <dialog open> element
+    await waitFor(() => expect(document.querySelector('dialog[open]')).toBeInTheDocument());
+    // And the button title changes to "Exit fullscreen"
+    expect(screen.getByTitle('Exit fullscreen')).toBeInTheDocument();
+  });
 });
 
 
