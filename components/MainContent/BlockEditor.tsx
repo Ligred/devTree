@@ -88,7 +88,6 @@ import { LinkBlock } from './blocks/LinkBlock';
 import { TableBlock } from './blocks/TableBlock';
 import { TextBlock } from './blocks/TextBlock';
 import { VideoBlock } from './blocks/VideoBlock';
-import { WhiteboardBlock } from './blocks/WhiteboardBlock';
 import {
   type AgendaBlockContent,
   type AudioBlockContent,
@@ -102,7 +101,6 @@ import {
   type TableBlockContent,
   type TextBlockContent,
   type VideoBlockContent,
-  type WhiteboardBlockContent,
 } from './types';
 
 /**
@@ -532,7 +530,14 @@ function BlockContent({
     case 'video':
       return <VideoBlock content={content as VideoBlockContent} onChange={onChange} />;
     case 'whiteboard':
-      return <WhiteboardBlock content={content as WhiteboardBlockContent} onChange={onChange} isEditing={isEditing} />;
+      // Legacy block type — the whiteboard has been superseded by the Canvas
+      // (DiagramBlock). Existing whiteboard blocks can no longer be rendered;
+      // users should delete them and create a new Canvas block instead.
+      return (
+        <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-border bg-muted/30 text-sm text-muted-foreground">
+          This whiteboard block is no longer supported. Delete it and add a Canvas block.
+        </div>
+      );;
     case 'audio':
       return (
         <AudioBlock

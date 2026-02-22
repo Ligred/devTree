@@ -10,11 +10,25 @@ const meta: Meta<typeof DiagramBlock> = {
   parameters: { layout: 'padded' },
   argTypes: {
     onChange: { action: 'change' },
+    isEditing: { control: 'boolean' },
   },
 };
 
 export default meta;
 type Story = StoryObj<typeof DiagramBlock>;
+
+const emptyContent: DiagramBlockContent = { code: '' };
+
+/** View mode — read-only canvas. */
+export const ViewMode: Story = {
+  args: { content: emptyContent, onChange: fn(), isEditing: false },
+};
+
+/** Edit mode — full Excalidraw toolbar with shapes, arrows, text, freehand, and Mermaid insert. */
+export const EditMode: Story = {
+  args: { content: emptyContent, onChange: fn(), isEditing: true },
+};
+
 
 const flowchartContent: DiagramBlockContent = {
   code: `flowchart TD

@@ -250,3 +250,20 @@
 }
 .ProseMirror ul[data-type="taskList"] li > label { @apply mt-1; }
 .ProseMirror ul[data-type="taskList"] li > div { @apply flex-1; }
+
+/* Excalidraw ---------------------------------------------------------------- */
+
+/**
+ * Excalidraw renders several UI layers (dialogs, library panel, insert-image
+ * picker, Mermaid-to-diagram popup) as React portals into a div appended to
+ * <body>. When the block is shown inside our fullscreen overlay (z-9999) those
+ * portals must sit above the overlay backdrop (z-9998) and the overlay content
+ * (z-9999) or they are hidden.
+ *
+ * The portal container Excalidraw uses has the class .excalidraw-modal-container.
+ * Raising it to 10000 guarantees visibility in every stacking context the app
+ * creates, without affecting other UI layers.
+ */
+.excalidraw-modal-container {
+  z-index: 10000 !important;
+}

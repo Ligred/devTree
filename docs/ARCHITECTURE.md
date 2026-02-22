@@ -31,24 +31,26 @@ graph TB
         Tiptap["Tiptap (rich text)"]
         Monaco["Monaco Editor (code)"]
         Mermaid["Mermaid.js (diagrams)"]
+        Excalidraw["Excalidraw (drawing)"]
         DndKit["@dnd-kit (drag & drop)"]
         App --> Tiptap
         App --> Monaco
         App --> Mermaid
+        App --> Excalidraw
         App --> DndKit
     end
 
     subgraph Server["Next.js Server (Node.js)"]
         NextAuth["NextAuth v5\n(Credentials + Google/GitHub)"]
         PrismaClient["Prisma Client"]
-        API["API Routes\n/api/auth/..."]
+        API["API Routes\n/api/auth/...\n/api/user/libraries/..."]
         NextAuth --> API
         PrismaClient --> API
     end
 
     subgraph Data
-        PostgreSQL["PostgreSQL\n(user data, pages)"]
-        LocalStorage["localStorage\n(locale, demo data)"]
+        PostgreSQL["PostgreSQL\n(user data, pages,\nExcalidraw libraries)"]
+        LocalStorage["localStorage\n(locale, demo data,\nExcalidraw personal items)"]
     end
 
     Browser <-->|"HTTP / fetch"| Server
@@ -179,7 +181,9 @@ classDiagram
         +string caption?
     }
     class DiagramBlockContent {
-        +string code "Mermaid syntax"
+        +ExcalidrawElement[] elements "Excalidraw canvas elements"
+        +AppState appState "Excalidraw viewport state"
+        +BinaryFiles files "embedded images/assets"
     }
     class VideoBlockContent {
         +string url
@@ -217,6 +221,48 @@ if (type === 'code' && isCodeBlockContent(content, type)) {
 ```
 
 Without this, every component would need `as` casts, losing type safety.
+
+### Excalidraw Library Model
+
+URL-sourced Excalidraw libraries are stored in the database with deduplication at the `sourceUrl` level. Multiple users can reference the same library entry.
+
+```mermaid
+erDiagram
+    USER {
+        string id PK
+    }
+    EXCALIDRAW_LIBRARY {
+        string id PK
+        string sourceUrl UK "unique — dedup key"
+        string name
+        Json items "ExcalidrawLibraryItem[]"
+        DateTime createdAt
+        DateTime updatedAt
+    }
+    USER_LIBRARY {
+        string userId FK
+        string libraryId FK
+        DateTime addedAt
+    }
+
+    USER ||--o{ USER_LIBRARY : "links to"
+    EXCALIDRAW_LIBRARY ||--o{ USER_LIBRARY : "referenced by"
+```
+
+**Design decisions:**
+
+| Decision | Rationale |
+|----------|-----------|
+| `sourceUrl @unique` | Two users importing the same URL share one DB row — content isn't duplicated |
+| `UserLibrary` join table | Tracks per-user access; `onDelete: Cascade` on both FKs keeps DB clean when a user or library is deleted |
+| `items Json` | Excalidraw `ExcalidrawLibraryItem[]` shape changes across versions; `Json` avoids schema migrations for format changes |
+| Personal items not persisted | Items created directly in Excalidraw (no `sourceUrl`) live in `localStorage` only — they have no canonical URL to deduplicate on |
+
+**Library persistence layers** (lowest → highest priority merge order):
+
+1. **Excalidraw's own `excalidraw-library` localStorage key** — all personal library items are persisted automatically by Excalidraw itself. We intentionally do NOT maintain a parallel custom key; doing so creates two copies with identical IDs that Excalidraw merges into one list, causing React duplicate-key warnings.
+2. **Backend (`GET /api/user/libraries`)** — URL-sourced libraries the user has imported across any device, loaded on mount when authenticated and merged via `updateLibrary({ merge: true })`.  Excalidraw deduplicates by item ID so repeat loads are safe.
+3. **Hash import (`#addLibrary=URL&token=`)** — on-demand import via `libraries.excalidraw.com` redirect; merged into the live canvas and saved to the backend.
 
 ### Tree Model
 
@@ -434,6 +480,96 @@ The double check (`type === 'code'` AND `isCodeBlockContent`) is intentional:
 1. `type` is the canonical discriminant — authoritative, fast.
 2. `isCodeBlockContent` checks the runtime shape — catches corrupted data.
 3. TypeScript uses both to narrow `content` to `CodeBlockContent`.
+
+### DiagramBlock (Excalidraw)
+
+The `diagram` block type embeds [Excalidraw](https://github.com/excalidraw/excalidraw) — an infinite-canvas drawing tool. Three non-obvious issues required specific solutions.
+
+#### 1. Drawing offset in scrollable view
+
+**Problem**: `MainContent` uses an `overflow-y-auto` scroll container. Excalidraw caches `offsetTop`/`offsetLeft` in its AppState to convert pointer events to canvas coordinates. A `ResizeObserver` updates these on size changes but **not on scroll** — the canvas moves within the viewport without resizing.
+
+**Solution** (two-part, no DOM-walking):
+1. Call `excalidrawAPI.refresh()` via `requestAnimationFrame` once on mount so the initial offset is measured **after the browser paints** (avoids the case where Excalidraw measured its position while the block was off-screen during SSR/hydration).
+2. Listen to `scroll` on `window` with `{ capture: true, passive: true }`. Scroll events don't bubble, but they **do** traverse the capture phase — a window capture listener fires for scroll on **any element in the document** without needing to walk the DOM.
+
+```tsx
+useEffect(() => {
+  if (!excalidrawAPI || fullscreen) return;
+  const rafId = requestAnimationFrame(() => excalidrawAPI.refresh());
+  const handleScroll = () => excalidrawAPI.refresh();
+  window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+  return () => {
+    cancelAnimationFrame(rafId);
+    window.removeEventListener('scroll', handleScroll, { capture: true });
+  };
+}, [excalidrawAPI, fullscreen]);
+```
+
+Skipped in fullscreen mode (the overlay covers the entire viewport — no outer scroll container).
+
+#### 2. Library import from `libraries.excalidraw.com`
+
+**Problem**: When a user clicks "Add to Excalidraw" on the public library site, the browser redirects back to the app with a `#addLibrary=URL&token=TOKEN` hash. Excalidraw only processes this hash at its own initial mount — it ignores hash changes after the fact, and if the user isn't on a page that has a Diagram block open, the hash is dropped entirely.
+
+**Solution**: A `useEffect` that runs whenever `excalidrawAPI` becomes available:
+1. Dynamically imports `parseLibraryTokensFromUrl` from `@excalidraw/excalidraw`
+2. Calls it — returns `{ libraryUrl }` if the current URL contains `#addLibrary=…`
+3. Fetches the `.excalidrawlib` JSON file from `libraryUrl`
+4. Parses the v1 (`library[]`) or v2 (`libraryItems[]`) format
+5. Calls `excalidrawAPI.updateLibrary({ libraryItems, merge: true, openLibraryMenu: true })`
+6. If authenticated, `POST /api/user/libraries` to persist it on the backend
+7. Strips the hash via `history.replaceState` to prevent double-import on re-render
+
+A `hashchange` listener is also registered so that subsequent imports in the same browser session are handled without a full page reload.
+
+#### 3. Backend library persistence
+
+See [Excalidraw Library Model](#excalidraw-library-model) in the Data Model section and the API endpoints below.
+
+**API surface:**
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/user/libraries` | Returns all library entries for the current user (merged `items` array) |
+| `POST` | `/api/user/libraries` | Upsert a library by `sourceUrl`; links it to the current user |
+| `DELETE` | `/api/user/libraries/:id` | Unlinks a library from the current user (idempotent) |
+
+**Sequence — loading libraries on mount:**
+
+```mermaid
+sequenceDiagram
+    participant B as Browser (DiagramBlock)
+    participant A as /api/user/libraries
+    participant DB as PostgreSQL
+
+    B->>A: GET /api/user/libraries
+    A->>DB: SELECT UserLibrary JOIN ExcalidrawLibrary WHERE userId = me
+    DB-->>A: rows[]
+    A-->>B: { libraries: [...] }
+    B->>B: updateLibrary({ libraryItems: flatItems, merge: true })
+```
+
+**Sequence — importing from library site:**
+
+```mermaid
+sequenceDiagram
+    participant Site as libraries.excalidraw.com
+    participant B as Browser (DiagramBlock)
+    participant Lib as .excalidrawlib URL
+    participant A as /api/user/libraries
+
+    Site->>B: redirect to app#addLibrary=URL&token=T
+    B->>B: parseLibraryTokensFromUrl() → { libraryUrl }
+    B->>Lib: fetch(libraryUrl)
+    Lib-->>B: ExcalidrawLibraryItems JSON
+    B->>B: updateLibrary({ merge: true })
+    B->>A: POST { sourceUrl, items, name }
+    A->>A: upsert ExcalidrawLibrary (sourceUrl unique)
+    A->>A: upsert UserLibrary (link user)
+    A-->>B: 201 Created
+    B->>B: history.replaceState (strip hash)
+```
 
 ---
 
@@ -712,7 +848,8 @@ Next.js normally requires the full `node_modules` (~500 MB) at runtime. `standal
 | ProseMirror (Tiptap's engine) | https://prosemirror.net/docs/guide/ |
 | @dnd-kit concepts | https://docs.dndkit.com/introduction/concepts |
 | Tailwind CSS | https://tailwindcss.com/docs |
-| Mermaid.js syntax | https://mermaid.js.org/syntax/flowchart.html |
+| Excalidraw imperative API | https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/excalidraw-api |
+| Excalidraw library format | https://docs.excalidraw.com/docs/codebase/frames#library |
 | Prisma ORM | https://www.prisma.io/docs |
 | Vitest | https://vitest.dev/guide/ |
 | Playwright (.NET) | https://playwright.dev/dotnet/docs/intro |

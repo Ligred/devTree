@@ -15,14 +15,56 @@ model User {
   password    String?  // Hashed; null for OAuth-only users
   name        String?
   image       String?
-  preferences Json?    // { theme?, locale?, tagsPerPageEnabled?, tagsPerBlockEnabled?, recordingStartSoundEnabled? }
+  preferences         Json?    // { theme?, locale?, tagsPerPageEnabled?, tagsPerBlockEnabled?, recordingStartSoundEnabled? }
+  /// Excalidraw library items the user added locally (from a .excalidrawlib
+  /// file or by composing elements in-canvas). Stored as a JSON array of
+  /// ExcalidrawLibraryItem objects.  Separate from URL-sourced libraries
+  /// (ExcalidrawLibrary / UserLibrary) so the two can be managed independently.
+  localLibraryItems   Json     @default("[]")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  accounts Account[]
-  sessions Session[]
-  pages    Page[]
-  folders  Folder[]
+  accounts  Account[]
+  sessions  Session[]
+  pages     Page[]
+  folders   Folder[]
+  libraries UserLibrary[]
+}
+
+// ─── Excalidraw library storage ───────────────────────────────────────────────
+//
+// ExcalidrawLibrary stores a SINGLE unique library package (e.g. "Software
+// Architecture" from libraries.excalidraw.com). Multiple users can add the same
+// library; the items JSON is stored only ONCE, identified by the sourceUrl.
+//
+// UserLibrary is the many-to-many join table that records which libraries each
+// user has access to.
+
+model ExcalidrawLibrary {
+  id        String   @id @default(cuid())
+  /// The canonical URL the library was fetched from (e.g.
+  /// https://libraries.excalidraw.com/libraries/…/….excalidrawlib).
+  /// Unique — ensures the same library is stored only once across all users.
+  sourceUrl String   @unique
+  /// Display name extracted from the library file (or derived from the URL).
+  name      String   @default("")
+  /// Serialised array of ExcalidrawLibraryItem objects.
+  items     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users     UserLibrary[]
+}
+
+model UserLibrary {
+  userId    String
+  libraryId String
+  addedAt   DateTime @default(now())
+
+  user    User              @relation(fields: [userId],    references: [id], onDelete: Cascade)
+  library ExcalidrawLibrary @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, libraryId])
 }
 
 model Folder {

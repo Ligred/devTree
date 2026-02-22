@@ -187,7 +187,7 @@ export function MainContent({
 
       {/* ───── Scrollable content area ───── */}
       <div className="flex-1 overflow-y-auto p-3 text-foreground sm:p-6 md:p-8">
-        <div className="mx-auto w-full max-w-4xl">
+        <div className="mx-auto w-full pr-7.5">
           {page ? (
             <div className="flex flex-col gap-4">
               {/* ── Page-level actions row (above title) ── */}

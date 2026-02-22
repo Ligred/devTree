@@ -1,10 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
-import { useI18n } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 
 interface FullscreenBlockOverlayProps {
   isOpen: boolean;
@@ -14,65 +10,66 @@ interface FullscreenBlockOverlayProps {
 }
 
 /**
- * FullscreenBlockOverlay — renders a fullscreen overlay for Diagram/Whiteboard blocks.
+ * FullscreenBlockOverlay — a plain fixed-position overlay for Excalidraw fullscreen.
  *
- * Provides a fixed, fullscreen dialog with a close button in the top-right corner.
- * Pressing Escape will close the overlay.
+ * ─── WHY NOT RADIX DIALOG? ────────────────────────────────────────────────────
  *
- * Usage:
- *   const [isFullscreen, setIsFullscreen] = useState(false);
+ * Radix Dialog applies `aria-modal="true"` and a focus-trap to its content, and
+ * in newer versions sets `inert` on all sibling DOM nodes. Excalidraw renders
+ * its own modals (Mermaid-to-diagram panel, Library panel, Help dialog) as React
+ * portals appended to `<body>` — OUTSIDE the Radix content node. Those portals
+ * end up marked `inert` and become non-interactive (clicks pass through, inputs
+ * ignore focus).
  *
- *   return (
- *     <>
- *       <button onClick={() => setIsFullscreen(true)}>Fullscreen</button>
- *       <FullscreenBlockOverlay
- *         isOpen={isFullscreen}
- *         onClose={() => setIsFullscreen(false)}
- *       >
- *         <DiagramBlock {...props} />
- *       </FullscreenBlockOverlay>
- *     </>
- *   );
+ * Using a plain div avoids all of that. We replicate the essential behaviors:
+ *   - Body scroll lock (prevents the page from jumping while drawing).
+ *   - Escape key handler (via keydown listener on the document).
+ *   - ARIA semantics (role="dialog", aria-modal, aria-label).
+ *
+ * ─── CLOSE BUTTON ─────────────────────────────────────────────────────────────
+ * This component intentionally does NOT render a close button.
+ * DiagramBlock injects its own minimize/maximize toggle via Excalidraw's
+ * `renderTopRightUI` API so the button lives inside the native toolbar.
  */
 export const FullscreenBlockOverlay = React.forwardRef<
-  HTMLDivElement,
+  HTMLDialogElement,
   FullscreenBlockOverlayProps
 >(({ isOpen, onClose, children, title }, forwardedRef) => {
-  const { t } = useI18n();
+  // Lock body scroll and listen for Escape while open
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   return (
-    <DialogPrimitive.Root open={isOpen} onOpenChange={onClose}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-9998 bg-black/80 backdrop-blur-sm" />
-        <DialogPrimitive.Content className="fixed inset-0 z-9999 w-screen max-w-none border-0 bg-background p-0 shadow-none focus:outline-none">
-          {/* Visually hidden title for accessibility */}
-          <DialogPrimitive.Title className="sr-only">
-            {title || t('ui.fullscreen')}
-          </DialogPrimitive.Title>
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-9998 bg-black/80 backdrop-blur-sm" aria-hidden="true" />
 
-          {/* Close button - positioned below toolbar to avoid overlap */}
-          <div className="absolute right-4 top-16 z-10">
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t('ui.exitFullscreen')}
-              title={t('ui.exitFullscreen')}
-              className={cn(
-                'rounded-full bg-background/90 backdrop-blur-sm p-2 text-muted-foreground shadow-lg border border-border transition-colors',
-                'hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-              )}
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {/* Fullscreen content */}
-          <div className="h-screen w-screen overflow-auto" ref={forwardedRef}>
-            {children}
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+      {/* Content — plain dialog element (no showModal, so no browser focus-trap) */}
+      <dialog
+        ref={forwardedRef}
+        open
+        aria-label={title}
+        className="fixed inset-0 z-9999 m-0 h-screen w-screen max-w-none border-0 bg-background p-0 focus:outline-none"
+      >
+        {children}
+      </dialog>
+    </>
   );
 });
 

@@ -1,207 +1,335 @@
 /** @vitest-environment happy-dom */
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom/vitest';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { I18nProvider } from '@/lib/i18n';
+/**
+ * DiagramBlock unit tests.
+ *
+ * Because ExcalidrawComponent is a heavy dynamic import we mock the entire
+ * @excalidraw/excalidraw module. The mock exposes a thin stub that:
+ *   - renders a simple <div data-testid="excalidraw"> so we can assert mount;
+ *   - captures props so we can inspect what was passed;
+ *   - exposes a fake imperative API via the excalidrawAPI callback.
+ *
+ * We test:
+ *   1. Component renders without crashing.
+ *   2. Correct props forwarded to Excalidraw.
+ *   3. Scroll-parent refresh effect wires up scroll listeners.
+ *   4. Hash-based library import calls updateLibrary + API.
+ *   5. Backend library load on mount when authenticated.
+ *   6. isDiagramBlockContent type guard.
+ */
 
-// Mock mermaid so tests don't need a real browser environment
-vi.mock('mermaid', () => ({
-  default: {
-    initialize: vi.fn(),
-    render: vi.fn().mockResolvedValue({ svg: '<svg data-testid="mermaid-svg"></svg>' }),
-  },
-}));
+import { render, screen, act, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import { I18nProvider } from '@/lib/i18n';
 
 // Mock next-themes so the component has a stable theme in tests
 vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light' }),
 }));
 
+// next-auth — default unauthenticated; tests override via mockReturnValue
+const mockUseSession = vi.fn(() => ({
+  status: 'unauthenticated' as string,
+  data: null as { user: { id: string } } | null,
+}));
+vi.mock('next-auth/react', () => ({
+  useSession: () => mockUseSession(),
+  SessionProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+// parseLibraryTokensFromUrl mock — returns null by default (no hash)
+const mockParseLibraryTokensFromUrl = vi.fn(
+  () => null as null | { libraryUrl: string; idToken: string | null },
+);
+
+// Fake imperative API passed back via the excalidrawAPI callback
+const fakeAPI = {
+  refresh: vi.fn(),
+  updateLibrary: vi.fn().mockResolvedValue([]),
+};
+
+// Captured Excalidraw props across renders
+let capturedExcalidrawProps: Record<string, any> = {};
+
+vi.mock('@excalidraw/excalidraw', () => ({
+  Excalidraw: (props: Record<string, any>) => {
+    capturedExcalidrawProps = props;
+    if (typeof props.excalidrawAPI === 'function') {
+      props.excalidrawAPI(fakeAPI);
+    }
+    return (
+      <div
+        data-testid="excalidraw"
+        data-view-mode={String(props.viewModeEnabled)}
+        data-theme={props.theme}
+        data-lang={props.langCode}
+      />
+    );
+  },
+  parseLibraryTokensFromUrl: mockParseLibraryTokensFromUrl,
+}));
+
+// ─── Component under test ─────────────────────────────────────────────────────
+
 import { DiagramBlock } from './DiagramBlock';
 import { isDiagramBlockContent } from '../types';
 
-function Wrapper({ children }: { children: React.ReactNode }) {
+function Wrapper({ children }: Readonly<{ children: React.ReactNode }>) {
   return <I18nProvider>{children}</I18nProvider>;
 }
 
 const wrap = (ui: React.ReactElement) => render(<Wrapper>{ui}</Wrapper>);
-const baseContent = { code: 'flowchart TD\n  A --> B' };
+
+const emptyContent = { code: '' };
+const filledContent = {
+  code: JSON.stringify({
+    elements: [{ id: 'el1', type: 'rectangle' }],
+    appState: { viewBackgroundColor: '#fff' },
+  }),
+};
+
+// ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('DiagramBlock', () => {
   beforeEach(() => {
+    capturedExcalidrawProps = {};
     vi.clearAllMocks();
+    mockUseSession.mockReturnValue({ status: 'unauthenticated', data: null });
+    mockParseLibraryTokensFromUrl.mockReturnValue(null);
+    vi.stubGlobal('fetch', vi.fn());
   });
 
-  // ── Tab rendering ─────────────────────────────────────────────────────────
-
-  it('renders Preview and Edit tab buttons in edit mode', () => {
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} isEditing />);
-    expect(screen.getByRole('button', { name: /preview/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument();
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it('hides tab buttons in view mode (default)', () => {
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} />);
-    // Zoom buttons are still there but tab switcher is hidden in view mode
-    expect(screen.queryByRole('button', { name: /^preview$/i })).not.toBeInTheDocument();
+  // ── Rendering ─────────────────────────────────────────────────────────────
+
+  it('renders the Excalidraw canvas', async () => {
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
   });
 
-  it('starts on the Preview tab (Preview button has active style)', () => {
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} isEditing />);
-    expect(screen.getByRole('button', { name: /preview/i })).toHaveClass('bg-card');
-  });
-
-  it('shows the textarea when Edit tab is clicked', async () => {
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} isEditing />);
-
-    await user.click(screen.getByRole('button', { name: /edit/i }));
-
-    const textarea = screen.getByRole('textbox');
-    expect(textarea).toBeInTheDocument();
-    expect(textarea).toHaveValue(baseContent.code);
-  });
-
-  it('shows placeholder when code is empty and Edit tab is active', async () => {
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={{ code: '' }} onChange={vi.fn()} isEditing />);
-    await user.click(screen.getByRole('button', { name: /edit/i }));
-    expect(screen.getByRole('textbox')).toHaveAttribute('placeholder');
-  });
-
-  it('hides textarea when switching back to Preview tab', async () => {
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} isEditing />);
-
-    await user.click(screen.getByRole('button', { name: /edit/i }));
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /preview/i }));
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-  });
-
-  // ── Editing ───────────────────────────────────────────────────────────────
-
-  it('calls onChange when code is edited', async () => {
-    const onChange = vi.fn();
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={baseContent} onChange={onChange} isEditing />);
-
-    await user.click(screen.getByRole('button', { name: /edit/i }));
-    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'graph LR\n  X --> Y' } });
-
-    expect(onChange).toHaveBeenCalledWith({ code: 'graph LR\n  X --> Y' });
-  });
-
-  // ── Diagram type picker ───────────────────────────────────────────────────
-
-  it('shows a diagram type picker button in the toolbar when editing', () => {
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} isEditing />);
-    // The type picker button shows the detected type name (e.g. "Flowchart")
-    // or "Diagram" as fallback
-    const typeButtons = screen.getAllByRole('button');
-    const hasDiagramType = typeButtons.some(
-      (b) => b.textContent && /flowchart|sequence|class|gantt|pie|mindmap|diagram/i.test(b.textContent),
-    );
-    expect(hasDiagramType).toBe(true);
-  });
-
-  it('opens the type picker dropdown on click', async () => {
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} isEditing />);
-
-    // The toolbar has tab buttons + the type picker. The type picker button
-    // shows the detected type name (Flowchart for flowchart TD) with a chevron.
-    // We find it by position: it's the button whose text includes "Flowchart"
-    // but is NOT inside the dropdown (dropdown doesn't exist yet before click).
-    const allBtns = screen.getAllByRole('button');
-    const pickerBtn = allBtns.find((b) => /flowchart/i.test(b.textContent ?? ''));
-    expect(pickerBtn).toBeDefined();
-
-    await user.click(pickerBtn!);
-
-    // After clicking, the dropdown appears. "Sequence" is only in the dropdown.
-    expect(screen.getByRole('button', { name: /^Sequence$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Gantt/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Pie Chart/i })).toBeInTheDocument();
-  });
-
-  it('loads a template and switches to preview when a diagram type is chosen', async () => {
-    const onChange = vi.fn();
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={baseContent} onChange={onChange} isEditing />);
-
-    // Open picker
-    const allBtns = screen.getAllByRole('button');
-    const pickerBtn = allBtns.find((b) => /flowchart/i.test(b.textContent ?? ''));
-    await user.click(pickerBtn!);
-
-    // Click "Sequence" template in the dropdown (only in dropdown, unique)
-    await user.click(screen.getByRole('button', { name: /^Sequence$/i }));
-
-    expect(onChange).toHaveBeenCalledWith(
-      expect.objectContaining({ code: expect.stringContaining('sequenceDiagram') }),
-    );
+  it('forwards viewModeEnabled=true in view mode (default)', async () => {
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} />);
     await waitFor(() => {
-      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+      expect(screen.getByTestId('excalidraw')).toHaveAttribute('data-view-mode', 'true');
     });
   });
 
-  // ── Zoom controls ─────────────────────────────────────────────────────────
-
-  it('renders zoom controls in preview mode', () => {
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} />);
-    expect(screen.getByTitle(/zoom in/i)).toBeInTheDocument();
-    expect(screen.getByTitle(/zoom out/i)).toBeInTheDocument();
-    expect(screen.getByTitle(/reset zoom/i)).toBeInTheDocument();
+  it('forwards viewModeEnabled=false in edit mode', async () => {
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} isEditing />);
+    await waitFor(() => {
+      expect(screen.getByTestId('excalidraw')).toHaveAttribute('data-view-mode', 'false');
+    });
   });
 
-  it('starts at 100% zoom and updates on zoom in/out', async () => {
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} />);
-
-    // Initial zoom should show 100%
-    expect(screen.getByTitle(/reset zoom/i)).toHaveTextContent('100%');
-
-    await user.click(screen.getByTitle(/zoom in/i));
-    expect(screen.getByTitle(/reset zoom/i)).toHaveTextContent('120%');
-
-    await user.click(screen.getByTitle(/zoom out/i));
-    expect(screen.getByTitle(/reset zoom/i)).toHaveTextContent('100%');
+  it('forwards theme=light when resolvedTheme is light', async () => {
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} />);
+    await waitFor(() => {
+      expect(screen.getByTestId('excalidraw')).toHaveAttribute('data-theme', 'light');
+    });
   });
 
-  it('resets zoom to 100% when the reset button is clicked', async () => {
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} />);
-
-    await user.click(screen.getByTitle(/zoom in/i));
-    await user.click(screen.getByTitle(/zoom in/i));
-    expect(screen.getByTitle(/reset zoom/i)).toHaveTextContent('140%');
-
-    await user.click(screen.getByTitle(/reset zoom/i));
-    expect(screen.getByTitle(/reset zoom/i)).toHaveTextContent('100%');
+  it('parses initial elements from content.code', async () => {
+    wrap(<DiagramBlock content={filledContent} onChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+    expect(capturedExcalidrawProps.initialData?.elements).toHaveLength(1);
+    expect(capturedExcalidrawProps.initialData?.elements[0].type).toBe('rectangle');
   });
 
-  it('disables zoom-out when at minimum zoom', async () => {
-    const user = userEvent.setup();
-    wrap(<DiagramBlock content={baseContent} onChange={vi.fn()} />);
-
-    // Zoom out 4 times to reach min (1.0 - 0.2*3 = 0.4)
-    for (let i = 0; i < 4; i++) {
-      const btn = screen.getByTitle(/zoom out/i);
-      if (!btn.hasAttribute('disabled')) await user.click(btn);
-    }
-
-    expect(screen.getByTitle(/zoom out/i)).toBeDisabled();
+  it('uses empty elements when content.code is invalid JSON', async () => {
+    wrap(<DiagramBlock content={{ code: '<<<not json' }} onChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+    expect(capturedExcalidrawProps.initialData?.elements).toEqual([]);
   });
+
+  // ── Session-aware library loading ──────────────────────────────────────────
+
+  it('does NOT fetch libraries when unauthenticated', async () => {
+    mockUseSession.mockReturnValue({ status: 'unauthenticated', data: null });
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+
+    const libraryCalls = (fetchMock.mock.calls as [string, ...any[]][]).filter(
+      ([url]) => typeof url === 'string' && url.includes('/api/user/libraries'),
+    );
+    expect(libraryCalls).toHaveLength(0);
+  });
+
+  it('fetches /api/user/libraries when authenticated', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated', data: { user: { id: 'u1' } } });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ libraries: [], localItems: [] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} />);
+
+    await waitFor(() => {
+      const calls = (fetchMock.mock.calls as [string, ...any[]][]).filter(
+        ([url]) => typeof url === 'string' && url === '/api/user/libraries',
+      );
+      expect(calls.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('merges backend library items via updateLibrary', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated', data: { user: { id: 'u1' } } });
+    const beItems = [{ id: 'li1', status: 'published', elements: [] }];
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ libraries: [{ items: beItems }], localItems: [] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(fakeAPI.updateLibrary).toHaveBeenCalledWith(
+        expect.objectContaining({ merge: true }),
+      );
+    });
+  });
+
+  // ── Hash-based library import ──────────────────────────────────────────────
+
+  it('does NOT import library when URL has no #addLibrary hash', async () => {
+    mockParseLibraryTokensFromUrl.mockReturnValue(null);
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} isEditing />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+    const hashCalls = fakeAPI.updateLibrary.mock.calls.filter(
+      ([args]: any[]) => args?.openLibraryMenu === true,
+    );
+    expect(hashCalls).toHaveLength(0);
+  });
+
+  it('calls updateLibrary and POSTs to backend on #addLibrary hash', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated', data: { user: { id: 'u1' } } });
+    mockParseLibraryTokensFromUrl.mockReturnValue({
+      libraryUrl: 'https://libraries.excalidraw.com/test.excalidrawlib',
+      idToken: 'tok123',
+    });
+
+    const libItems = [{ id: 'item1', status: 'published', elements: [] }];
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/user/libraries') {
+        return Promise.resolve({ ok: true, json: async () => ({ libraries: [], localItems: [] }) });
+      }
+      if (url.includes('libraries.excalidraw.com')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            type: 'excalidrawlib',
+            version: 2,
+            libraryItems: libItems,
+          }),
+        });
+      }
+      return Promise.resolve({ ok: false });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} isEditing />);
+
+    await waitFor(() => {
+      expect(fakeAPI.updateLibrary).toHaveBeenCalledWith(
+        expect.objectContaining({
+          libraryItems: libItems,
+          merge: true,
+          openLibraryMenu: true,
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      const postCalls = (
+        fetchMock.mock.calls as [string, RequestInit | undefined][]
+      ).filter(([url, opts]) => url === '/api/user/libraries' && opts?.method === 'POST');
+      expect(postCalls).toHaveLength(1);
+    });
+  });
+
+  // ── Scroll coordinate refresh ──────────────────────────────────────────────
+
+  it('calls refresh() when the page scrolls', async () => {
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} isEditing />);
+
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+
+    // The refresh is called once on mount (RAF) and again on each scroll.
+    // Dispatch a scroll event on window (our listener uses capture:true which
+    // fires for scroll on any element in the document, simplest to dispatch
+    // directly on window from the test).
+    act(() => {
+      globalThis.dispatchEvent(new Event('scroll'));
+    });
+
+    expect(fakeAPI.refresh).toHaveBeenCalled();
+  });
+
+  // ── Local library persistence (onLibraryChange → PATCH) ──────────────────
+
+  it('PATCHes local library items to backend when onLibraryChange fires', async () => {
+    mockUseSession.mockReturnValue({ status: 'authenticated', data: { user: { id: 'u1' } } });
+
+    const urlItem = { id: 'url-item', elements: [] };
+    const fetchMock = vi.fn().mockImplementation((url: string, opts?: RequestInit) => {
+      if (url === '/api/user/libraries' && !opts?.method) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ libraries: [{ items: [urlItem] }], localItems: [] }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} isEditing />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+
+    // Wait for the backend library load to finish so urlItemIdsRef is populated
+    await waitFor(() => expect(fakeAPI.updateLibrary).toHaveBeenCalled());
+
+    // The onLibraryChange prop must be wired to the Excalidraw component.
+    expect(typeof capturedExcalidrawProps.onLibraryChange).toBe('function');
+
+    // Simulate the user adding a local item from a file
+    const newLocalItem = { id: 'local-item', elements: [{ type: 'rectangle' }] };
+    act(() => capturedExcalidrawProps.onLibraryChange([urlItem, newLocalItem]));
+
+    // Wait for the 1500ms debounce to fire naturally (test-level timeout is 10s)
+    await waitFor(
+      () => {
+        const patchCalls = (fetchMock.mock.calls as [string, RequestInit | undefined][]).filter(
+          ([url, opts]) => url === '/api/user/libraries' && opts?.method === 'PATCH',
+        );
+        expect(patchCalls).toHaveLength(1);
+        const body = JSON.parse(patchCalls[0][1]!.body as string);
+        // URL-sourced item should be excluded; only the local item should be patched
+        expect(body.items).toHaveLength(1);
+        expect(body.items[0].id).toBe('local-item');
+      },
+      { timeout: 5000 },
+    );
+  }, 8000);
 
   // ── Type guard ────────────────────────────────────────────────────────────
 
-  it('is identified by isDiagramBlockContent type guard', () => {
-    expect(isDiagramBlockContent({ code: 'flowchart LR\n  A-->B' }, 'diagram')).toBe(true);
+  it('isDiagramBlockContent recognises diagram blocks', () => {
     expect(isDiagramBlockContent({ code: '' }, 'diagram')).toBe(true);
+    expect(isDiagramBlockContent({ code: '{}' }, 'diagram')).toBe(true);
+  });
+
+  it('isDiagramBlockContent rejects non-diagram content', () => {
     expect(isDiagramBlockContent({ code: 'x', language: 'js' } as never, 'diagram')).toBe(false);
     expect(isDiagramBlockContent({ code: '' }, 'code' as never)).toBe(false);
   });
 });
+
+
