@@ -104,6 +104,11 @@ export async function POST(req: NextRequest) {
       include: { blocks: true },
     });
 
+    // Emit PAGE_CREATED content event (best-effort; failure is non-fatal)
+    void prisma.contentEvent.create({
+      data: { userId, type: 'PAGE_CREATED', pageId: page.id, folderId: folderId ?? null },
+    }).catch(() => {});
+
     return NextResponse.json(page, { status: 201 });
   } catch (err) {
     console.error('[POST /api/pages]', err);

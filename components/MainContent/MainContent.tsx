@@ -22,9 +22,9 @@
  */
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useUIStore } from '@/lib/uiStore';
 import { Download, Filter, Menu, Save, Tag, X } from 'lucide-react';
 
-import { SettingsDialog } from '@/components/SettingsDialog/SettingsDialog';
 import { UserMenu } from '@/components/UserMenu/UserMenu';
 import { useI18n } from '@/lib/i18n';
 import { computePageStats, downloadMarkdown } from '@/lib/pageUtils';
@@ -75,7 +75,7 @@ export function MainContent({
 }: MainContentProps) {
   const { t } = useI18n();
   const { tagsPerPageEnabled, tagsPerBlockEnabled } = useSettingsStore();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { openSettings } = useUIStore();
 
   /**
    * Active block-tag filters.
@@ -181,7 +181,7 @@ export function MainContent({
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <UserMenu onOpenSettings={() => setSettingsOpen(true)} />
+          <UserMenu onOpenSettings={openSettings} />
         </div>
       </header>
 
@@ -279,7 +279,6 @@ export function MainContent({
         </div>
       </div>
 
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </main>
   );
 }

@@ -13,6 +13,12 @@ export type UserPreferencesPayload = {
   tagsPerBlockEnabled?: boolean;
   recordingStartSoundEnabled?: boolean;
   dictationFormattingEnabled?: boolean;
+  // Statistics tracking (default true when absent)
+  statisticsEnabled?: boolean;
+  trackSessionTime?: boolean;
+  trackPageTime?: boolean;
+  trackFolderTime?: boolean;
+  trackContentEvents?: boolean;
 };
 
 /**

@@ -35,6 +35,8 @@ describe('buildTreeDataWithActions sorting', () => {
       onDelete: vi.fn(),
       selectedPageId: null,
       ancestorPathIds: [],
+      editingFolderId: null,
+      setEditingFolderId: vi.fn(),
       t,
     });
 

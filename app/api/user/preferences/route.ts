@@ -11,6 +11,12 @@ export type UserPreferences = {
   tagsPerPageEnabled?: boolean;
   tagsPerBlockEnabled?: boolean;
   recordingStartSoundEnabled?: boolean;
+  // Statistics tracking preferences (all default to true when absent)
+  statisticsEnabled?: boolean;
+  trackSessionTime?: boolean;
+  trackPageTime?: boolean;
+  trackFolderTime?: boolean;
+  trackContentEvents?: boolean;
 };
 
 function isPreferencesBody(
@@ -84,6 +90,11 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.recordingStartSoundEnabled === 'boolean') {
     updates.recordingStartSoundEnabled = body.recordingStartSoundEnabled;
   }
+  if (typeof body.statisticsEnabled === 'boolean') updates.statisticsEnabled = body.statisticsEnabled;
+  if (typeof body.trackSessionTime === 'boolean') updates.trackSessionTime = body.trackSessionTime;
+  if (typeof body.trackPageTime === 'boolean') updates.trackPageTime = body.trackPageTime;
+  if (typeof body.trackFolderTime === 'boolean') updates.trackFolderTime = body.trackFolderTime;
+  if (typeof body.trackContentEvents === 'boolean') updates.trackContentEvents = body.trackContentEvents;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No valid preference fields' }, { status: 400 });

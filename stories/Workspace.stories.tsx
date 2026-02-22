@@ -25,7 +25,7 @@ export const Default: Story = {
     nextjs: {
       appDirectory: true,
       navigation: {
-        pathname: '/',
+        pathname: '/notebook',
       },
     },
   },

@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { Geist, Geist_Mono } from 'next/font/google';
 
 import { Providers } from '@/components/providers';
+import { AppShell } from '@/components/AppShell';
 import type { Locale } from '@/lib/i18n';
 
 import './globals.css';
@@ -57,7 +58,9 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers initialLocale={initialLocale}>{children}</Providers>
+        <Providers initialLocale={initialLocale}>
+          <AppShell>{children}</AppShell>
+        </Providers>
       </body>
     </html>
   );

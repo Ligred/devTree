@@ -44,6 +44,7 @@ import { MainContent, type Page, type Block } from '@/components/MainContent';
 import type { TreeDataItem } from '@/components/ui/tree-view';
 import { useI18n } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/settingsStore';
+import { usePageTracking } from '@/lib/usePageTracking';
 import { cn } from '@/lib/utils';
 
 import { buildTreeDataWithActions } from './buildTreeData';
@@ -191,6 +192,14 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   /** The id of the page currently displayed in the editor. null = none selected. */
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [titleHasError, setTitleHasError] = useState(false);
+
+  // Track time spent on each page for statistics
+  const activeFolderIdForTracking = useMemo(
+    () => (activePageId ? pages.find((p) => p.id === activePageId)?.folderId ?? undefined : undefined),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activePageId, pages],
+  );
+  usePageTracking({ pageId: activePageId ?? undefined, folderId: activeFolderIdForTracking });
 
   const router = useRouter();
   const pathname = usePathname();
@@ -1181,7 +1190,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     if (currentPageParam !== activePageId) {
       // Update URL with new page ID
       // Key: Route stays '/', so no unmounting occurs
-      router.push(`/?page=${encodeURIComponent(activePageId)}`, { scroll: false });
+      router.push(`/notebook?page=${encodeURIComponent(activePageId)}`, { scroll: false });
     }
   }, [activePageId, loading, router]);
 
@@ -1209,11 +1218,12 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
 
   return (
     /**
-     * Root container uses `h-screen` + `overflow-hidden` to create a
-     * full-viewport fixed layout where only the inner scrollable areas
-     * (sidebar tree, page content) overflow and scroll independently.
+     * Root container uses `h-full` + `overflow-hidden` to fill the available
+     * space provided by AppShell. The AppShell wraps the whole app in
+     * `h-screen overflow-hidden`, so `h-full` here means full viewport height
+     * minus the ActivityBar column.
      */
-    <div className="flex h-screen overflow-hidden bg-background font-sans text-foreground">
+    <div className="flex h-full overflow-hidden bg-background font-sans text-foreground">
       {/* Loading overlay — shown while the initial data fetch is in progress. */}
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">

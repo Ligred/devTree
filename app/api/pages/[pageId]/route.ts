@@ -134,6 +134,11 @@ export async function DELETE(req: NextRequest, { params }: Params) {
   }
 
   try {
+    // Emit PAGE_DELETED event before deleting (page still exists at this point)
+    void prisma.contentEvent.create({
+      data: { userId: auth.userId, type: 'PAGE_DELETED', pageId, folderId: page.folderId ?? null },
+    }).catch(() => {});
+
     // Blocks cascade-delete via the onDelete: Cascade relation
     await prisma.page.delete({ where: { id: pageId } });
     return new NextResponse(null, { status: 204 });

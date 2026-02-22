@@ -273,6 +273,7 @@ export type Page = {
   title: string;
   blocks: Block[];
   tags?: string[];
+  folderId?: string | null;
 };
 
 // ─── Type guards ─────────────────────────────────────────────────────────────

@@ -8,6 +8,8 @@ import { I18nProvider, useI18n, type Locale } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/settingsStore';
 import { loadUserPreferences } from '@/lib/userPreferences';
 import { ConfirmationProvider } from '@/lib/confirmationContext';
+import { useStatsStore } from '@/lib/statsStore';
+import { useSessionTracking } from '@/lib/useSessionTracking';
 import { RecordingIndicator } from './RecordingIndicator';
 
 /**
@@ -21,6 +23,7 @@ function SyncUserPreferences() {
   const { setTheme } = useTheme();
   const { setLocale } = useI18n();
   const { setTagsPerPage, setTagsPerBlock, setRecordingStartSound } = useSettingsStore();
+  const { setEnabled: setStatsEnabled } = useStatsStore();
   const appliedRef = useRef(false);
 
   useEffect(() => {
@@ -33,9 +36,17 @@ function SyncUserPreferences() {
       if (typeof prefs.tagsPerPageEnabled === 'boolean') setTagsPerPage(prefs.tagsPerPageEnabled);
       if (typeof prefs.tagsPerBlockEnabled === 'boolean') setTagsPerBlock(prefs.tagsPerBlockEnabled);
       if (typeof prefs.recordingStartSoundEnabled === 'boolean') setRecordingStartSound(prefs.recordingStartSoundEnabled);
+      // Statistics tracking — enabled by default
+      setStatsEnabled(prefs.statisticsEnabled ?? true);
     });
-  }, [status, session?.user, setTheme, setLocale, setTagsPerPage, setTagsPerBlock, setRecordingStartSound]);
+  }, [status, session?.user, setTheme, setLocale, setTagsPerPage, setTagsPerBlock, setRecordingStartSound, setStatsEnabled]);
 
+  return null;
+}
+
+/** Mounts the session-level activity tracker. */
+function SessionTracker() {
+  useSessionTracking();
   return null;
 }
 
@@ -54,6 +65,7 @@ export function Providers({
         >
           <I18nProvider initialLocale={initialLocale}>
             <SyncUserPreferences />
+            <SessionTracker />
             {children}
             <RecordingIndicator />
           </I18nProvider>

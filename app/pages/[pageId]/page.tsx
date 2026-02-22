@@ -99,5 +99,5 @@ export default async function PageByIdRoute({ params }: Readonly<PageProps>) {
   
   // Redirect to root with page ID as query parameter
   // This ensures Workspace stays mounted at root route
-  redirect(`/?page=${encodeURIComponent(pageId)}`);
+  redirect(`/notebook?page=${encodeURIComponent(pageId)}`);
 }

@@ -28,13 +28,13 @@ public class RouteTests : E2ETestBase
         
         // Wait for the page to load and extract the URL to find the page ID
         var currentUrl = Page.Url;
-        var pageIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"/pages/([^/?#]+)");
-        Assert.That(pageIdMatch.Success, Is.True, "URL should contain /pages/[pageId] after page selection");
+        var pageIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"[?&]page=([^&#]+)");
+        Assert.That(pageIdMatch.Success, Is.True, "URL should contain ?page=[pageId] after page selection");
 
         var pageId = pageIdMatch.Groups[1].Value;
         Assert.That(pageId, Is.Not.Empty, "Page ID should be extracted from URL");
 
-        // Now navigate directly via deep-link URL
+        // Navigate directly via deep-link URL (the /pages/ redirect still works)
         var deepLinkUrl = $"{BaseUrl}/pages/{pageId}";
         await Page.GotoAsync(deepLinkUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
         
@@ -49,8 +49,8 @@ public class RouteTests : E2ETestBase
         // Use a seeded page known to be inside a folder.
         await App.Sidebar.SelectPageAsync("React Hooks");
         var currentUrl = Page.Url;
-        var pageIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"/pages/([^/?#]+)");
-        Assert.That(pageIdMatch.Success, Is.True, "URL should contain /pages/[pageId]");
+        var pageIdMatch = System.Text.RegularExpressions.Regex.Match(currentUrl, @"[?&]page=([^&#]+)");
+        Assert.That(pageIdMatch.Success, Is.True, "URL should contain ?page=[pageId]");
 
         var pageId = pageIdMatch.Groups[1].Value;
         var deepLinkUrl = $"{BaseUrl}/pages/{pageId}";

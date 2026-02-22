@@ -31,7 +31,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { useSession } from 'next-auth/react';
-import { User, Palette, SlidersHorizontal } from 'lucide-react';
+import { User, Palette, SlidersHorizontal, BarChart2 } from 'lucide-react';
 
 import {
   Dialog,
@@ -43,10 +43,11 @@ import {
 import { Switch } from '@/components/ui/Switch';
 import { useI18n, type Locale } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/settingsStore';
+import { useStatsStore } from '@/lib/statsStore';
 import { cn } from '@/lib/utils';
 import { saveUserPreferences } from '@/lib/userPreferences';
 
-type SettingsTab = 'account' | 'appearance' | 'features';
+type SettingsTab = 'account' | 'appearance' | 'features' | 'statistics';
 
 function getInitials(user: { name?: string | null; email?: string | null }) {
   if (user?.name) {
@@ -137,7 +138,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { theme, setTheme } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const { data: session, update: updateSession } = useSession();
-  const {
+  const { 
     tagsPerPageEnabled,
     tagsPerBlockEnabled,
     recordingStartSoundEnabled,
@@ -148,6 +149,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setDictationFormatting,
   } =
     useSettingsStore();
+  const { enabled: statisticsEnabled, setEnabled: setStatisticsEnabled } = useStatsStore();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [displayName, setDisplayName] = useState(session?.user?.name ?? '');
@@ -272,6 +274,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     { id: 'account', labelKey: 'settings.sectionAccount', icon: <User size={18} /> },
     { id: 'appearance', labelKey: 'settings.sectionAppearance', icon: <Palette size={18} /> },
     { id: 'features', labelKey: 'settings.sectionFeatures', icon: <SlidersHorizontal size={18} /> },
+    { id: 'statistics', labelKey: 'settings.sectionStatistics', icon: <BarChart2 size={18} /> },
   ];
 
   return (
@@ -577,6 +580,60 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   label={t('settings.dictationFormatting')}
                 />
               </SettingRow>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'statistics' && (
+              <section className="space-y-6 p-4 sm:p-6">
+                <SectionHeader title={t('settings.sectionStatistics')} />
+                <div className="space-y-4">
+                  <SettingRow
+                    label={t('settings.statisticsEnabled')}
+                    description={t('settings.statisticsEnabledDescription')}
+                  >
+                    <Switch
+                      checked={statisticsEnabled}
+                      onChange={(v) => {
+                        setStatisticsEnabled(v);
+                        void saveUserPreferences({ statisticsEnabled: v });
+                      }}
+                      label={t('settings.statisticsEnabled')}
+                    />
+                  </SettingRow>
+
+                  <SettingRow
+                    label={t('settings.trackSessionTime')}
+                    description={t('settings.trackSessionTimeDescription')}
+                  >
+                    <Switch
+                      checked={statisticsEnabled}
+                      onChange={(v) => void saveUserPreferences({ trackSessionTime: v })}
+                      label={t('settings.trackSessionTime')}
+                    />
+                  </SettingRow>
+
+                  <SettingRow
+                    label={t('settings.trackPageTime')}
+                    description={t('settings.trackPageTimeDescription')}
+                  >
+                    <Switch
+                      checked={statisticsEnabled}
+                      onChange={(v) => void saveUserPreferences({ trackPageTime: v })}
+                      label={t('settings.trackPageTime')}
+                    />
+                  </SettingRow>
+
+                  <SettingRow
+                    label={t('settings.trackContentEvents')}
+                    description={t('settings.trackContentEventsDescription')}
+                  >
+                    <Switch
+                      checked={statisticsEnabled}
+                      onChange={(v) => void saveUserPreferences({ trackContentEvents: v })}
+                      label={t('settings.trackContentEvents')}
+                    />
+                  </SettingRow>
                 </div>
               </section>
             )}
