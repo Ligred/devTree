@@ -1,8 +1,14 @@
 namespace DevTree.E2E.Tests;
 
 /// <summary>
-/// E2E tests for the Diagram block:
-/// adding, switching type, zoom controls, and live preview.
+/// E2E tests for the Diagram block — powered by Excalidraw (replaced the old
+/// Mermaid text-editor in the "diagram imp" commit).
+///
+/// What we verify:
+///   - The Excalidraw canvas element renders on a page that has a diagram block.
+///   - Adding a new diagram block enters edit mode and shows the Excalidraw toolbar.
+///   - The fullscreen toggle button is visible in edit mode.
+///   - Exiting edit mode switches to view mode (no toolbar).
 /// </summary>
 [TestFixture]
 [Category("Diagram")]
@@ -14,129 +20,108 @@ public class DiagramTests : E2ETestBase
         await App.Sidebar.SelectPageAsync("TypeScript Tips");
     }
 
-    // ── Existing diagram block ────────────────────────────────────────────────
+    // ── Canvas renders ────────────────────────────────────────────────────────
 
     [Test]
-    public async Task DiagramBlock_RendersOnTypescriptTipsPage()
+    public async Task DiagramBlock_RendersExcalidrawCanvas()
     {
-        // TypeScript Tips has a pre-loaded class diagram block.
-        // The block renders an SVG in the preview pane.
-        var diagram = Page.Locator("[class*='mermaid-']").First;
-        await Expect(Page.Locator("svg").First).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        // TypeScript Tips has a pre-loaded diagram block.
+        // Excalidraw renders a <canvas> element inside its .excalidraw container.
+        var canvas = Page.Locator(".excalidraw canvas").First;
+        await Expect(canvas).ToBeVisibleAsync(new() { Timeout = 15_000 });
     }
 
     // ── Add a new diagram block ───────────────────────────────────────────────
 
     [Test]
-    public async Task AddDiagramBlock_ShowsPreviewByDefault()
+    public async Task AddDiagramBlock_RendersExcalidrawCanvasInEditMode()
     {
         await App.Sidebar.SelectPageAsync("React Hooks");
         await App.Editor.AddBlockAsync("Diagram");
 
-        // Preview tab should be active by default — no textarea visible
-        await Expect(Page.GetByTestId("diagram-editor-textarea").Last)
-            .Not.ToBeVisibleAsync(new() { Timeout = 3_000 });
+        // After adding (new blocks auto-start in edit mode), the Excalidraw
+        // canvas must be visible within reasonable time (dynamic import + render).
+        var canvas = Page.Locator(".excalidraw canvas").Last;
+        await Expect(canvas).ToBeVisibleAsync(new() { Timeout = 15_000 });
     }
 
     [Test]
-    public async Task AddDiagramBlock_EditTabShowsTextarea()
+    public async Task AddDiagramBlock_EditModeShowsExcalidrawToolbar()
     {
         var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
         var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
         await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
         await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
-        // Click the Edit tab
-        await Page.GetByTestId("diagram-tab-edit").Last.ClickAsync();
-
-        // Textarea for Mermaid code should appear
-        var textarea = Page.GetByTestId("diagram-editor-textarea").Last;
-        await Expect(textarea).ToBeVisibleAsync();
+        // In edit mode (viewModeEnabled=false) the Excalidraw App-toolbar is visible.
+        var toolbar = Page.Locator(".excalidraw .App-toolbar").Last;
+        await Expect(toolbar).ToBeVisibleAsync(new() { Timeout = 15_000 });
     }
 
-    // ── Diagram type picker ───────────────────────────────────────────────────
+    // ── Fullscreen toggle ─────────────────────────────────────────────────────
 
     [Test]
-    public async Task DiagramTypePicker_OpensDropdownWithAllTypes()
+    public async Task EditMode_FullscreenButtonIsVisible()
     {
         var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
         var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
         await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
         await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
-        await Page.GetByTestId("diagram-type-picker").Last.ClickAsync();
-
-        await Expect(Page.GetByTestId("diagram-type-option-sequence").Last).ToBeVisibleAsync();
-        await Expect(Page.GetByTestId("diagram-type-option-gantt").Last).ToBeVisibleAsync();
-        await Expect(Page.GetByTestId("diagram-type-option-pie").Last).ToBeVisibleAsync();
+        // The fullscreen toggle is injected into Excalidraw's top-right toolbar
+        // area via renderTopRightUI; its title attribute contains "fullscreen".
+        var fullscreenBtn = Page.Locator("button[title*='ullscreen']").Last;
+        await Expect(fullscreenBtn).ToBeVisibleAsync(new() { Timeout = 15_000 });
     }
 
     [Test]
-    public async Task DiagramTypePicker_SelectingTypeLoadsTemplate()
+    public async Task FullscreenButton_TogglesFullscreenOverlay()
     {
         var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
         var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
         await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
         await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
-        await Page.GetByTestId("diagram-type-picker").Last.ClickAsync();
-        await Page.GetByTestId("diagram-type-option-sequence").Last.ClickAsync();
+        // Enter fullscreen
+        var fullscreenBtn = Page.Locator("button[title*='ullscreen']").Last;
+        await Expect(fullscreenBtn).ToBeVisibleAsync(new() { Timeout = 15_000 });
+        await fullscreenBtn.ClickAsync();
 
-        await Page.GetByTestId("diagram-tab-edit").Last.ClickAsync();
-        var textarea = Page.GetByTestId("diagram-editor-textarea").Last;
-        await Expect(textarea).ToContainTextAsync("sequenceDiagram");
+        // The canvas should now cover the full viewport (dialog overlay rendered)
+        var dialog = Page.Locator("dialog[open]");
+        await Expect(dialog).ToBeVisibleAsync(new() { Timeout = 5_000 });
+
+        // Exit fullscreen via the minimize button
+        var minimizeBtn = Page.Locator("button[title*='xit']").Last;
+        await minimizeBtn.ClickAsync();
+        await Expect(dialog).Not.ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
 
-    // ── Zoom controls ─────────────────────────────────────────────────────────
+    // ── View mode ─────────────────────────────────────────────────────────────
 
     [Test]
-    public async Task ZoomControls_AreVisibleInPreviewMode()
+    public async Task ExitingEditMode_HidesExcalidrawToolbar()
     {
-        await App.Sidebar.SelectPageAsync("React Hooks");
-        await App.Editor.AddBlockAsync("Diagram");
+        var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
+        var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
+        await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
+        await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
-        await Expect(Page.GetByTestId("diagram-zoom-in").Last).ToBeVisibleAsync();
-        await Expect(Page.GetByTestId("diagram-zoom-out").Last).ToBeVisibleAsync();
-        await Expect(Page.GetByTestId("diagram-zoom-reset").Last).ToBeVisibleAsync();
-    }
+        // Wait for canvas to appear in edit mode
+        var canvas = Page.Locator(".excalidraw canvas").Last;
+        await Expect(canvas).ToBeVisibleAsync(new() { Timeout = 15_000 });
 
-    [Test]
-    public async Task ZoomIn_IncreasesZoomPercentage()
-    {
-        await App.Sidebar.SelectPageAsync("React Hooks");
-        await App.Editor.AddBlockAsync("Diagram");
+        // Exit edit mode by clicking the "Done editing" button in the BlockWrapper.
+        // (Escape is intercepted by Excalidraw internally, so we use the aria-label button.)
+        var doneBtn = Page.Locator(
+            "button[aria-label='Done editing'], button[aria-label='Завершити редагування']"
+        ).Last;
+        await doneBtn.ClickAsync();
+        await Page.WaitForTimeoutAsync(200);
 
-        // Initial zoom is 100%
-        var resetBtn = Page.GetByTestId("diagram-zoom-reset").Last;
-        await Expect(resetBtn).ToContainTextAsync("100%");
-
-        await Page.GetByTestId("diagram-zoom-in").Last.ClickAsync();
-        await Expect(resetBtn).ToContainTextAsync("120%");
-    }
-
-    [Test]
-    public async Task ZoomReset_RestoresTo100Percent()
-    {
-        await App.Sidebar.SelectPageAsync("React Hooks");
-        await App.Editor.AddBlockAsync("Diagram");
-
-        await Page.GetByTestId("diagram-zoom-in").Last.ClickAsync();
-        await Page.GetByTestId("diagram-zoom-in").Last.ClickAsync();
-
-        var resetBtn = Page.GetByTestId("diagram-zoom-reset").Last;
-        await Expect(resetBtn).ToContainTextAsync("140%");
-
-        await resetBtn.ClickAsync();
-        await Expect(resetBtn).ToContainTextAsync("100%");
-    }
-
-    // ── App title ────────────────────────────────────────────────────────────
-
-    [Test]
-    public async Task AppTitle_IsLearningTree()
-    {
-        // The sidebar header shows the app name
-        var title = Page.Locator("h1");
-        await Expect(title).ToContainTextAsync("Learning Tree");
+        // In view mode (viewModeEnabled=true) the Excalidraw toolbar is hidden.
+        var toolbar = Page.Locator(".excalidraw .App-toolbar").Last;
+        await Expect(toolbar).Not.ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
 }
+

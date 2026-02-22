@@ -21,6 +21,14 @@ export default meta;
 type Story = StoryObj<typeof Workspace>;
 
 export const Default: Story = {
+  parameters: {
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/',
+      },
+    },
+  },
   render: () => (
     <div className="h-screen w-full">
       <Workspace />

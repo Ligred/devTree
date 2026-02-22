@@ -244,7 +244,11 @@ function DiagramContent({
    * to the backend — URL-sourced items are already persisted via POST.
    */
   const urlItemIdsRef = useRef<Set<string>>(new Set());
-  // Ref to the Excalidraw imperative API (set via the excalidrawAPI callback prop).
+  // Excalidraw imperative API — stored in BOTH state (so effects that depend on
+  // `excalidrawAPI` re-run when it becomes available) and a ref (so the
+  // pointer-down capture handler has zero-overhead synchronous access without
+  // needing to be re-created).  `handleExcalidrawAPI` below keeps them in sync
+  // in one place, removing the need for a separate sync `useEffect`.
   const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
 
   /**
@@ -304,10 +308,17 @@ function DiagramContent({
   //
   // Safety nets: double-rAF after mount + window scroll listener.
 
-  /** Keep latest API in a ref so the pointer-down handler doesn't need to be
-   *  re-created each time the API ref changes. */
+  /** Ref gives the pointer-down capture handler zero-overhead synchronous
+   *  access to the API without rebuilding the callback on each render. */
   const excalidrawAPIRef = useRef<any>(null);
-  useEffect(() => { excalidrawAPIRef.current = excalidrawAPI; }, [excalidrawAPI]);
+
+  /** Callback passed to Excalidraw’s `excalidrawAPI` prop.
+   *  Updates both the ref (synchronous, zero re-render cost) and the state
+   *  (triggers dependent effects) in one place. */
+  const handleExcalidrawAPI = useCallback((api: any) => {
+    excalidrawAPIRef.current = api;
+    setExcalidrawAPI(api);
+  }, []);
 
   /** Called in the capture phase before Excalidraw sees any pointer-down.
    *  Ensures offsetLeft/offsetTop are always up-to-date before drawing. */
@@ -510,7 +521,7 @@ function DiagramContent({
       {/* Excalidraw editor */}
       <div className="h-full w-full">
         <ExcalidrawComponent
-          excalidrawAPI={setExcalidrawAPI}
+          excalidrawAPI={handleExcalidrawAPI}
           initialData={initialData}
           onChange={handleChange}
           onLibraryChange={handleLibraryChange}

@@ -124,11 +124,12 @@ This document describes every major library and technology used in the project: 
 - **Why:** Best-in-class code editing in the browser.
 - **Where:** `components/MainContent/blocks/CodeBlock.tsx`. Theme synced with app theme (`vs` / `vs-dark`) via `useTheme().resolvedTheme`.
 
-### Mermaid 11
+### @excalidraw/excalidraw 0.18
 
-- **What:** Text-to-diagram library (flowcharts, sequence, ERD).
-- **Why:** Diagrams as code; no image uploads.
-- **Where:** `components/MainContent/blocks/DiagramBlock.tsx`. Renders Mermaid from block `content.code`; error boundary on parse errors.
+- **What:** Infinite-canvas visual editor with hand-drawn aesthetic (shapes, arrows, text, freehand, images, Mermaid insert).
+- **Why:** Replaces the previous code-only Mermaid integration; gives users a graphical diagramming experience without requiring Mermaid syntax knowledge. Native Mermaid insert is still available via the "Mermaid diagram" button.
+- **Where:** `components/MainContent/blocks/DiagramBlock.tsx`. Diagram state (elements + appState) is serialised to JSON and stored per-block in `content.code`. Library items sync cross-device via `/api/user/libraries`.
+- **Coordinate fix:** Excalidraw caches `offsetLeft`/`offsetTop` for pointer math. An `onPointerDownCapture` handler on the wrapper div calls `refresh()` before each interaction so the coordinates are always correct even when lazy-loaded content above the block shifts it after mount.
 
 ### @dnd-kit (core, sortable, modifiers, utilities)
 
@@ -269,7 +270,7 @@ This document describes every major library and technology used in the project: 
 | lucide-react | Icons | 0.5xx |
 | @tiptap/* | Rich text | 3.x |
 | @monaco-editor/react | Code editor | 4.x |
-| mermaid | Diagrams | 11.x |
+| @excalidraw/excalidraw | Diagramming canvas | 0.18.x |
 | @dnd-kit/* | Drag and drop | 6–10.x |
 | zustand | Global state | 5.x |
 | vitest | Unit tests | 4.x |

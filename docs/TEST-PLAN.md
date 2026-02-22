@@ -389,6 +389,6 @@ DEVTREE_BASE_URL=http://localhost:3001 dotnet test
 |------|-------------------|
 | Tiptap rich-text internals | Third-party library — tested by Tiptap itself |
 | Monaco Editor | Third-party library |
-| Mermaid.js rendering | Third-party library |
+| Excalidraw rendering | Third-party library |
 | CSS / Tailwind classes | Visual regression tests (Storybook) cover this |
 | `prisma/schema.prisma` | Schema correctness verified by Prisma itself at migration time |

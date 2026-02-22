@@ -1,4 +1,5 @@
 import type { StorybookConfig } from '@storybook/nextjs-vite';
+import { mergeConfig } from 'vite';
 
 const config: StorybookConfig = {
   "stories": [
@@ -16,6 +17,16 @@ const config: StorybookConfig = {
   "framework": "@storybook/nextjs-vite",
   "staticDirs": [
     "../public"
-  ]
+  ],
+  async viteFinal(config) {
+    // es6-promise-pool is a CJS-only package used by @excalidraw/excalidraw.
+    // Without pre-bundling it Vite serves it as a raw CJS file which throws
+    // "is not a constructor" errors in the browser test environment.
+    return mergeConfig(config, {
+      optimizeDeps: {
+        include: ['es6-promise-pool'],
+      },
+    });
+  },
 };
 export default config;

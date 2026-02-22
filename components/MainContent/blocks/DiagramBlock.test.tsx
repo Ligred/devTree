@@ -17,7 +17,7 @@
  *   6. isDiagramBlockContent type guard.
  */
 
-import { render, screen, act, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
@@ -271,6 +271,21 @@ describe('DiagramBlock', () => {
     });
 
     expect(fakeAPI.refresh).toHaveBeenCalled();
+  });
+
+  it('calls refresh() on pointer-down capture before Excalidraw processes the event', async () => {
+    wrap(<DiagramBlock content={emptyContent} onChange={vi.fn()} isEditing />);
+    await waitFor(() => expect(screen.getByTestId('excalidraw')).toBeInTheDocument());
+
+    vi.clearAllMocks();
+
+    // Fire a pointerdown on the Excalidraw mock element.  React dispatches the
+    // capture-phase handler on the ancestor wrapper div before the target, so
+    // handlePointerDownCapture runs — which calls excalidrawAPIRef.current.refresh() —
+    // before Excalidraw would process the event.
+    fireEvent.pointerDown(screen.getByTestId('excalidraw'));
+
+    expect(fakeAPI.refresh).toHaveBeenCalledTimes(1);
   });
 
   // ── Local library persistence (onLibraryChange → PATCH) ──────────────────
