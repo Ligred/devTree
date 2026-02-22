@@ -105,6 +105,22 @@
   }
 }
 
+/* Motivation banner — celebration particles floating up */
+@keyframes banner-float-up {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+
+  60% {
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(-56px) scale(0.4) rotate(20deg);
+    opacity: 0;
+  }
+}
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);

@@ -6,6 +6,7 @@ import { BookOpen, BarChart2, BookHeart, Settings } from 'lucide-react';
 
 import { ActivityBarItem } from './ActivityBarItem';
 import { useSettingsDialog } from '@/components/SettingsDialog/useSettingsDialog';
+import { useStatsStore } from '@/lib/statsStore';
 
 const TOP_ITEMS = [
   {
@@ -33,6 +34,7 @@ export function ActivityBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { openSettings } = useSettingsDialog();
+  const { enabled: statisticsEnabled } = useStatsStore();
 
   /** Determine active section from current pathname */
   const activeId = (() => {
@@ -41,6 +43,10 @@ export function ActivityBar() {
     return 'notebook';
   })();
 
+  const visibleItems = TOP_ITEMS.filter(
+    (item) => !(item.id === 'statistics' && !statisticsEnabled),
+  );
+
   return (
     <nav
       aria-label="Application sections"
@@ -48,7 +54,7 @@ export function ActivityBar() {
     >
       {/* Top section items */}
       <div className="flex flex-col gap-1 flex-1">
-        {TOP_ITEMS.map((item) => (
+        {visibleItems.map((item) => (
           <ActivityBarItem
             key={item.id}
             icon={item.icon}
@@ -75,3 +81,4 @@ export function ActivityBar() {
     </nav>
   );
 }
+

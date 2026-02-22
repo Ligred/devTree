@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
-import { UserMenu } from '@/components/UserMenu/UserMenu';
 import { StatsSummaryCards } from '@/components/Statistics/StatsSummaryCards';
 import { StreakCard } from '@/components/Statistics/StreakCard';
 import { DailyActivityChart } from '@/components/Statistics/DailyActivityChart';
@@ -12,7 +11,7 @@ import { TopicsBarChart } from '@/components/Statistics/TopicsBarChart';
 import { ContentTypeDonut } from '@/components/Statistics/ContentTypeDonut';
 import { ActivityHeatmap } from '@/components/Statistics/ActivityHeatmap';
 import { MotivationBanner } from '@/components/Statistics/MotivationBanner';
-import { useUIStore } from '@/lib/uiStore';
+import { useStatsStore } from '@/lib/statsStore';
 import type { ActivityDay, ContentData, SummaryData, TopicData } from '@/components/Statistics/types';
 
 /** Safely decode a fetch Response as JSON, throwing if the response is not OK. */
@@ -27,7 +26,7 @@ async function safeJson<T>(res: Response): Promise<T> {
 export default function StatisticsPage() {
   const { status } = useSession();
   const router = useRouter();
-  const { openSettings } = useUIStore();
+  const { enabled: statisticsEnabled } = useStatsStore();
 
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [activity, setActivity] = useState<ActivityDay[]>([]);
@@ -36,14 +35,19 @@ export default function StatisticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Redirect to notebook if stats are disabled
+  useEffect(() => {
+    if (!statisticsEnabled) router.replace('/notebook');
+  }, [statisticsEnabled, router]);
+
   // Auth guard
   useEffect(() => {
     if (status === 'unauthenticated') router.replace('/login');
   }, [status, router]);
 
-  // Data fetching
+  // Data fetching — request 365 days so the heatmap can show a full year
   useEffect(() => {
-    if (status !== 'authenticated') return;
+    if (status !== 'authenticated' || !statisticsEnabled) return;
 
     const load = async () => {
       setLoading(true);
@@ -51,7 +55,7 @@ export default function StatisticsPage() {
       try {
         const [summaryRes, activityRes, topicsRes, contentRes] = await Promise.all([
           fetch('/api/stats/summary'),
-          fetch('/api/stats/activity?days=90'),
+          fetch('/api/stats/activity?days=365'),
           fetch('/api/stats/topics'),
           fetch('/api/stats/content'),
         ]);
@@ -76,7 +80,7 @@ export default function StatisticsPage() {
     };
 
     void load();
-  }, [status]);
+  }, [status, statisticsEnabled]);
 
   if (status === 'loading' || status === 'unauthenticated') {
     return (
@@ -86,28 +90,23 @@ export default function StatisticsPage() {
     );
   }
 
+  if (!statisticsEnabled) return null;
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      {/* Top header bar — matches MainContent header style */}
-      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4 shadow-sm md:px-6">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground">Statistics</span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <UserMenu onOpenSettings={openSettings} />
-        </div>
-      </header>
-
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl space-y-6 p-6 lg:p-8">
-          {/* Page title + description */}
+          {/* Page title */}
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Statistics</h1>
             <p className="text-sm text-muted-foreground">
               Track your learning progress and habits
             </p>
           </div>
+
+          {/* Motivation banner — shown once per day, dismissed per session */}
+          <MotivationBanner data={summary} />
 
           {/* Error state */}
           {error && (
@@ -116,15 +115,12 @@ export default function StatisticsPage() {
             </div>
           )}
 
-          {/* Motivation banner */}
-          <MotivationBanner data={summary} />
-
-          {/* Summary cards + Streak */}
-          <div className="grid gap-4 lg:grid-cols-5">
-            <div className="lg:col-span-4">
+          {/* Summary cards (2×2) + Streak card — same row, same height */}
+          <div className="grid gap-4 lg:grid-cols-5 lg:items-stretch">
+            <div className="lg:col-span-4 lg:h-full">
               <StatsSummaryCards data={summary} loading={loading} />
             </div>
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 lg:h-full">
               <StreakCard data={summary} loading={loading} />
             </div>
           </div>
@@ -138,7 +134,7 @@ export default function StatisticsPage() {
             <ContentTypeDonut data={content} loading={loading} />
           </div>
 
-          {/* Activity heatmap */}
+          {/* Activity heatmap — uses all 365 days */}
           <ActivityHeatmap data={activity} loading={loading} />
         </div>
       </div>

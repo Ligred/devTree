@@ -21,26 +21,56 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   whiteboard: 'Whiteboard',
   audio: 'Audio',
   link: 'Link',
+  heading: 'Heading',
+  list: 'List',
 };
 
+// Balanced, readable palette — no toxic neons
 const PALETTE = [
-  'hsl(var(--primary))',
-  'hsl(217 91% 60%)',
-  'hsl(142 76% 36%)',
-  'hsl(38 92% 50%)',
-  'hsl(280 68% 60%)',
-  'hsl(355 78% 56%)',
-  'hsl(174 60% 41%)',
-  'hsl(25 95% 53%)',
+  '#6366f1', // indigo-500
+  '#06b6d4', // cyan-500
+  '#10b981', // emerald-500
+  '#f59e0b', // amber-500
+  '#ec4899', // pink-500
+  '#8b5cf6', // violet-500
+  '#14b8a6', // teal-500
+  '#f97316', // orange-500
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
+  const entry = payload[0] as { name: string; value: number; payload: { percent: number } };
+  const pct = entry.payload?.percent ?? 0;
   return (
     <div className="rounded-lg border bg-background p-3 shadow-sm text-sm">
-      <p className="font-medium">{payload[0].name}</p>
-      <p className="text-muted-foreground">{payload[0].value} blocks</p>
+      <p className="font-semibold text-foreground">{entry.name}</p>
+      <p className="text-muted-foreground mt-0.5">
+        {entry.value} blocks{' '}
+        <span className="text-foreground/60">({(pct * 100).toFixed(1)}%)</span>
+      </p>
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function CustomLegend({ payload }: any) {
+  if (!payload?.length) return null;
+  return (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 px-2 mt-3">
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      {payload.map((entry: any, i: number) => (
+        <div key={i} className="flex items-center gap-2 min-w-0">
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: entry.color as string }}
+          />
+          <span className="truncate text-xs text-muted-foreground">{entry.value as string}</span>
+          <span className="ml-auto text-xs font-medium tabular-nums">
+            {(entry.payload as { value: number }).value}
+          </span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -57,30 +87,32 @@ export function ContentTypeDonut({ data, loading }: Props) {
     : [];
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader>
         <CardTitle>Block Types</CardTitle>
         <CardDescription>Distribution of content block types</CardDescription>
       </CardHeader>
-      <CardContent className="h-64 flex items-center">
+      <CardContent>
         {loading ? (
-          <div className="h-full w-full animate-pulse rounded bg-muted" />
+          <div className="h-80 w-full animate-pulse rounded bg-muted" />
         ) : chartData.length === 0 ? (
-          <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+          <div className="flex h-80 w-full items-center justify-center text-sm text-muted-foreground">
             No blocks yet — start writing!
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={320}>
             <PieChart>
               <Pie
                 data={chartData}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
-                cy="50%"
-                innerRadius="45%"
-                outerRadius="70%"
-                paddingAngle={3}
+                cy="42%"
+                outerRadius="82%"
+                innerRadius="68%"
+                paddingAngle={6}
+                cornerRadius={6}
+                strokeWidth={0}
               >
                 {chartData.map((_, i) => (
                   <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
@@ -88,9 +120,8 @@ export function ContentTypeDonut({ data, loading }: Props) {
               </Pie>
               <Tooltip content={<CustomTooltip />} />
               <Legend
-                iconType="circle"
-                iconSize={8}
-                formatter={(value) => <span className="text-xs text-foreground">{value}</span>}
+                content={<CustomLegend />}
+                verticalAlign="bottom"
               />
             </PieChart>
           </ResponsiveContainer>

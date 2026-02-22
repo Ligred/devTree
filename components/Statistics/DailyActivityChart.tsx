@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { ActivityDay } from './types';
 import { formatDuration } from './types';
+import { formatDateShort, formatDateLong, parseLocalDate } from '@/lib/dateUtils';
 
 interface Props {
   data: ActivityDay[];
@@ -22,24 +23,29 @@ interface Props {
 
 type View = '30' | '90';
 
+// Use explicit hex values — CSS custom properties (oklch) are not reliably
+// resolved by Recharts SVG in all browsers / render environments.
 const COLORS = {
-  sessionMs: 'hsl(var(--primary))',
-  contentEvents: 'hsl(var(--chart-2, 142 76% 36%))',
+  sessionMs: '#3b82f6',   // blue-500 — visible on both light and dark backgrounds
+  contentEvents: '#8b5cf6', // violet-500
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CustomTooltip({ active, payload, label }: any) {
+function CustomTooltip({ active, payload }: any) {
   if (!active || !payload?.length) return null;
+  // rawDate is YYYY-MM-DD stored alongside the display label
+  const rawDate: string | undefined = payload[0]?.payload?.rawDate as string | undefined;
+  const dateLabel = rawDate ? formatDateLong(parseLocalDate(rawDate)) : '';
   return (
     <div className="rounded-lg border bg-background p-3 shadow-sm text-sm">
-      <p className="font-medium mb-1">{label}</p>
+      {dateLabel && <p className="font-semibold mb-1.5 text-foreground">{dateLabel}</p>}
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {payload.map((entry: any) => (
         <div key={entry.name} className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full" style={{ background: entry.color }} />
           <span className="text-muted-foreground">{entry.name}:</span>
           <span className="font-medium">
-            {entry.name === 'Session time' ? formatDuration(entry.value) : entry.value}
+            {entry.name === 'Session time' ? formatDuration(entry.value as number) : (entry.value as number)}
           </span>
         </div>
       ))}
@@ -50,8 +56,14 @@ function CustomTooltip({ active, payload, label }: any) {
 export function DailyActivityChart({ data, loading }: Props) {
   const [view, setView] = useState<View>('30');
 
-  const displayData = data.slice(-Number(view)).map((d) => ({
-    date: d.date.slice(5), // MM-DD
+  const sliced = data.slice(-Number(view));
+
+  // Tick density: show ~7-8 labels regardless of window size
+  const tickInterval = view === '30' ? 3 : 9;
+
+  const displayData = sliced.map((d) => ({
+    rawDate: d.date, // kept for full-date tooltip
+    label: formatDateShort(parseLocalDate(d.date)), // e.g. "Feb 15"
     'Session time': d.sessionMs,
     'Content events': d.contentEvents,
   }));
@@ -85,25 +97,43 @@ export function DailyActivityChart({ data, loading }: Props) {
             <AreaChart data={displayData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="sessionGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={COLORS.sessionMs} stopOpacity={0.3} />
+                  <stop offset="5%" stopColor={COLORS.sessionMs} stopOpacity={0.25} />
                   <stop offset="95%" stopColor={COLORS.sessionMs} stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="eventsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={COLORS.contentEvents} stopOpacity={0.3} />
+                  <stop offset="5%" stopColor={COLORS.contentEvents} stopOpacity={0.25} />
                   <stop offset="95%" stopColor={COLORS.contentEvents} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tickLine={false}
+                axisLine={false}
+                interval={tickInterval}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                tickLine={false}
+                axisLine={false}
+              />
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
+              <Legend
+                iconType="circle"
+                iconSize={8}
+                formatter={(value) => (
+                  <span className="text-xs text-muted-foreground">{value}</span>
+                )}
+              />
               <Area
                 type="monotone"
                 dataKey="Session time"
                 stroke={COLORS.sessionMs}
                 fill="url(#sessionGrad)"
                 strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
               />
               <Area
                 type="monotone"
@@ -111,6 +141,8 @@ export function DailyActivityChart({ data, loading }: Props) {
                 stroke={COLORS.contentEvents}
                 fill="url(#eventsGrad)"
                 strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
               />
             </AreaChart>
           </ResponsiveContainer>

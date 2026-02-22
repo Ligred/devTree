@@ -22,10 +22,8 @@
  */
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { useUIStore } from '@/lib/uiStore';
 import { Download, Filter, Menu, Save, Tag, X } from 'lucide-react';
 
-import { UserMenu } from '@/components/UserMenu/UserMenu';
 import { useI18n } from '@/lib/i18n';
 import { computePageStats, downloadMarkdown } from '@/lib/pageUtils';
 import { useSettingsStore } from '@/lib/settingsStore';
@@ -75,7 +73,6 @@ export function MainContent({
 }: MainContentProps) {
   const { t } = useI18n();
   const { tagsPerPageEnabled, tagsPerBlockEnabled } = useSettingsStore();
-  const { openSettings } = useUIStore();
 
   /**
    * Active block-tag filters.
@@ -180,9 +177,31 @@ export function MainContent({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <UserMenu onOpenSettings={openSettings} />
-        </div>
+        {page && (
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              title={t(I18N_EXPORT_MARKDOWN)}
+              aria-label={t(I18N_EXPORT_MARKDOWN)}
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              onClick={() => downloadMarkdown(page)}
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">{t(I18N_EXPORT_MARKDOWN)}</span>
+            </button>
+            <button
+              type="button"
+              aria-label={t('main.savePage')}
+              data-testid="save-page-button"
+              className="inline-flex min-w-22 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+              onClick={onSave}
+              disabled={!isDirty}
+            >
+              <Save size={16} aria-hidden />
+              {saved ? t('main.saved') : t('main.save')}
+            </button>
+          </div>
+        )}
       </header>
 
       {/* ───── Scrollable content area ───── */}
@@ -190,32 +209,6 @@ export function MainContent({
         <div className="mx-auto w-full pr-7.5">
           {page ? (
             <div className="flex flex-col gap-4">
-              {/* ── Page-level actions row (above title) ── */}
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  title={t(I18N_EXPORT_MARKDOWN)}
-                  aria-label={t(I18N_EXPORT_MARKDOWN)}
-                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => downloadMarkdown(page)}
-                >
-                  <Download size={14} />
-                  <span className="hidden sm:inline">{t(I18N_EXPORT_MARKDOWN)}</span>
-                </button>
-
-                <button
-                  type="button"
-                  aria-label={t('main.savePage')}
-                  data-testid="save-page-button"
-                  className="inline-flex min-w-22 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-card disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-                  onClick={onSave}
-                  disabled={!isDirty}
-                >
-                  <Save size={16} aria-hidden />
-                  {saved ? t('main.saved') : t('main.save')}
-                </button>
-              </div>
-
               <PageTitle
                 page={page}
                 readOnly={!onTitleChange}

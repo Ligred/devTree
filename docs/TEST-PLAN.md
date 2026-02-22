@@ -197,6 +197,57 @@ These are *block-level* inline forms. "Apply" signals "apply these settings to t
 | Shows URL below label | Secondary detail is visible |
 | Shows edit form for empty URL | Starts in edit mode when URL is empty |
 
+### `components/Statistics/` — MotivationBanner, StreakCard, StatsSummaryCards
+
+**File:** [`components/Statistics/statistics.test.tsx`](../components/Statistics/statistics.test.tsx)
+
+These tests ensure the statistics UI components render correctly across all key data states and user interactions.
+
+#### `MotivationBanner`
+
+| Test | What it verifies |
+|------|-----------------|
+| `data=null` renders nothing | `null` prop returns null output |
+| Daily message shown for new user | When no achievements qualify, a rotating daily message appears |
+| First-note achievement | `totalPages >= 1` shows the "Achievement" label and first-note message |
+| 7-day streak milestone | `streakCurrent >= 7` shows "Milestone reached!" with streak message |
+| 30-day streak | Full message text is rendered |
+| 100-day milestone (celebration) | "Milestone reached!" + confetti particles rendered |
+| 50-notes achievement | Correct achievement shown when streak < any milestone |
+| Highest priority wins | 100-day streak takes precedence over 50-notes when both qualify |
+| Dismiss button | Clicking × removes the banner from the DOM |
+| Source explanation text | "rotates daily" info text is visible to users |
+| Already-dismissed today | Banner hidden when `localStorage` key is set to today's date |
+
+**Design note — `forceShow` prop:**  
+The component guards against showing twice per day via `localStorage`. All tests use `forceShow={true}` to bypass this guard, making tests deterministic regardless of when they run.
+
+#### `StreakCard`
+
+| Test | What it verifies |
+|------|-----------------|
+| Loading skeletons while `loading=true` | No streak number visible |
+| 0-day streak — no badge | Default empty state |
+| Current streak number | Correct count appears in large text |
+| Best streak displayed | "Best: N days" sub-label |
+| Progress toward next milestone | "N days to X-day milestone" progress bar |
+| 7-day milestone badge | Badge appears when milestone is hit |
+| 100-day milestone badge | Champion badge |
+| 365+ days — no progress bar | No "days to milestone" shown beyond all milestones |
+
+#### `StatsSummaryCards`
+
+| Test | What it verifies |
+|------|-----------------|
+| Loading skeletons | Animated pulse divs when `loading=true` |
+| All four card titles | "Total Notes", "Total Blocks", "Total Time in App", "Writing Time" |
+| Correct count values | Numbers match `totalPages` and `totalBlocks` |
+| Formatted durations | "5h" for session, "2h 30m" for writing |
+| Writing focus % sub-stat | `(writingMs / sessionMs) * 100` displayed |
+| Avg blocks/note sub-stat | `totalBlocks / totalPages.toFixed(1)` displayed |
+| Zero-session safety | No division-by-zero; no `NaN` in output |
+| Null data graceful | Skeletons shown even when `loading=false` but `data=null` |
+
 ---
 
 ## 5. API Route Tests (planned)
