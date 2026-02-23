@@ -55,14 +55,17 @@ export function TopicsBarChart({ data, loading }: Props) {
         <CardDescription>How long you spent in each folder</CardDescription>
       </CardHeader>
       <CardContent className="h-64">
-        {loading ? (
-          <div className="h-full w-full animate-pulse rounded bg-muted" />
-        ) : chartData.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-            No topic data yet — spend some time in your notes
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
+        {(() => {
+          if (loading) return <div className="h-full w-full animate-pulse rounded bg-muted" />;
+          if (chartData.length === 0) {
+            return (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                No topic data yet — spend some time in your notes
+              </div>
+            );
+          }
+          return (
+            <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
               layout="vertical"
@@ -86,7 +89,8 @@ export function TopicsBarChart({ data, loading }: Props) {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );

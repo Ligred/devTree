@@ -52,53 +52,72 @@ const WRITING_MILESTONES = [
   100 * 3_600_000,
 ];
 
-export function StatsSummaryCards({ data, loading }: Props) {
-  const avgBlocksPerNote =
-    data && data.totalPages > 0
-      ? (data.totalBlocks / data.totalPages).toFixed(1)
-      : null;
+function buildNotesBar(noteMilestone: { pct: number; label: string } | null): BarConfig | null {
+  if (!noteMilestone) return null;
+  return {
+    label: `next milestone: ${noteMilestone.label.split(' / ')[1]}`,
+    pct: noteMilestone.pct,
+    color: 'bg-violet-500',
+    tooltip: `${noteMilestone.label} notes — progress toward your next milestone`,
+  };
+}
 
-  const writingPct =
-    data && data.totalSessionTimeMs > 0
-      ? Math.round((data.totalWritingTimeMs / data.totalSessionTimeMs) * 100)
-      : null;
+function buildBlocksBar(
+  data: SummaryData | null,
+  avgBlocksPerNote: string | null,
+  richnessPct: number,
+): BarConfig | null {
+  if (!data || data.totalPages === 0) return null;
+  return {
+    label: 'note richness',
+    pct: richnessPct,
+    color: 'bg-cyan-500',
+    tooltip: `Avg ${avgBlocksPerNote} blocks/note. A well-developed note has 5+ blocks.`,
+  };
+}
 
-  const browsingTimeMs = data
-    ? Math.max(0, data.totalSessionTimeMs - data.totalWritingTimeMs)
-    : 0;
+function buildSessionBar(writingPct: number | null): BarConfig | null {
+  if (writingPct === null) return null;
+  return {
+    label: 'writing focus',
+    pct: writingPct,
+    color: 'bg-emerald-500',
+    tooltip: `${writingPct}% of your session time is spent actively writing. Higher = more productive.`,
+  };
+}
 
-  // Note milestone progress
-  const noteMilestone = data
-    ? milestoneProgress(data.totalPages, NOTE_MILESTONES)
-    : null;
+function buildWritingBar(
+  data: SummaryData | null,
+  writingMilestone: { pct: number; label: string } | null,
+): BarConfig | null {
+  if (!writingMilestone) return null;
+  const nextMs =
+    WRITING_MILESTONES.find((m) => m > (data?.totalWritingTimeMs ?? 0)) ??
+    WRITING_MILESTONES[WRITING_MILESTONES.length - 1]!;
+  return {
+    label: `next milestone: ${formatDuration(nextMs)}`,
+    pct: writingMilestone.pct,
+    color: 'bg-indigo-500',
+    tooltip: 'Progress toward your next writing time milestone',
+  };
+}
 
-  // Note richness: avg blocks/note → target is 5 blocks = "rich note"
-  const richnessPct = data && data.totalPages > 0
-    ? Math.min(100, Math.round((data.totalBlocks / data.totalPages / 5) * 100))
-    : 0;
-
-  // Writing time milestone progress
-  const writingMilestone = data
-    ? milestoneProgress(data.totalWritingTimeMs, WRITING_MILESTONES)
-    : null;
-
-  const cards: CardConfig[] = [
+function buildCountCards(
+  data: SummaryData | null,
+  avgBlocksPerNote: string | null,
+  noteMilestone: { pct: number; label: string } | null,
+  richnessPct: number,
+): CardConfig[] {
+  return [
     {
       key: 'notes',
       label: 'Total Notes',
-      helpText: 'Total number of notes you\'ve created. The bar shows progress toward your next notes milestone.',
+      helpText: "Total number of notes you've created. The bar shows progress toward your next notes milestone.",
       icon: <BookOpen className="h-4 w-4 text-muted-foreground" />,
       value: data ? data.totalPages.toLocaleString() : null,
       sub1: avgBlocksPerNote !== null ? `${avgBlocksPerNote} blocks / note` : 'No notes yet',
       sub2: data ? `${data.totalBlocks.toLocaleString()} blocks total` : null,
-      bar: noteMilestone
-        ? {
-            label: `next milestone: ${noteMilestone.label.split(' / ')[1]}`,
-            pct: noteMilestone.pct,
-            color: 'bg-violet-500',
-            tooltip: `${noteMilestone.label} notes — progress toward your next milestone`,
-          }
-        : null,
+      bar: buildNotesBar(noteMilestone),
     },
     {
       key: 'blocks',
@@ -108,32 +127,27 @@ export function StatsSummaryCards({ data, loading }: Props) {
       value: data ? data.totalBlocks.toLocaleString() : null,
       sub1: data && data.totalPages > 0 ? `across ${data.totalPages} notes` : 'Start writing!',
       sub2: avgBlocksPerNote !== null ? `avg ${avgBlocksPerNote} per note` : null,
-      bar: data && data.totalPages > 0
-        ? {
-            label: 'note richness',
-            pct: richnessPct,
-            color: 'bg-cyan-500',
-            tooltip: `Avg ${avgBlocksPerNote} blocks/note. A well-developed note has 5+ blocks.`,
-          }
-        : null,
+      bar: buildBlocksBar(data, avgBlocksPerNote, richnessPct),
     },
+  ];
+}
+
+function buildTimeCards(
+  data: SummaryData | null,
+  writingPct: number | null,
+  browsingTimeMs: number,
+  writingMilestone: { pct: number; label: string } | null,
+): CardConfig[] {
+  return [
     {
       key: 'session',
       label: 'Total Time in App',
-      helpText: 'Total time you\'ve spent in the app across all sessions. The bar shows your writing focus — what portion of that time was spent actively writing vs just browsing.',
+      helpText: "Total time you've spent in the app across all sessions. The bar shows your writing focus — what portion of that time was spent actively writing vs just browsing.",
       icon: <Clock className="h-4 w-4 text-muted-foreground" />,
       value: data ? formatDuration(data.totalSessionTimeMs) : null,
       sub1: writingPct !== null ? `${writingPct}% writing focus` : 'Time spent in app',
       sub2: browsingTimeMs > 0 ? `${formatDuration(browsingTimeMs)} browsing` : null,
-      bar:
-        writingPct !== null
-          ? {
-              label: 'writing focus',
-              pct: writingPct,
-              color: 'bg-emerald-500',
-              tooltip: `${writingPct}% of your session time is spent actively writing. Higher = more productive.`,
-            }
-          : null,
+      bar: buildSessionBar(writingPct),
     },
     {
       key: 'writing',
@@ -142,22 +156,40 @@ export function StatsSummaryCards({ data, loading }: Props) {
       icon: <PenTool className="h-4 w-4 text-muted-foreground" />,
       value: data ? formatDuration(data.totalWritingTimeMs) : null,
       sub1: writingPct !== null ? `${writingPct}% of session time` : 'Actively typing',
-      sub2:
-        data && data.totalWritingTimeMs > 0
-          ? `${formatDuration(browsingTimeMs)} other activity`
-          : null,
-      bar: writingMilestone
-        ? {
-            label: `next milestone: ${formatDuration(WRITING_MILESTONES[WRITING_MILESTONES.indexOf(
-              WRITING_MILESTONES.find((m) => m > (data?.totalWritingTimeMs ?? 0)) ?? WRITING_MILESTONES[WRITING_MILESTONES.length - 1]
-            )])}`,
-            pct: writingMilestone.pct,
-            color: 'bg-indigo-500',
-            tooltip: `Progress toward your next writing time milestone`,
-          }
-        : null,
+      sub2: data && data.totalWritingTimeMs > 0 ? `${formatDuration(browsingTimeMs)} other activity` : null,
+      bar: buildWritingBar(data, writingMilestone),
     },
   ];
+}
+
+function buildCards(data: SummaryData | null): CardConfig[] {
+  const avgBlocksPerNote =
+    data && data.totalPages > 0
+      ? (data.totalBlocks / data.totalPages).toFixed(1)
+      : null;
+  const writingPct =
+    data && data.totalSessionTimeMs > 0
+      ? Math.round((data.totalWritingTimeMs / data.totalSessionTimeMs) * 100)
+      : null;
+  const browsingTimeMs = data
+    ? Math.max(0, data.totalSessionTimeMs - data.totalWritingTimeMs)
+    : 0;
+  const noteMilestone = data ? milestoneProgress(data.totalPages, NOTE_MILESTONES) : null;
+  const richnessPct =
+    data && data.totalPages > 0
+      ? Math.min(100, Math.round((data.totalBlocks / data.totalPages / 5) * 100))
+      : 0;
+  const writingMilestone = data
+    ? milestoneProgress(data.totalWritingTimeMs, WRITING_MILESTONES)
+    : null;
+  return [
+    ...buildCountCards(data, avgBlocksPerNote, noteMilestone, richnessPct),
+    ...buildTimeCards(data, writingPct, browsingTimeMs, writingMilestone),
+  ];
+}
+
+export function StatsSummaryCards({ data, loading }: Props) {
+  const cards = buildCards(data);
 
   return (
     <TooltipProvider>

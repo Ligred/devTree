@@ -9,7 +9,7 @@
 
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { MotivationBanner } from './MotivationBanner';
 import { StreakCard } from './StreakCard';

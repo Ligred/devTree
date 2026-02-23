@@ -166,20 +166,31 @@ function CelebrationParticles() {
   );
 }
 
+// ─── Internal sub-component ────────────────────────────────────────────────
+function BannerLabel({ isMilestone, hasAchievement }: { isMilestone: boolean; hasAchievement: boolean }) {
+  if (isMilestone) {
+    return (
+      <span className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+        Milestone reached!
+      </span>
+    );
+  }
+  if (hasAchievement) {
+    return (
+      <span className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400">
+        Achievement
+      </span>
+    );
+  }
+  return <span className="text-xs text-muted-foreground/80">Daily motivation</span>;
+}
+
 // ─── Banner component ──────────────────────────────────────────────────────
 export function MotivationBanner({ data, forceShow = false }: Props) {
-  const [shownToday, setShownToday] = useState(true); // SSR-safe default
+  const [shownToday] = useState<boolean>(() => (forceShow ? false : wasShownToday()));
   const [dismissed, setDismissed] = useState(false);
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (forceShow) {
-      setShownToday(false);
-    } else {
-      setShownToday(wasShownToday());
-    }
-  }, [forceShow]);
 
   // Trigger entrance animation after mount
   useEffect(() => {
@@ -232,17 +243,7 @@ export function MotivationBanner({ data, forceShow = false }: Props) {
         <div className="flex-1 min-w-0">
           {/* Label row */}
           <div className="flex items-center gap-1.5 mb-1">
-            {isMilestone ? (
-              <span className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
-                Milestone reached!
-              </span>
-            ) : achievement ? (
-              <span className="text-xs font-semibold uppercase tracking-wide text-violet-600 dark:text-violet-400">
-                Achievement
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground/80">Daily motivation</span>
-            )}
+            <BannerLabel isMilestone={isMilestone} hasAchievement={!!achievement} />
           </div>
 
           {/* Message */}

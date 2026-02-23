@@ -93,14 +93,17 @@ export function ContentTypeDonut({ data, loading }: Props) {
         <CardDescription>Distribution of content block types</CardDescription>
       </CardHeader>
       <CardContent>
-        {loading ? (
-          <div className="h-80 w-full animate-pulse rounded bg-muted" />
-        ) : chartData.length === 0 ? (
-          <div className="flex h-80 w-full items-center justify-center text-sm text-muted-foreground">
-            No blocks yet — start writing!
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height={320}>
+        {(() => {
+          if (loading) return <div className="h-80 w-full animate-pulse rounded bg-muted" />;
+          if (chartData.length === 0) {
+            return (
+              <div className="flex h-80 w-full items-center justify-center text-sm text-muted-foreground">
+                No blocks yet — start writing!
+              </div>
+            );
+          }
+          return (
+            <ResponsiveContainer width="100%" height={320}>
             <PieChart>
               <Pie
                 data={chartData}
@@ -125,7 +128,8 @@ export function ContentTypeDonut({ data, loading }: Props) {
               />
             </PieChart>
           </ResponsiveContainer>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );

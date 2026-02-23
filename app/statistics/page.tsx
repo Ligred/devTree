@@ -10,7 +10,6 @@ import { DailyActivityChart } from '@/components/Statistics/DailyActivityChart';
 import { TopicsBarChart } from '@/components/Statistics/TopicsBarChart';
 import { ContentTypeDonut } from '@/components/Statistics/ContentTypeDonut';
 import { ActivityHeatmap } from '@/components/Statistics/ActivityHeatmap';
-import { MotivationBanner } from '@/components/Statistics/MotivationBanner';
 import { useStatsStore } from '@/lib/statsStore';
 import type { ActivityDay, ContentData, SummaryData, TopicData } from '@/components/Statistics/types';
 
@@ -104,9 +103,6 @@ export default function StatisticsPage() {
               Track your learning progress and habits
             </p>
           </div>
-
-          {/* Motivation banner — shown once per day, dismissed per session */}
-          <MotivationBanner data={summary} />
 
           {/* Error state */}
           {error && (

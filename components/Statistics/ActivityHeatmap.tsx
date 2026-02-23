@@ -33,6 +33,15 @@ const VIOLET_DARK: [string, string, string, string, string] = [
   '#2e1065', // violet-950 — max activity (darkest)
 ];
 
+/** Map a total activity count to a heatmap level 0–4. */
+function getActivityLevel(total: number): 0 | 1 | 2 | 3 | 4 {
+  if (total === 0) return 0;
+  if (total < 3) return 1;
+  if (total < 8) return 2;
+  if (total < 15) return 3;
+  return 4;
+}
+
 export function ActivityHeatmap({ data, loading }: Props) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -68,8 +77,7 @@ export function ActivityHeatmap({ data, loading }: Props) {
   // Map ActivityDay[] → Activity[] (date, count, level)
   const calendarData = data.map((d) => {
     const total = d.contentEvents + Math.floor(d.sessionMs / 60_000);
-    const level = total === 0 ? 0 : total < 3 ? 1 : total < 8 ? 2 : total < 15 ? 3 : 4;
-    return { date: d.date, count: total, level: level as 0 | 1 | 2 | 3 | 4 };
+    return { date: d.date, count: total, level: getActivityLevel(total) };
   });
 
   return (
@@ -79,14 +87,17 @@ export function ActivityHeatmap({ data, loading }: Props) {
         <CardDescription>Your daily activity over the last 12 months</CardDescription>
       </CardHeader>
       <CardContent ref={containerRef} className="pb-4">
-        {loading ? (
-          <div className="h-28 w-full animate-pulse rounded bg-muted" />
-        ) : calendarData.length === 0 ? (
-          <div className="flex h-28 items-center justify-center text-sm text-muted-foreground">
-            No activity data yet
-          </div>
-        ) : (
-          <TooltipProvider>
+        {(() => {
+          if (loading) return <div className="h-28 w-full animate-pulse rounded bg-muted" />;
+          if (calendarData.length === 0) {
+            return (
+              <div className="flex h-28 items-center justify-center text-sm text-muted-foreground">
+                No activity data yet
+              </div>
+            );
+          }
+          return (
+            <TooltipProvider>
             <ActivityCalendar
               data={calendarData}
               colorScheme={isDark ? 'dark' : 'light'}
@@ -118,7 +129,8 @@ export function ActivityHeatmap({ data, loading }: Props) {
               }}
             />
           </TooltipProvider>
-        )}
+          );
+        })()}
       </CardContent>
     </Card>
   );

@@ -81,6 +81,11 @@ const sampleSummary50Pages: SummaryData = {
   streakCurrent: 2,
 };
 
+/** Deterministic pseudo-random in [0, 1) based on a seed (Knuth multiplicative hash). */
+function stableRand(seed: number): number {
+  return ((seed * 2654435761) >>> 0) / 0xffffffff;
+}
+
 /** Generate `n` days of activity going backwards from today. */
 function generateActivityDays(n: number): ActivityDay[] {
   const days: ActivityDay[] = [];
@@ -92,9 +97,9 @@ function generateActivityDays(n: number): ActivityDay[] {
     const isWeekend = d.getDay() === 0 || d.getDay() === 6;
     days.push({
       date: dateStr!,
-      sessionMs: isWeekend ? 0 : Math.floor(Math.random() * 3_600_000),
-      pagesVisited: isWeekend ? 0 : Math.floor(Math.random() * 8),
-      contentEvents: isWeekend ? 0 : Math.floor(Math.random() * 20),
+      sessionMs: isWeekend ? 0 : Math.floor(stableRand(i) * 3_600_000),
+      pagesVisited: isWeekend ? 0 : Math.floor(stableRand(i + 1000) * 8),
+      contentEvents: isWeekend ? 0 : Math.floor(stableRand(i + 2000) * 20),
     });
   }
   return days;
@@ -128,7 +133,7 @@ const sampleContent: ContentData = {
   },
   creationTimeline: Array.from({ length: 12 }, (_, i) => ({
     week: new Date(Date.now() - (11 - i) * 7 * 86_400_000).toISOString().split('T')[0]!,
-    count: Math.floor(Math.random() * 30) + 1,
+    count: Math.floor(stableRand(i + 3000) * 30) + 1,
   })),
 };
 
@@ -159,6 +164,22 @@ export const Loading: SummaryStory = {
 
 export const NoData: SummaryStory = {
   args: { data: null, loading: false },
+};
+
+export const ApproachingMilestone: SummaryStory = {
+  name: 'StatsSummaryCards / Approaching milestone',
+  args: {
+    data: { ...sampleSummaryBase, totalPages: 8, totalBlocks: 36, totalWritingTimeMs: 45 * 60_000 },
+    loading: false,
+  },
+};
+
+export const RichNotes: SummaryStory = {
+  name: 'StatsSummaryCards / Rich notes (high richness)',
+  args: {
+    data: { ...sampleSummaryBase, totalPages: 20, totalBlocks: 200, totalWritingTimeMs: 8 * 3_600_000 },
+    loading: false,
+  },
 };
 
 // ─── StreakCard ─────────────────────────────────────────────────────────────
