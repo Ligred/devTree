@@ -79,6 +79,9 @@
   background: var(--popover);
   padding: 4px;
   box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  /* Entrance animation — scale up from slightly smaller */
+    animation: menu-enter 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    transform-origin: top left;
 }
 
 .block-action-menu-sep {
@@ -190,4 +193,44 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+/* Animations & transitions                                                    */
+/* ─────────────────────────────────────────────────────────────────────────── */
+
+/* Menu / picker popup entrance — used by .block-action-menu (both the action
+ * dropdown and the block-picker share this class).                            */
+@keyframes menu-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Atom-node block entrance — applied via @starting-style so it fires only
+ * when the element is first inserted into the DOM (new block added), not on
+ * subsequent re-renders.  Scoped to NodeViewWrapper roots only so that
+ * lightweight text paragraphs appear instantly (better for typing flow).     */
+.page-editor-content [data-node-view-wrapper] {
+  transition: opacity 220ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@starting-style {
+  .page-editor-content [data-node-view-wrapper] {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Slash-command suggestion list — same popup feel */
+.tiptap-slash-list {
+  animation: menu-enter 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: top left;
 }

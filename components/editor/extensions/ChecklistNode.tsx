@@ -11,6 +11,7 @@ import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from 
 import { useEditable } from '../EditableContext';
 import { CheckSquare, GripVertical, Plus, Trash2 } from 'lucide-react';
 import { BlockTagChips } from '../BlockTagChips';
+import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nodeUtils';
 import { cn } from '@/lib/utils';
 
 type CheckItem = { id: string; text: string; checked: boolean };
@@ -39,7 +40,7 @@ function ChecklistNodeView({ node, updateAttributes }: ReactNodeViewProps) {
     updateItems(safeItems.map((i) => (i.id === id ? { ...i, text } : i)));
 
   return (
-    <NodeViewWrapper className="my-2 rounded-xl border border-border bg-card overflow-hidden" data-drag-handle>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
         <CheckSquare size={13} className="text-muted-foreground" />
@@ -140,10 +141,7 @@ function ChecklistNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
 export const ChecklistNode = Node.create({
   name: 'checklistNode',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  selectable: true,
+  ...BLOCK_ATOM_SPEC,
 
   addAttributes() {
     return {
@@ -159,7 +157,7 @@ export const ChecklistNode = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(ChecklistNodeView, {
-      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+      stopEvent: blockStopEvent,
     });
   },
 });

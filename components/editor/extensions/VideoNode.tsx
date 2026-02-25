@@ -11,6 +11,8 @@ import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from 
 import { useEditable } from '../EditableContext';
 import { Video } from 'lucide-react';
 import { BlockTagChips } from '../BlockTagChips';
+import { BlockHeader } from '../BlockHeader';
+import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nodeUtils';
 
 /** Convert YouTube watch URL to an embed URL; pass through other URLs unchanged. */
 function toEmbedUrl(url: string): string {
@@ -36,12 +38,8 @@ function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const embedUrl = url ? toEmbedUrl(url) : '';
 
   return (
-    <NodeViewWrapper className="my-2 rounded-xl border border-border bg-card overflow-hidden" data-drag-handle>
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
-        <Video size={13} className="text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">Video</span>
-      </div>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+      <BlockHeader icon={<Video size={13} className="text-muted-foreground" />} title="Video" />
 
       {/* Tags */}
       <BlockTagChips
@@ -66,6 +64,7 @@ function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
             <iframe
               src={embedUrl}
               title="Video"
+              data-testid="video-block-iframe"
               className="absolute inset-0 h-full w-full"
               allowFullScreen
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -85,10 +84,7 @@ function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
 export const VideoNode = Node.create({
   name: 'videoNode',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  selectable: true,
+  ...BLOCK_ATOM_SPEC,
 
   addAttributes() {
     return {
@@ -103,7 +99,7 @@ export const VideoNode = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(VideoNodeView, {
-      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+      stopEvent: blockStopEvent,
     });
   },
 });

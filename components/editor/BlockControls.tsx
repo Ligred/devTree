@@ -67,6 +67,8 @@ type BlockPickerAnchor = {
   x: number;
   y: number;
   openAbove: boolean;
+  /** ProseMirror position where the chosen block will be inserted. */
+  insertAt: number;
 };
 
 type Props = { editor: Editor };
@@ -175,7 +177,7 @@ export function BlockControls({ editor }: Props) {
     setMenuAnchor({ x, y, nodePos, openAbove });
   }, [editor, handleEl]);
 
-  // ── + button → insert paragraph then open block-picker popup ────────────
+  // ── + button → open block-picker popup at the position after current block ─
 
   const handlePlus = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -194,10 +196,6 @@ export function BlockControls({ editor }: Props) {
       insertAt = editor.state.doc.content.size;
     }
 
-    // Insert a fresh paragraph and move the cursor there.
-    // The block picker will replace it when the user picks a block type.
-    editor.chain().insertContentAt(insertAt, { type: 'paragraph' }).focus(insertAt + 1).run();
-
     // Position the picker to the right of the drag handle, near the + button.
     const rect = handleEl.getBoundingClientRect();
     const openAbove = (window.innerHeight - rect.bottom) < PICKER_HEIGHT_ESTIMATE + 8;
@@ -206,7 +204,7 @@ export function BlockControls({ editor }: Props) {
       ? Math.max(rect.top - PICKER_HEIGHT_ESTIMATE, 8)
       : rect.bottom + 4;
 
-    setPickerAnchor({ x, y, openAbove });
+    setPickerAnchor({ x, y, openAbove, insertAt });
   }, [editor, handleEl, pickerAnchor]);
 
   // ── Override drag-ghost for all block types ───────────────────────────────
@@ -392,8 +390,9 @@ export function BlockControls({ editor }: Props) {
           x={pickerAnchor.x}
           y={pickerAnchor.y}
           onSelect={(item) => {
+            const pos = pickerAnchor.insertAt;
             setPickerAnchor(null);
-            item.command(editor);
+            editor.chain().insertContentAt(pos, item.insertSpec).focus().run();
           }}
           onClose={() => setPickerAnchor(null)}
         />,

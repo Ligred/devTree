@@ -25,7 +25,8 @@ public class EditorTests : E2ETestBase
     public async Task NewPage_StartsWithNoBlocks()
     {
         var count = await App.Editor.BlockCountAsync();
-        Assert.That(count, Is.EqualTo(0));
+        // Tiptap always initialises with one empty paragraph node; "no user blocks" == 1.
+        Assert.That(count, Is.EqualTo(1));
     }
 
     // ── Add blocks ───────────────────────────────────────────────────────────
@@ -69,9 +70,9 @@ public class EditorTests : E2ETestBase
         await App.Editor.AddBlockAsync("Code");
         await App.Editor.SetCodeLanguageAsync("typescript");
 
-        // Language button should now show "typescript"
-        var langBtn = Page.Locator("button[class*='font-mono']").Last;
-        await Expect(langBtn).ToContainTextAsync("typescript");
+        // The CodeBlock uses a <select> element; check its current value.
+        var langSelect = Page.Locator("select").Last;
+        await Expect(langSelect).ToHaveValueAsync("typescript");
     }
 
     [Test]
@@ -143,7 +144,7 @@ public class EditorTests : E2ETestBase
         await App.Editor.TypeAgendaItemAsync("Learn Playwright");
 
         // Verify the text input has the expected value
-        var agendaInputs = Page.Locator("input[placeholder='To-do item…']");
+        var agendaInputs = Page.Locator("input[placeholder='Item\u2026']");
         await Expect(agendaInputs.Last).ToHaveValueAsync("Learn Playwright");
 
         // Checkbox is a sibling of the text input inside the same flex row
@@ -158,7 +159,7 @@ public class EditorTests : E2ETestBase
         await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Image");
 
-        await Expect(Page.GetByPlaceholder("https://example.com/image.png")).ToBeVisibleAsync();
+        await Expect(Page.GetByPlaceholder("Image URL\u2026")).ToBeVisibleAsync();
     }
 
     [Test]
@@ -182,7 +183,7 @@ public class EditorTests : E2ETestBase
         await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Video");
 
-        await Expect(Page.GetByPlaceholder("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).ToBeVisibleAsync();
+        await Expect(Page.GetByPlaceholder("YouTube or video URL\u2026")).ToBeVisibleAsync();
     }
 
     [Test]

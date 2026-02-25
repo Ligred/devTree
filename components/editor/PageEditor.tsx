@@ -5,7 +5,7 @@
  *
  * All legacy block types (Code, Checklist, Canvas, Audio, Video, Image, Table,
  * LinkCard) are wired in as custom Tiptap atom node extensions and can be
- * inserted via the slash-command menu or the drag-handle context menu.
+ * inserted via the block picker or the drag-handle context menu.
  *
  * Props
  * ─────
@@ -133,7 +133,8 @@ export function PageEditor({ content, editable, onChange, pageId, onEditorReady,
 
       // ── Custom marks ──────────────────────────────────────────────────────
       CommentMark,
-      BookmarkMark,      InlineTagMark,
+      BookmarkMark,
+      InlineTagMark,
       // ── Custom atom nodes ─────────────────────────────────────────────────
       CodeBlockNode,
       ChecklistNode,
@@ -210,17 +211,13 @@ export function PageEditor({ content, editable, onChange, pageId, onEditorReady,
   // ── Block-level tag filter ────────────────────────────────────────────────
   // When activeFilterTags is non-empty, hide every top-level block that doesn't
   // carry a matching tag (attrs.tags on atom nodes, or inlineTag marks on text).
+  // Re-run after any document change so newly-added blocks react immediately.
   useEffect(() => {
     if (!editor) return;
-    applyBlockFilter(editor, activeFilterTags);
-  }, [editor, activeFilterTags]);
-
-  // Re-run filter after any document change so newly-added blocks react.
-  useEffect(() => {
-    if (!editor) return;
-    const refilter = () => applyBlockFilter(editor, activeFilterTags);
-    editor.on('update', refilter);
-    return () => { editor.off('update', refilter); };
+    const apply = () => applyBlockFilter(editor, activeFilterTags);
+    apply();
+    editor.on('update', apply);
+    return () => { editor.off('update', apply); };
   }, [editor, activeFilterTags]);
 
   if (!editor) return null;
@@ -242,19 +239,16 @@ export function PageEditor({ content, editable, onChange, pageId, onEditorReady,
 // ── AddBlockButton ────────────────────────────────────────────────────────────
 
 function AddBlockButton({ editor }: Readonly<{ editor: Editor }>) {
-  const [anchor, setAnchor] = useState<{ x: number; y: number } | null>(null);
+  const [anchor, setAnchor] = useState<{ x: number; y: number; insertAt: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
   const handleClick = () => {
     if (anchor) { setAnchor(null); return; }
 
-    // Insert a fresh empty paragraph at the END of the document and place the
-    // cursor inside it — exactly the same as what the inline + button does.
-    // The picker's onSelect will then call item.command which runs
-    // clearNodes() + setXxx() on that empty paragraph.
-    const endPos = editor.state.doc.content.size;
-    editor.chain().insertContentAt(endPos, { type: 'paragraph' }).focus(endPos + 1).run();
+    // Remember the end-of-document insertion point but do NOT insert anything
+    // yet — inserting before the user picks would cause a visible layout jump.
+    const insertAt = editor.state.doc.content.size;
 
     // Anchor the picker above the button
     const rect = btnRef.current?.getBoundingClientRect();
@@ -263,7 +257,7 @@ function AddBlockButton({ editor }: Readonly<{ editor: Editor }>) {
     const PICKER_H = 380;
     const x = Math.min(rect.left, window.innerWidth - PICKER_W - 8);
     const y = Math.max(rect.top - PICKER_H - 8, 8);
-    setAnchor({ x, y });
+    setAnchor({ x, y, insertAt });
   };
 
   // Close on outside click
@@ -304,10 +298,9 @@ function AddBlockButton({ editor }: Readonly<{ editor: Editor }>) {
           x={anchor.x}
           y={anchor.y}
           onSelect={(item) => {
+            const pos = anchor.insertAt;
             setAnchor(null);
-            // Cursor is already in the new empty paragraph inserted in handleClick.
-            // item.command calls clearNodes() + setXxx() which transforms it.
-            item.command(editor);
+            editor.chain().insertContentAt(pos, item.insertSpec).focus().run();
           }}
           onClose={() => setAnchor(null)}
         />,

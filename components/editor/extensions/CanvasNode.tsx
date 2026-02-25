@@ -11,9 +11,12 @@ import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from 
 import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useTheme } from 'next-themes';
 import { useEditable } from '../EditableContext';
 import { Palette, Maximize2, Minimize2 } from 'lucide-react';
 import { BlockTagChips } from '../BlockTagChips';
+import { BlockHeader } from '../BlockHeader';
+import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nodeUtils';
 
 const Excalidraw = dynamic(
   () => import('@excalidraw/excalidraw').then((m) => ({ default: m.Excalidraw })),
@@ -29,6 +32,8 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   // PageEditor provides EditableContext; tiptap-react uses createPortal so
   // context propagates correctly into all node views without extra wiring.
   const isEditable = useEditable();
+  const { resolvedTheme } = useTheme();
+  const canvasTheme = resolvedTheme === 'light' ? 'light' : 'dark';
 
   const [fullscreen, setFullscreen] = useState(false);
   // Key incremented on each fullscreen toggle so Excalidraw remounts with
@@ -44,7 +49,6 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   // fullscreen portal). Used for the drag-prevention effect below.
   const editorCanvasRef = useRef<HTMLDivElement>(null);
 
-  // ── Prevent drag-ghost when drawing inside Excalidraw ──────────────────────
   // ── Prevent drag-ghost when painting inside Excalidraw ──────────────────
   // The drag handle makes the whole block draggable. If the user draws inside
   // the canvas with pointer-down → pointermove, the browser misreads it as a
@@ -133,7 +137,7 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [excalidrawKey]); // intentionally ignore `data` — see comment above
 
-  const handleFullscreenToggle = () => {
+  const handleFullscreenToggle = useCallback(() => {
     // Flush any pending save so the persisted `data` attr is current before remount.
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -142,7 +146,7 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
     // Remount Excalidraw with fresh initialData sourced from the now-current attr.
     setExcalidrawKey((k) => k + 1);
     setFullscreen((v) => !v);
-  };
+  }, [saveTimerRef]);
 
   const excalidrawInstance = (
     <Excalidraw
@@ -153,7 +157,7 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
       viewModeEnabled={!isEditable}
       gridModeEnabled={false}
       zenModeEnabled={false}
-      theme="dark"
+      theme={canvasTheme}
       UIOptions={{ canvasActions: { export: false, loadScene: false } }}
     />
   );
@@ -170,7 +174,7 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
   return (
     <NodeViewWrapper
-      className="my-2 rounded-xl border border-border bg-card overflow-hidden"
+      className={BLOCK_NODE_WRAPPER_CLASS}
       data-drag-handle
     >
       {fullscreen ? (
@@ -183,12 +187,11 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
         </div>
       ) : (
         <>
-          {/* Header */}
-          <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
-            <Palette size={13} className="text-muted-foreground" />
-            <span className="flex-1 text-xs font-medium text-muted-foreground">Canvas</span>
-            {toggleBtn}
-          </div>
+          <BlockHeader
+            icon={<Palette size={13} className="text-muted-foreground" />}
+            title="Canvas"
+            actions={toggleBtn}
+          />
           {/* Tags */}
           <BlockTagChips
             tags={tags ?? []}
@@ -215,12 +218,11 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
        */}
       {isMounted && fullscreen && createPortal(
         <div className="fixed inset-0 z-[9999] bg-card flex flex-col">
-          {/* Header */}
-          <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
-            <Palette size={13} className="text-muted-foreground" />
-            <span className="flex-1 text-xs font-medium text-muted-foreground">Canvas</span>
-            {toggleBtn}
-          </div>
+          <BlockHeader
+            icon={<Palette size={13} className="text-muted-foreground" />}
+            title="Canvas"
+            actions={toggleBtn}
+          />
           {/* Tags */}
           <BlockTagChips
             tags={tags ?? []}
@@ -246,10 +248,7 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
 export const CanvasNode = Node.create({
   name: 'canvasNode',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  selectable: true,
+  ...BLOCK_ATOM_SPEC,
 
   addAttributes() {
     return {
@@ -264,7 +263,7 @@ export const CanvasNode = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(CanvasNodeView, {
-      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+      stopEvent: blockStopEvent,
     });
   },
 });

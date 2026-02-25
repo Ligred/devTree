@@ -1,7 +1,5 @@
 namespace DevTree.E2E.PageObjects;
 
-using System.Text.RegularExpressions;
-
 /// <summary>
 /// Page object for the main content / block editor area.
 /// </summary>
@@ -28,10 +26,12 @@ public class EditorPage(IPage page)
 
     private ILocator TiptapEditor => _page.Locator(".page-editor-content").First;
 
-    // ── Block picker via slash command ──────────────────────────────────────
+    // ── Block picker via "Add block" button ─────────────────────────────────
 
     /// <summary>
-    /// Inserts a block via the Tiptap slash-command menu.
+    /// Inserts a block via the "Add block" button at the bottom of the editor.
+    /// Uses the block-picker search to reliably find and click the correct item,
+    /// avoiding timing problems associated with the slash-command approach.
     /// Assumes the page is already in edit mode.
     /// </summary>
     public async Task AddBlockAsync(string blockLabel)
@@ -39,24 +39,23 @@ public class EditorPage(IPage page)
         if (!BlockLabelToSlashTitle.TryGetValue(blockLabel, out var slashTitle))
             throw new ArgumentException($"Unsupported block label: {blockLabel}", nameof(blockLabel));
 
-        // Click at the end of the editor and press Enter to get a fresh line
-        var editor = TiptapEditor;
-        await editor.ClickAsync();
-        await _page.Keyboard.PressAsync("End");
-        await _page.Keyboard.PressAsync("Enter");
+        // Click the "Add block" button in the editor footer.
+        var addBlockBtn = _page.GetByRole(AriaRole.Button, new() { Name = "Add block", Exact = true });
+        await addBlockBtn.ClickAsync();
 
-        // Type "/" to trigger slash menu, then type first word of title to filter
-        await _page.Keyboard.TypeAsync("/");
+        // Wait for the block picker to appear.
+        var picker = _page.Locator("[role='menu'][aria-label='Insert block']");
+        await picker.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
+
+        // Type the full title into the search box to filter the list.
+        var searchInput = picker.Locator("input[aria-label='Search block types']");
+        await searchInput.FillAsync(slashTitle);
         await _page.WaitForTimeoutAsync(200);
-        await _page.Keyboard.TypeAsync(slashTitle.Split(' ')[0]);
-        await _page.WaitForTimeoutAsync(300);
 
-        // Click the first matching slash-menu button
-        var slashItem = _page
-            .Locator("[role='button']:has-text('" + slashTitle + "'), button:has-text('" + slashTitle + "')")
-            .Last;
-        await slashItem.ClickAsync(new() { Timeout = 5_000 });
-        await _page.WaitForTimeoutAsync(250);
+        // Click the first matching item.
+        var item = picker.Locator("button").Filter(new() { HasText = slashTitle }).First;
+        await item.ClickAsync(new() { Timeout = 5_000 });
+        await _page.WaitForTimeoutAsync(300);
     }
 
     /// <summary>
@@ -89,31 +88,14 @@ public class EditorPage(IPage page)
     public ILocator LastCodeEditor =>
         _page.Locator(".monaco-editor").Last;
 
-    /// <summary>Changes the language of the last code block.</summary>
+    /// <summary>Changes the language of the last code block via the language &lt;select&gt;.</summary>
     public async Task SetCodeLanguageAsync(string language)
     {
-        // Click the language dropdown button (shows current language, has font-mono class)
-        var langBtn = _page.Locator("button[class*='font-mono']").Last;
-        await langBtn.ClickAsync();
-
-        // Wait for dropdown to appear - look for any popover content
-        await _page.WaitForTimeoutAsync(300);
-
-        // Try to find the language button in the dropdown
-        // First, try in the last popover (most recently opened)
-        var allPopovers = _page.Locator("[data-radix-popper-content-wrapper]");
-        var count = await allPopovers.CountAsync();
-        
-        if (count > 0)
-        {
-            var dropdown = allPopovers.Nth(count - 1);
-            await dropdown.GetByRole(AriaRole.Button, new() { Name = language, Exact = true }).ClickAsync();
-        }
-        else
-        {
-            // Fallback: search the entire page
-            await _page.GetByRole(AriaRole.Button, new() { Name = language, Exact = true }).Last.ClickAsync();
-        }
+        // CodeBlockNode renders a plain <select> element containing an <option> for each language.
+        var langSelect = _page.Locator("select")
+            .Filter(new() { Has = _page.Locator($"option[value='{language}']") })
+            .Last;
+        await langSelect.SelectOptionAsync(language);
     }
 
     // ── Table block ────────────────────────────────────────────────────────
@@ -138,9 +120,9 @@ public class EditorPage(IPage page)
     public Task AddTableRowAsync() =>
         _page.GetByRole(AriaRole.Button, new() { Name = "Add row" }).Last.ClickAsync();
 
-    /// <summary>Clicks the "+" column button in the last table.</summary>
+    /// <summary>Clicks the "Add column" button in the last table block header.</summary>
     public Task AddTableColumnAsync() =>
-        _page.Locator("table thead th button[aria-label='Add column']").Last.ClickAsync();
+        _page.GetByRole(AriaRole.Button, new() { Name = "Add column" }).Last.ClickAsync();
 
     // ── Agenda block ───────────────────────────────────────────────────────
 
@@ -148,12 +130,16 @@ public class EditorPage(IPage page)
     public Task AddAgendaItemAsync() =>
         _page.GetByRole(AriaRole.Button, new() { Name = "Add item" }).Last.ClickAsync();
 
-    /// <summary>Types text into the last agenda text input.</summary>
+    /// <summary>Types text into the last agenda text input.
+    /// Automatically clicks "Add item" first if no item inputs exist yet.</summary>
     public async Task TypeAgendaItemAsync(string text)
     {
-        var inputs = _page.Locator("input[placeholder='To-do item…']");
-        var count  = await inputs.CountAsync();
-        await inputs.Nth(count - 1).FillAsync(text);
+        // A fresh Checklist block has no item rows — click "Add item" to create one.
+        await _page.GetByRole(AriaRole.Button, new() { Name = "Add item" }).Last.ClickAsync();
+
+        var inputs = _page.Locator("input[placeholder='Item\u2026']");
+        await inputs.Last.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
+        await inputs.Last.FillAsync(text);
     }
 
     /// <summary>Toggles the checkbox at the given index (0-based).</summary>
@@ -165,41 +151,49 @@ public class EditorPage(IPage page)
 
     // ── Image block ────────────────────────────────────────────────────────
 
-    /// <summary>Sets the URL and applies the image block form.</summary>
+    /// <summary>Fills the URL input of the last image block. The image updates in real-time.</summary>
     public async Task SetImageUrlAsync(string url)
     {
-        var urlInput = _page.GetByPlaceholder("https://example.com/image.png").Last;
+        var urlInput = _page.GetByPlaceholder("Image URL\u2026").Last;
         await urlInput.FillAsync(url);
-
-        var container = urlInput.Locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
-        var applyButton = container.GetByRole(
-            AriaRole.Button,
-            new() { NameRegex = new Regex("^(Apply|Застосувати)$", RegexOptions.IgnoreCase) }
-        );
-        await applyButton.ClickAsync();
+        await _page.WaitForTimeoutAsync(300);
     }
 
     // ── Video block ────────────────────────────────────────────────────────
 
-    /// <summary>Sets the URL and applies the video block form.</summary>
+    /// <summary>Fills the URL input of the last video block. The embed updates in real-time.</summary>
     public async Task SetVideoUrlAsync(string url)
     {
-        var urlInput = _page.GetByPlaceholder("https://www.youtube.com/watch?v=dQw4w9WgXcQ").Last;
+        var urlInput = _page.GetByPlaceholder("YouTube or video URL\u2026").Last;
         await urlInput.FillAsync(url);
-
-        var container = urlInput.Locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
-        var applyButton = container.GetByRole(
-            AriaRole.Button,
-            new() { NameRegex = new Regex("^(Apply|Застосувати)$", RegexOptions.IgnoreCase) }
-        );
-        await applyButton.ClickAsync();
-        await _page.WaitForTimeoutAsync(250);
+        await _page.WaitForTimeoutAsync(500);
     }
 
     // ── Block controls ─────────────────────────────────────────────────────
 
-    /// <summary>Deletes a block — no-op in the unified Tiptap editor (kept for API compatibility).</summary>
-    public Task DeleteBlockAsync(int index) => Task.CompletedTask;
+    /// <summary>
+    /// Deletes a block by index by hovering to reveal the drag handle, clicking
+    /// "Block actions", and selecting "Delete block" from the dropdown menu.
+    /// </summary>
+    public async Task DeleteBlockAsync(int index)
+    {
+        var blocks = _page.Locator(".page-editor-content > *");
+        var block = blocks.Nth(index);
+
+        // Hover to reveal the drag handle (the library shows it on mouse move).
+        await block.HoverAsync();
+        await _page.WaitForTimeoutAsync(200);
+
+        // Click the grip / "Block actions" button that appears in the drag handle.
+        var gripBtn = _page.Locator("button[aria-label='Block actions']");
+        await gripBtn.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 4_000 });
+        await gripBtn.ClickAsync();
+
+        // Click "Delete block" in the dropdown (rendered as role="menuitem").
+        var deleteBtn = _page.GetByRole(AriaRole.Menuitem, new() { Name = "Delete block" });
+        await deleteBtn.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 3_000 });
+        await deleteBtn.ClickAsync();
+    }
 
     // ── Queries ──────────────────────────────────────────────────────
 

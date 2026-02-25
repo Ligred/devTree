@@ -9,9 +9,12 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { useEditable } from '../EditableContext';
+import { useTheme } from 'next-themes';
 import dynamic from 'next/dynamic';
 import { Code2 } from 'lucide-react';
 import { BlockTagChips } from '../BlockTagChips';
+import { BlockHeader } from '../BlockHeader';
+import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nodeUtils';
 
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
@@ -26,31 +29,33 @@ const LANGUAGES = [
 function CodeBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const { code, language, tags } = node.attrs as { code: string; language: string; tags: string[] };
   const isEditable = useEditable();
+  const { resolvedTheme } = useTheme();
+  const monacoTheme = resolvedTheme === 'light' ? 'vs' : 'vs-dark';
 
   return (
-    <NodeViewWrapper className="my-2 rounded-xl border border-border bg-card overflow-hidden" data-drag-handle>
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
-        <Code2 size={13} className="text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">Code</span>
-        <div className="flex-1" />
-        {isEditable ? (
-          <select
-            value={language ?? 'javascript'}
-            onChange={(e) => updateAttributes({ language: e.target.value })}
-            className="rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground outline-none"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            {LANGUAGES.map((l) => (
-              <option key={l} value={l}>{l}</option>
-            ))}
-          </select>
-        ) : (
-          <span className="rounded border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground">
-            {language ?? 'javascript'}
-          </span>
-        )}
-      </div>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+      <BlockHeader
+        icon={<Code2 size={13} className="text-muted-foreground" />}
+        title="Code"
+        actions={
+          isEditable ? (
+            <select
+              value={language ?? 'javascript'}
+              onChange={(e) => updateAttributes({ language: e.target.value })}
+              className="rounded border border-border bg-background px-2 py-0.5 text-xs text-foreground outline-none"
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="rounded border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground">
+              {language ?? 'javascript'}
+            </span>
+          )
+        }
+      />
 
       {/* Block tags */}
       <BlockTagChips
@@ -74,10 +79,9 @@ function CodeBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
             fontSize: 13,
             lineNumbers: 'on',
             wordWrap: 'on',
-            theme: 'vs-dark',
             padding: { top: 8, bottom: 8 },
           }}
-          theme="vs-dark"
+          theme={monacoTheme}
         />
       </div>
     </NodeViewWrapper>
@@ -88,10 +92,7 @@ function CodeBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
 export const CodeBlockNode = Node.create({
   name: 'codeBlockNode',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  selectable: true,
+  ...BLOCK_ATOM_SPEC,
 
   addAttributes() {
     return {
@@ -113,7 +114,7 @@ export const CodeBlockNode = Node.create({
     // Prevent ProseMirror from intercepting events inside Monaco,
     // but still allow drag events so the GlobalDragHandle works.
     return ReactNodeViewRenderer(CodeBlockNodeView, {
-      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+      stopEvent: blockStopEvent,
     });
   },
 });

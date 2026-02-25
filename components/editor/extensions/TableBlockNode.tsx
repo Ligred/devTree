@@ -11,6 +11,8 @@ import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from 
 import { useEditable } from '../EditableContext';
 import { Plus, Trash2, Table } from 'lucide-react';
 import { BlockTagChips } from '../BlockTagChips';
+import { BlockHeader } from '../BlockHeader';
+import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nodeUtils';
 
 // ─── Node View ────────────────────────────────────────────────────────────────
 
@@ -56,21 +58,23 @@ function TableBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   };
 
   return (
-    <NodeViewWrapper className="my-2 rounded-xl border border-border bg-card overflow-hidden" data-drag-handle>
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
-        <Table size={13} className="text-muted-foreground" />
-        <span className="flex-1 text-xs font-medium text-muted-foreground">Table</span>
-        {isEditable && (
-          <button
-            type="button"
-            onClick={addColumn}
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Plus size={11} /> Column
-          </button>
-        )}
-      </div>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+      <BlockHeader
+        icon={<Table size={13} className="text-muted-foreground" />}
+        title="Table"
+        actions={
+          isEditable && (
+            <button
+              type="button"
+              aria-label="Add column"
+              onClick={addColumn}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <Plus size={11} /> Column
+            </button>
+          )
+        }
+      />
 
       {/* Tags */}
       <BlockTagChips
@@ -160,10 +164,7 @@ function TableBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
 export const TableBlockNode = Node.create({
   name: 'tableBlockNode',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  selectable: true,
+  ...BLOCK_ATOM_SPEC,
 
   addAttributes() {
     return {
@@ -179,7 +180,7 @@ export const TableBlockNode = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(TableBlockNodeView, {
-      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+      stopEvent: blockStopEvent,
     });
   },
 });

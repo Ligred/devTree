@@ -11,6 +11,8 @@ import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from 
 import { useEditable } from '../EditableContext';
 import { Volume2 } from 'lucide-react';
 import { BlockTagChips } from '../BlockTagChips';
+import { BlockHeader } from '../BlockHeader';
+import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nodeUtils';
 
 // ─── Node View ────────────────────────────────────────────────────────────────
 
@@ -19,12 +21,8 @@ function AudioNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const isEditable = useEditable();
 
   return (
-    <NodeViewWrapper className="my-2 rounded-xl border border-border bg-card overflow-hidden" data-drag-handle>
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
-        <Volume2 size={13} className="text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">Audio</span>
-      </div>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+      <BlockHeader icon={<Volume2 size={13} className="text-muted-foreground" />} title="Audio" />
 
       {/* Tags */}
       <BlockTagChips
@@ -57,7 +55,7 @@ function AudioNodeView({ node, updateAttributes }: ReactNodeViewProps) {
         )}
 
         {/* Caption */}
-        {isEditable ? (
+        {isEditable && (
           <input
             type="text"
             value={caption ?? ''}
@@ -65,9 +63,10 @@ function AudioNodeView({ node, updateAttributes }: ReactNodeViewProps) {
             className="mt-2 w-full bg-transparent text-xs text-muted-foreground outline-none placeholder:text-muted-foreground/50"
             onChange={(e) => updateAttributes({ caption: e.target.value })}
           />
-        ) : caption ? (
+        )}
+        {!isEditable && caption && (
           <p className="mt-2 text-xs text-muted-foreground">{caption}</p>
-        ) : null}
+        )}
       </div>
     </NodeViewWrapper>
   );
@@ -77,10 +76,7 @@ function AudioNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
 export const AudioNode = Node.create({
   name: 'audioNode',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  selectable: true,
+  ...BLOCK_ATOM_SPEC,
 
   addAttributes() {
     return {
@@ -96,7 +92,7 @@ export const AudioNode = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(AudioNodeView, {
-      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+      stopEvent: blockStopEvent,
     });
   },
 });

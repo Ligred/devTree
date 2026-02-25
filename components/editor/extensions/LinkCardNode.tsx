@@ -11,6 +11,7 @@ import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from 
 import { useEditable } from '../EditableContext';
 import { ExternalLink } from 'lucide-react';
 import { BlockTagChips } from '../BlockTagChips';
+import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nodeUtils';
 
 // ─── Node View ────────────────────────────────────────────────────────────────
 
@@ -20,7 +21,7 @@ function LinkCardNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const displayLabel = label || url || 'Link';
 
   return (
-    <NodeViewWrapper className="my-2 rounded-xl border border-border bg-card overflow-hidden" data-drag-handle>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
       {/* Tags */}
       <BlockTagChips
         tags={tags ?? []}
@@ -73,10 +74,7 @@ function LinkCardNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
 export const LinkCardNode = Node.create({
   name: 'linkCardNode',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  selectable: true,
+  ...BLOCK_ATOM_SPEC,
 
   addAttributes() {
     return {
@@ -92,7 +90,7 @@ export const LinkCardNode = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(LinkCardNodeView, {
-      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+      stopEvent: blockStopEvent,
     });
   },
 });

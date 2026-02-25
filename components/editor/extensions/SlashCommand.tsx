@@ -39,7 +39,17 @@ export type SlashCommandItem = {
   title: string;
   description: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
+  /**
+   * `command` is used by the slash-command suggestion flow: it runs on the already-
+   * focused cursor position and uses `clearNodes()` to replace the current line.
+   */
   command: (editor: Editor) => void;
+  /**
+   * `insertSpec` is the Tiptap JSONContent used by block pickers when inserting
+   * at a specific position WITHOUT a pre-inserted placeholder paragraph.
+   * This avoids the layout jump caused by inserting a paragraph, then replacing it.
+   */
+  insertSpec: Record<string, unknown>;
 };
 
 export const SLASH_ITEMS: SlashCommandItem[] = [
@@ -47,12 +57,14 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Paragraph',
     description: 'Plain text paragraph',
     icon: Type,
+    insertSpec: { type: 'paragraph' },
     command: (editor) => editor.chain().focus().clearNodes().setParagraph().run(),
   },
   {
     title: 'Heading 1',
     description: 'Large section heading',
     icon: Heading1,
+    insertSpec: { type: 'heading', attrs: { level: 1 } },
     command: (editor) =>
       editor.chain().focus().clearNodes().setHeading({ level: 1 }).run(),
   },
@@ -60,6 +72,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Heading 2',
     description: 'Medium section heading',
     icon: Heading2,
+    insertSpec: { type: 'heading', attrs: { level: 2 } },
     command: (editor) =>
       editor.chain().focus().clearNodes().setHeading({ level: 2 }).run(),
   },
@@ -67,6 +80,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Heading 3',
     description: 'Small section heading',
     icon: Heading3,
+    insertSpec: { type: 'heading', attrs: { level: 3 } },
     command: (editor) =>
       editor.chain().focus().clearNodes().setHeading({ level: 3 }).run(),
   },
@@ -74,30 +88,41 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Bullet List',
     description: 'Unordered list with bullet points',
     icon: List,
+    insertSpec: {
+      type: 'bulletList',
+      content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }],
+    },
     command: (editor) => editor.chain().focus().clearNodes().toggleBulletList().run(),
   },
   {
     title: 'Numbered List',
     description: 'Ordered list with numbers',
     icon: ListOrdered,
+    insertSpec: {
+      type: 'orderedList',
+      content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }],
+    },
     command: (editor) => editor.chain().focus().clearNodes().toggleOrderedList().run(),
   },
   {
     title: 'Blockquote',
     description: 'Indented quote block',
     icon: Quote,
+    insertSpec: { type: 'blockquote', content: [{ type: 'paragraph' }] },
     command: (editor) => editor.chain().focus().clearNodes().toggleBlockquote().run(),
   },
   {
     title: 'Divider',
     description: 'Horizontal rule divider',
     icon: Minus,
+    insertSpec: { type: 'horizontalRule' },
     command: (editor) => editor.chain().focus().clearNodes().setHorizontalRule().run(),
   },
   {
     title: 'Code Block',
     description: 'Monaco code editor block',
     icon: Code2,
+    insertSpec: { type: 'codeBlockNode' },
     command: (editor) =>
       editor.chain().focus().clearNodes().insertContent({ type: 'codeBlockNode' }).run(),
   },
@@ -105,6 +130,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Checklist',
     description: 'Interactive checklist / agenda',
     icon: CheckSquare,
+    insertSpec: { type: 'checklistNode' },
     command: (editor) =>
       editor.chain().focus().clearNodes().insertContent({ type: 'checklistNode' }).run(),
   },
@@ -112,6 +138,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Canvas',
     description: 'Excalidraw drawing canvas',
     icon: Palette,
+    insertSpec: { type: 'canvasNode' },
     command: (editor) =>
       editor.chain().focus().clearNodes().insertContent({ type: 'canvasNode' }).run(),
   },
@@ -119,6 +146,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Audio',
     description: 'Audio player block',
     icon: Volume2,
+    insertSpec: { type: 'audioNode' },
     command: (editor) =>
       editor.chain().focus().clearNodes().insertContent({ type: 'audioNode' }).run(),
   },
@@ -126,6 +154,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Video',
     description: 'YouTube or video embed',
     icon: Video,
+    insertSpec: { type: 'videoNode' },
     command: (editor) =>
       editor.chain().focus().clearNodes().insertContent({ type: 'videoNode' }).run(),
   },
@@ -133,6 +162,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Image',
     description: 'Image with optional caption',
     icon: Image,
+    insertSpec: { type: 'imageNode' },
     command: (editor) =>
       editor.chain().focus().clearNodes().insertContent({ type: 'imageNode' }).run(),
   },
@@ -140,6 +170,7 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Link Card',
     description: 'Link with label',
     icon: LinkIcon,
+    insertSpec: { type: 'linkCardNode' },
     command: (editor) =>
       editor.chain().focus().clearNodes().insertContent({ type: 'linkCardNode' }).run(),
   },
@@ -147,6 +178,10 @@ export const SLASH_ITEMS: SlashCommandItem[] = [
     title: 'Table',
     description: 'Spreadsheet-style table',
     icon: Table,
+    insertSpec: {
+      type: 'tableBlockNode',
+      attrs: { headers: ['Column 1', 'Column 2'], rows: [['', '']] },
+    },
     command: (editor) =>
       editor.chain().focus().clearNodes().insertContent({
         type: 'tableBlockNode',
@@ -212,7 +247,7 @@ const SlashCommandList = forwardRef<SlashListHandle, SlashListProps>((props, ref
   return (
     <div
       ref={containerRef}
-      className="max-h-80 min-w-60 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg"
+      className="tiptap-slash-list max-h-80 min-w-60 overflow-y-auto rounded-xl border border-border bg-popover p-1 shadow-lg"
     >
       {props.items.map((item, index) => {
         const Icon = item.icon;

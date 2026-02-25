@@ -11,6 +11,8 @@ import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from 
 import { useEditable } from '../EditableContext';
 import { Image } from 'lucide-react';
 import { BlockTagChips } from '../BlockTagChips';
+import { BlockHeader } from '../BlockHeader';
+import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nodeUtils';
 
 // ─── Node View ────────────────────────────────────────────────────────────────
 
@@ -19,12 +21,8 @@ function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const isEditable = useEditable();
 
   return (
-    <NodeViewWrapper className="my-2 rounded-xl border border-border bg-card overflow-hidden" data-drag-handle>
-      {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
-        <Image size={13} className="text-muted-foreground" />
-        <span className="text-xs font-medium text-muted-foreground">Image</span>
-      </div>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+      <BlockHeader icon={<Image size={13} className="text-muted-foreground" />} title="Image" />
 
       {/* Tags */}
       <BlockTagChips
@@ -56,7 +54,7 @@ function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
             <p className="text-sm text-muted-foreground">Enter an image URL above</p>
           </div>
         )}
-        {isEditable ? (
+        {isEditable && (
           <input
             type="text"
             value={caption ?? ''}
@@ -64,9 +62,10 @@ function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
             className="mt-2 w-full bg-transparent text-xs text-muted-foreground outline-none"
             onChange={(e) => updateAttributes({ caption: e.target.value })}
           />
-        ) : caption ? (
+        )}
+        {!isEditable && caption && (
           <p className="mt-2 text-center text-xs text-muted-foreground">{caption}</p>
-        ) : null}
+        )}
       </div>
     </NodeViewWrapper>
   );
@@ -76,10 +75,7 @@ function ImageNodeView({ node, updateAttributes }: ReactNodeViewProps) {
 
 export const ImageNode = Node.create({
   name: 'imageNode',
-  group: 'block',
-  atom: true,
-  draggable: true,
-  selectable: true,
+  ...BLOCK_ATOM_SPEC,
 
   addAttributes() {
     return {
@@ -96,7 +92,7 @@ export const ImageNode = Node.create({
   },
   addNodeView() {
     return ReactNodeViewRenderer(ImageNodeView, {
-      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+      stopEvent: blockStopEvent,
     });
   },
 });
