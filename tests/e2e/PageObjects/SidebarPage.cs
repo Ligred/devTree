@@ -223,4 +223,93 @@ public class SidebarPage(IPage page)
         await _page.Locator("aside").WaitForAsync(new() { Timeout = 10_000 });
         await _page.Locator("aside").IsVisibleAsync();
     }
+
+    // ── Delete helpers ─────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Clicks the three-dot context-menu on the last tree item in the sidebar
+    /// and selects "Delete page" (or the localised equivalent).
+    /// </summary>
+    public async Task DeleteLastPageAsync()
+    {
+        var items = _page.Locator("[data-radix-accordion-item]");
+        var count = await items.CountAsync();
+        if (count == 0) throw new InvalidOperationException("No tree items found in sidebar.");
+
+        var last = items.Nth(count - 1);
+        await last.HoverAsync();
+
+        // The context-menu trigger is typically a MoreHorizontal / ellipsis button
+        var menuTrigger = last.Locator("button[aria-label*='menu'], button[aria-haspopup='menu'], button[data-testid='item-menu']").First;
+        await menuTrigger.ClickAsync();
+
+        var deleteItem = _page.Locator("[role='menuitem']:has-text('Delete page'), [role='menuitem']:has-text('Видалити сторінку')").First;
+        await deleteItem.WaitForAsync(new() { Timeout = 5_000 });
+        await deleteItem.ClickAsync();
+    }
+
+    /// <summary>
+    /// Right-clicks the last folder item in the sidebar and selects "Delete folder".
+    /// </summary>
+    public async Task DeleteLastFolderAsync()
+    {
+        // Folders are accordion items whose last child is not a leaf page
+        var folders = _page.Locator("aside [data-radix-accordion-item]");
+        var count = await folders.CountAsync();
+        if (count == 0) throw new InvalidOperationException("No folder items found in sidebar.");
+
+        var last = folders.Nth(count - 1);
+        await last.HoverAsync();
+
+        var menuTrigger = last.Locator("button[aria-label*='menu'], button[aria-haspopup='menu'], button[data-testid='item-menu']").First;
+        await menuTrigger.ClickAsync();
+
+        var deleteItem = _page.Locator("[role='menuitem']:has-text('Delete folder'), [role='menuitem']:has-text('Видалити папку')").First;
+        await deleteItem.WaitForAsync(new() { Timeout = 5_000 });
+        await deleteItem.ClickAsync();
+    }
+
+    /// <summary>
+    /// Clicks the Confirm / Delete button in the delete-confirmation dialog.
+    /// </summary>
+    public async Task ConfirmDeleteDialogAsync()
+    {
+        var confirmBtn = _page.Locator(
+            "button:has-text('Confirm'), button:has-text('Delete'), button:has-text('Підтвердити'), button:has-text('Видалити')"
+        ).Last;
+        await confirmBtn.WaitForAsync(new() { Timeout = 5_000 });
+        await confirmBtn.ClickAsync();
+        // Wait for the dialog to close
+        await _page.WaitForTimeoutAsync(300);
+    }
+
+    /// <summary>
+    /// Clicks the Cancel button in the delete-confirmation dialog.
+    /// </summary>
+    public async Task CancelDeleteDialogAsync()
+    {
+        var cancelBtn = _page.Locator(
+            "button:has-text('Cancel'), button:has-text('Скасувати')"
+        ).First;
+        await cancelBtn.WaitForAsync(new() { Timeout = 5_000 });
+        await cancelBtn.ClickAsync();
+        await _page.WaitForTimeoutAsync(300);
+    }
+
+    /// <summary>
+    /// Selects the page with <paramref name="oldTitle"/> in the sidebar, then
+    /// renames it via the MainContent PageTitle input to <paramref name="newTitle"/>.
+    /// Assumes the page is already selected (for rename via the title input).
+    /// </summary>
+    public async Task RenameActivePageTitleAsync(string newTitle)
+    {
+        // The PageTitle renders as a text-input in edit mode or an h1 when viewing;
+        // it may also be an input with data-testid="page-title-input".
+        var titleInput = _page.Locator("[data-testid='page-title-input'], input[placeholder*='title' i]").First;
+        await titleInput.WaitForAsync(new() { Timeout = 5_000 });
+        await titleInput.ClearAsync();
+        await titleInput.FillAsync(newTitle);
+        await titleInput.BlurAsync();
+        await _page.WaitForTimeoutAsync(400);
+    }
 }
