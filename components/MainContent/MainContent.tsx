@@ -41,6 +41,7 @@ const I18N_EXPORT_MARKDOWN = 'main.exportMarkdown';
 
 type MainContentProps = Readonly<{
   page: Page | null;
+  isPageLoading?: boolean;
   breadcrumbs?: Array<{ id: string; label: string; isCurrent: boolean }>;
   onBreadcrumbClick?: (id: string) => void;
   onSave?: () => void;
@@ -69,6 +70,7 @@ type MainContentProps = Readonly<{
 }>;
 export function MainContent({
   page,
+  isPageLoading = false,
   breadcrumbs = [],
   onBreadcrumbClick,
   onSave,
@@ -129,6 +131,111 @@ export function MainContent({
     setActiveFilterTags([]);
   }, [page?.id]);
 
+  let headerTitleNode: React.ReactNode;
+  if (isPageLoading) {
+    headerTitleNode = (
+      <div data-testid="main-content-header-skeleton" className="h-5 w-56 animate-pulse rounded-md bg-muted" />
+    );
+  } else if (breadcrumbs.length > 0) {
+    headerTitleNode = (
+      <nav aria-label="Breadcrumb" className="min-w-0" data-testid="page-header-title">
+        <ol className="flex min-w-0 items-center gap-1 text-sm">
+          {breadcrumbs.map((crumb, index) => (
+            <li key={crumb.id} className="flex min-w-0 items-center gap-1">
+              {index > 0 && <span className="text-muted-foreground">/</span>}
+              {crumb.isCurrent ? (
+                <span
+                  className="min-w-0 truncate rounded px-1 py-0.5 font-medium text-foreground"
+                  aria-current="page"
+                >
+                  {crumb.label}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    'min-w-0 truncate rounded px-1 py-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+                  )}
+                  onClick={() => onBreadcrumbClick?.(crumb.id)}
+                >
+                  {crumb.label}
+                </button>
+              )}
+            </li>
+          ))}
+        </ol>
+      </nav>
+    );
+  } else {
+    headerTitleNode = (
+      <span className="min-w-0 truncate text-sm font-medium text-foreground" data-testid="page-header-title">
+        {page?.title ?? t('main.selectPage')}
+      </span>
+    );
+  }
+
+  let pageBodyNode: React.ReactNode;
+  if (isPageLoading) {
+    pageBodyNode = <NotebookPageSkeleton />;
+  } else if (page) {
+    pageBodyNode = (
+      <div className="flex flex-col gap-4">
+        <PageTitle
+          page={page}
+          readOnly={!isEditMode}
+          onTitleChange={isEditMode ? onTitleChange : undefined}
+          onTitleBlur={isEditMode ? onTitleBlur : undefined}
+          invalid={titleHasError}
+        />
+
+        {/* Page-level tag bar — always visible; editable only in edit mode */}
+        {tagsPerPageEnabled && (
+          <TagBar
+            tags={page.tags ?? []}
+            isEditable={isEditMode}
+            suggestions={allTagSuggestions}
+            onChange={onTagsChange ?? (() => {})}
+          />
+        )}
+
+        {/* Creation and last-edit timestamps */}
+        <PageMeta createdAt={page.createdAt} updatedAt={page.updatedAt} />
+
+        {/* Per-page inline tag filter — always shown when the feature is enabled */}
+        {tagsPerBlockEnabled && (
+          <BlockTagFilter
+            allTags={pageInlineTags}
+            activeTags={activeFilterTags}
+            onChange={setActiveFilterTags}
+            totalBlocks={pageInlineTags.length}
+            visibleBlocks={activeFilterTags.length > 0 ? activeFilterTags.length : pageInlineTags.length}
+          />
+        )}
+
+        {/* Unified Tiptap editor */}
+        <PageEditor
+          content={page.content ?? null}
+          editable={isEditMode}
+          onChange={onContentChange}
+          pageId={page.id}
+          onEditorReady={setEditorInstance}
+          activeFilterTags={activeFilterTags}
+        />
+      </div>
+    );
+  } else {
+    pageBodyNode = (
+      <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card py-16 text-center">
+        <p className="text-sm font-medium text-muted-foreground">
+          {t('main.emptyHint')}
+        </p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {t('main.emptyHint2')}
+        </p>
+      </div>
+    );
+  }
+
   return (
     <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-background text-foreground">
       {/* ───── Top header bar ───── */}
@@ -145,42 +252,10 @@ export function MainContent({
             </button>
           )}
           <span className="sr-only">{page?.title ?? t('main.selectPage')}</span>
-          {breadcrumbs.length > 0 ? (
-            <nav aria-label="Breadcrumb" className="min-w-0" data-testid="page-header-title">
-              <ol className="flex min-w-0 items-center gap-1 text-sm">
-                {breadcrumbs.map((crumb, index) => (
-                  <li key={crumb.id} className="flex min-w-0 items-center gap-1">
-                    {index > 0 && <span className="text-muted-foreground">/</span>}
-                    {crumb.isCurrent ? (
-                      <span
-                        className="min-w-0 truncate rounded px-1 py-0.5 font-medium text-foreground"
-                        aria-current="page"
-                      >
-                        {crumb.label}
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        className={cn(
-                          'min-w-0 truncate rounded px-1 py-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-                        )}
-                        onClick={() => onBreadcrumbClick?.(crumb.id)}
-                      >
-                        {crumb.label}
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          ) : (
-            <span className="min-w-0 truncate text-sm font-medium text-foreground" data-testid="page-header-title">
-              {page?.title ?? t('main.selectPage')}
-            </span>
-          )}
+          {headerTitleNode}
         </div>
 
-        {page && (
+        {page && !isPageLoading && (
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -235,7 +310,7 @@ export function MainContent({
 
       {/* ───── Formatting toolbar — shown as a second bar when editing ───── */}
       {isEditMode && editorInstance && (
-        <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+        <div className="shrink-0 border-b border-border bg-card/95 backdrop-blur supports-backdrop-filter:bg-card/60">
           <EditorToolbar editor={editorInstance} blockId={page?.id} />
         </div>
       )}
@@ -243,64 +318,28 @@ export function MainContent({
       {/* ───── Scrollable content area ───── */}
       <div className="flex-1 overflow-y-auto py-3 text-foreground sm:py-6 md:py-8">
         <div className="mx-auto w-full px-3 pr-7.5 sm:px-6 md:px-8">
-          {page ? (
-            <div className="flex flex-col gap-4">
-              <PageTitle
-                page={page}
-                readOnly={!isEditMode}
-                onTitleChange={isEditMode ? onTitleChange : undefined}
-                onTitleBlur={isEditMode ? onTitleBlur : undefined}
-                invalid={titleHasError}
-              />
-
-              {/* Page-level tag bar — always visible; editable only in edit mode */}
-              {tagsPerPageEnabled && (
-                <TagBar
-                  tags={page.tags ?? []}
-                  isEditable={isEditMode}
-                  suggestions={allTagSuggestions}
-                  onChange={onTagsChange ?? (() => {})}
-                />
-              )}
-
-              {/* Creation and last-edit timestamps */}
-              <PageMeta createdAt={page.createdAt} updatedAt={page.updatedAt} />
-
-              {/* Per-page inline tag filter — always shown when the feature is enabled */}
-              {tagsPerBlockEnabled && (
-                <BlockTagFilter
-                  allTags={pageInlineTags}
-                  activeTags={activeFilterTags}
-                  onChange={setActiveFilterTags}
-                  totalBlocks={pageInlineTags.length}
-                  visibleBlocks={activeFilterTags.length > 0 ? activeFilterTags.length : pageInlineTags.length}
-                />
-              )}
-
-              {/* Unified Tiptap editor */}
-              <PageEditor
-                content={page.content ?? null}
-                editable={isEditMode}
-                onChange={onContentChange}
-                pageId={page.id}
-                onEditorReady={setEditorInstance}
-                activeFilterTags={activeFilterTags}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card py-16 text-center">
-              <p className="text-sm font-medium text-muted-foreground">
-                {t('main.emptyHint')}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t('main.emptyHint2')}
-              </p>
-            </div>
-          )}
+          {pageBodyNode}
         </div>
       </div>
 
     </main>
+  );
+}
+
+function NotebookPageSkeleton() {
+  return (
+    <div className="flex flex-col gap-4" data-testid="main-content-page-skeleton" aria-live="polite" aria-busy="true">
+      <div className="h-10 w-2/3 animate-pulse rounded-lg bg-muted" />
+      <div className="h-7 w-80 animate-pulse rounded-lg bg-muted" />
+      <div className="h-5 w-56 animate-pulse rounded-md bg-muted" />
+      <div className="space-y-3">
+        <div className="h-5 w-full animate-pulse rounded-md bg-muted" />
+        <div className="h-5 w-full animate-pulse rounded-md bg-muted" />
+        <div className="h-5 w-5/6 animate-pulse rounded-md bg-muted" />
+        <div className="h-5 w-full animate-pulse rounded-md bg-muted" />
+        <div className="h-5 w-4/5 animate-pulse rounded-md bg-muted" />
+      </div>
+    </div>
   );
 }
 

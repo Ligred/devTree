@@ -28,6 +28,7 @@ import type { TreeDataItem } from '@/components/ui/tree-view';
 import { useI18n } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/settingsStore';
 import { usePageTracking } from '@/lib/usePageTracking';
+import { getLastNotebookPageId, setLastNotebookPageId } from '@/lib/notebookPageMemory';
 import { cn } from '@/lib/utils';
 
 import { buildTreeDataWithActions } from './buildTreeData';
@@ -41,6 +42,7 @@ import { useSaveLogic } from './hooks/useSaveLogic';
 import { useTreeOperations } from './hooks/useTreeOperations';
 
 const I18N_CLEAR_TAG_FILTER = 'sidebar.clearTagFilter';
+const MIN_PAGE_TRANSITION_MS = 150;
 
 type WorkspaceProps = Readonly<{
   initialRoutePageId?: string;
@@ -51,16 +53,29 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [leftPanelHidden, setLeftPanelHidden] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isPageTransitioning, setIsPageTransitioning] = useState(false);
+  const [transitionStartedAt, setTransitionStartedAt] = useState<number | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTags, setActiveTags] = useState<string[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const lastHandledRoutePageIdRef = useRef<string | null>(null);
+  const transitionTargetPageIdRef = useRef<string | null>(null);
+  const isTransitioningRef = useRef(false);
 
   const { t } = useI18n();
   const tagsPerPageEnabled = useSettingsStore((s) => s.tagsPerPageEnabled);
   const router = useRouter();
   const routePageId = useMemo(() => initialRoutePageId || null, [initialRoutePageId]);
   const showErrorToast = useCallback((msg: string) => setErrorToast(msg), []);
+  const startPageTransition = useCallback((targetPageId: string | null = null) => {
+    if (isTransitioningRef.current && transitionTargetPageIdRef.current === targetPageId) return;
+
+    transitionTargetPageIdRef.current = targetPageId;
+    isTransitioningRef.current = true;
+    setTransitionStartedAt(Date.now());
+    setIsPageTransitioning(true);
+  }, []);
 
   // ─── Data hook ───────────────────────────────────────────────────────────
   const {
@@ -89,6 +104,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     setActivePageId,
     setMobileSidebarOpen,
   });
+  const setTitleHasError = saveLogic.setTitleHasError;
 
   // ─── Tree operations hook ────────────────────────────────────────────────
   const treeOps = useTreeOperations({
@@ -110,6 +126,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
       // then navigate away — corrupting the old page's title in the database.
       saveLogic.cancelTitleBlurSave();
       saveLogic.justCreatedPageRef.current = true;
+      startPageTransition(pageId);
       setActivePageId(pageId);
       saveLogic.setIsEditMode(true);
     },
@@ -118,6 +135,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
       // update activePageId without triggering the edit-mode reset in useSaveLogic.
       // Setting justCreatedPageRef to true prevents the reset.
       saveLogic.justCreatedPageRef.current = true;
+      startPageTransition(newId);
       setActivePageId((current) => (current === oldId ? newId : current));
     },
   });
@@ -138,6 +156,12 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     () => (activePageId ? (pages.find((p) => p.id === activePageId) ?? null) : null),
     [pages, activePageId],
   );
+
+  const isActivePageDataReady = useMemo(() => {
+    if (loading) return false;
+    if (!activePageId) return true;
+    return activePage !== null;
+  }, [loading, activePageId, activePage]);
 
   const ancestorPathIds = useMemo(
     () => (activePageId ? getAncestorPath(treeRoot, activePageId) : []),
@@ -222,11 +246,12 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
         saveLogic.setPendingNavId(pageId);
         return;
       }
-      saveLogic.setTitleHasError(false);
+      setTitleHasError(false);
+      startPageTransition(pageId);
       setActivePageId(pageId);
       setMobileSidebarOpen(false);
     },
-    [activePageId, saveLogic],
+    [activePageId, saveLogic, setTitleHasError, startPageTransition],
   );
 
   const handleTreeSelect = useCallback(
@@ -279,22 +304,79 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
 
   // URL → state sync (deep-linking, browser back/forward).
   useEffect(() => {
-    if (loading || !routePageId) return;
-    if (pages.some((p) => p.id === routePageId) && activePageId !== routePageId) {
-      setActivePageId(routePageId);
-      saveLogic.setTitleHasError(false);
+    if (!routePageId) {
+      lastHandledRoutePageIdRef.current = null;
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, routePageId, pages, activePageId]);
+    if (loading || !routePageId) return;
+
+    // When navigation originated from in-app page selection, activePageId is
+    // already set before router updates ?page=. Do not re-trigger transition.
+    if (activePageId === routePageId) {
+      lastHandledRoutePageIdRef.current = routePageId;
+      return;
+    }
+
+    if (lastHandledRoutePageIdRef.current === routePageId) return;
+    if (pages.some((p) => p.id === routePageId)) {
+      lastHandledRoutePageIdRef.current = routePageId;
+      startPageTransition(routePageId);
+      setActivePageId(routePageId);
+      setTitleHasError(false);
+    }
+  }, [loading, routePageId, pages, activePageId, setTitleHasError, startPageTransition]);
+
+  // Restore last opened notebook page when route has no ?page= parameter.
+  useEffect(() => {
+    if (loading || routePageId || activePageId) return;
+    const lastOpenPageId = getLastNotebookPageId();
+    if (!lastOpenPageId) return;
+    if (!pages.some((p) => p.id === lastOpenPageId)) return;
+    startPageTransition(lastOpenPageId);
+    setActivePageId(lastOpenPageId);
+    setTitleHasError(false);
+  }, [loading, routePageId, activePageId, pages, setTitleHasError, startPageTransition]);
 
   // State → URL sync (bookmarkable pages).
   useEffect(() => {
     if (loading || !activePageId) return;
-    const current = new URLSearchParams(window.location.search).get('page');
+    const current = new URLSearchParams(globalThis.location.search).get('page');
     if (current !== activePageId) {
       router.push(`/notebook?page=${encodeURIComponent(activePageId)}`, { scroll: false });
     }
   }, [activePageId, loading, router]);
+
+  // Persist the last actively opened page for cross-tab (Notebook/Statistics) return.
+  useEffect(() => {
+    if (!activePageId) return;
+    setLastNotebookPageId(activePageId);
+  }, [activePageId]);
+
+  // End transition only when selected-page data is available and minimum
+  // skeleton visibility has elapsed.
+  useEffect(() => {
+    if (!isPageTransitioning || !isActivePageDataReady) return;
+
+    const startedAt = transitionStartedAt ?? Date.now();
+    const elapsed = Date.now() - startedAt;
+    const remaining = MIN_PAGE_TRANSITION_MS - elapsed;
+
+    if (remaining <= 0) {
+      isTransitioningRef.current = false;
+      transitionTargetPageIdRef.current = null;
+      setIsPageTransitioning(false);
+      setTransitionStartedAt(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      isTransitioningRef.current = false;
+      transitionTargetPageIdRef.current = null;
+      setIsPageTransitioning(false);
+      setTransitionStartedAt(null);
+    }, remaining);
+    return () => clearTimeout(timer);
+  }, [isPageTransitioning, isActivePageDataReady, transitionStartedAt]);
 
   // Keyboard shortcut: Cmd/Ctrl+K → focus search input.
   useEffect(() => {
@@ -521,6 +603,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
       {/* ─── Main content ───────────────────────────────────────────────────── */}
       <MainContent
         page={activePage}
+        isPageLoading={loading || isPageTransitioning}
         breadcrumbs={breadcrumbs}
         onBreadcrumbClick={handleBreadcrumbClick}
         onSave={saveLogic.handleSave}

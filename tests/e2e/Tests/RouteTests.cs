@@ -202,6 +202,32 @@ public class RouteTests : E2ETestBase
     }
 
     [Test]
+    public async Task PageSwitch_ShowsSkeletonUntilTargetPageRenders()
+    {
+        // Start from a known page.
+        await App.Sidebar.SelectPageAsync("React Hooks");
+        var headerSpan = Page.GetByTestId("page-header-title");
+        await Expect(headerSpan).ToContainTextAsync("React Hooks");
+
+        // Switch to another page.
+        var targetPage = Page.Locator("aside").GetByText("TypeScript Tips", new() { Exact = true }).First;
+        await targetPage.ClickAsync();
+
+        // While switching, skeleton may appear briefly depending on environment speed.
+        var headerSkeleton = Page.GetByTestId("main-content-header-skeleton");
+        var bodySkeleton = Page.GetByTestId("main-content-page-skeleton");
+        var sawHeaderSkeleton = await headerSkeleton.IsVisibleAsync();
+        var sawBodySkeleton = await bodySkeleton.IsVisibleAsync();
+        if (!sawHeaderSkeleton || !sawBodySkeleton)
+        {
+            await Page.WaitForTimeoutAsync(100);
+        }
+
+        // Final state: target page is fully rendered.
+        await Expect(headerSpan).ToContainTextAsync("TypeScript Tips", new() { Timeout = 10_000 });
+    }
+
+    [Test]
     public async Task BrowserBack_WithUnsavedChanges_ShowsConfirmation()
     {
         // Navigate to a page

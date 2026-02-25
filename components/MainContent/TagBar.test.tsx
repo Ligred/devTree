@@ -30,7 +30,7 @@ vi.mock('@/lib/pageUtils', () => ({
 import { MainContent } from './MainContent';
 import type { Page } from './types';
 
-function Wrapper({ children }: { children: React.ReactNode }) {
+function Wrapper({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <I18nProvider>
       <ConfirmationProvider>{children}</ConfirmationProvider>
@@ -53,6 +53,18 @@ const pageNoTags: Page = {
 };
 
 describe('TagBar (via MainContent)', () => {
+  it('renders page skeleton and hides page content while switching pages', () => {
+    render(
+      <Wrapper>
+        <MainContent page={pageWithTags} onTagsChange={vi.fn()} isPageLoading />
+      </Wrapper>,
+    );
+
+    expect(screen.getByTestId('main-content-header-skeleton')).toBeInTheDocument();
+    expect(screen.getByTestId('main-content-page-skeleton')).toBeInTheDocument();
+    expect(screen.queryByTestId('page-header-title')).not.toBeInTheDocument();
+  });
+
   it('renders existing tags as chips in read-only mode', () => {
     render(
       <Wrapper>

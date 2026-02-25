@@ -41,6 +41,32 @@ public class StatisticsTests : E2ETestBase
     }
 
     [Test]
+    public async Task NavigateBackToNotebook_RestoresLastOpenedPage()
+    {
+        // Ensure we are on notebook route where sidebar is available.
+        await Page.GotoAsync($"{BaseUrl}/notebook", new() { WaitUntil = WaitUntilState.NetworkIdle });
+
+        // Select a known page in notebook first.
+        await App.Sidebar.SelectPageAsync("React Hooks");
+        var headerTitle = Page.GetByTestId("page-header-title");
+        await Expect(headerTitle).ToContainTextAsync("React Hooks");
+
+        // Navigate away to statistics.
+        var statsBtn = Page.Locator("nav[aria-label='Application sections'] button[aria-label='Statistics']").First;
+        await statsBtn.ClickAsync();
+        await Expect(Page.Locator("h1").GetByText("Statistics").First).ToBeVisibleAsync(new() { Timeout = 5_000 });
+
+        // Return to notebook.
+        var notebookBtn = Page.Locator("nav[aria-label='Application sections'] button[aria-label='Notebook']").First;
+        await notebookBtn.ClickAsync();
+
+        // Last opened page should be restored.
+        await Expect(Page.Locator("aside")).ToBeVisibleAsync(new() { Timeout = 5_000 });
+        await Expect(headerTitle).ToContainTextAsync("React Hooks");
+        Assert.That(Page.Url, Does.Contain("/notebook?page="), "Notebook URL should include the restored page query parameter.");
+    }
+
+    [Test]
     public async Task StatisticsPage_HasUserMenu()
     {
         // Navigate to statistics
