@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi } from 'vitest';
 import { I18nProvider } from '@/lib/i18n';
+import { ConfirmationProvider } from '@/lib/confirmationContext';
 
 vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light' }),
@@ -23,13 +24,18 @@ vi.mock('next-auth/react', () => ({
 vi.mock('@/lib/pageUtils', () => ({
   computePageStats: () => ({ wordCount: 0, readingTimeMin: 1, blockCount: 0 }),
   downloadMarkdown: vi.fn(),
+  extractInlineTagsFromContent: () => [],
 }));
 
 import { MainContent } from './MainContent';
 import type { Page } from './types';
 
 function Wrapper({ children }: { children: React.ReactNode }) {
-  return <I18nProvider>{children}</I18nProvider>;
+  return (
+    <I18nProvider>
+      <ConfirmationProvider>{children}</ConfirmationProvider>
+    </I18nProvider>
+  );
 }
 
 const pageWithTags: Page = {
@@ -47,7 +53,7 @@ const pageNoTags: Page = {
 };
 
 describe('TagBar (via MainContent)', () => {
-  it('renders existing tags as chips', () => {
+  it('renders existing tags as chips in read-only mode', () => {
     render(
       <Wrapper>
         <MainContent page={pageWithTags} onTagsChange={vi.fn()} />
@@ -57,10 +63,10 @@ describe('TagBar (via MainContent)', () => {
     expect(screen.getByText('hooks')).toBeInTheDocument();
   });
 
-  it('shows the add-tag placeholder input when no tags present', () => {
+  it('shows the add-tag placeholder input when no tags present and in edit mode', () => {
     render(
       <Wrapper>
-        <MainContent page={pageNoTags} onTagsChange={vi.fn()} />
+        <MainContent page={pageNoTags} onTagsChange={vi.fn()} isEditMode />
       </Wrapper>,
     );
     const input = screen.getByPlaceholderText(/add tag/i);
@@ -73,7 +79,7 @@ describe('TagBar (via MainContent)', () => {
 
     render(
       <Wrapper>
-        <MainContent page={pageNoTags} onTagsChange={onTagsChange} />
+        <MainContent page={pageNoTags} onTagsChange={onTagsChange} isEditMode />
       </Wrapper>,
     );
 
@@ -91,7 +97,7 @@ describe('TagBar (via MainContent)', () => {
 
     render(
       <Wrapper>
-        <MainContent page={pageNoTags} onTagsChange={onTagsChange} />
+        <MainContent page={pageNoTags} onTagsChange={onTagsChange} isEditMode />
       </Wrapper>,
     );
 
@@ -108,7 +114,7 @@ describe('TagBar (via MainContent)', () => {
 
     render(
       <Wrapper>
-        <MainContent page={pageWithTags} onTagsChange={onTagsChange} />
+        <MainContent page={pageWithTags} onTagsChange={onTagsChange} isEditMode />
       </Wrapper>,
     );
 
@@ -124,7 +130,7 @@ describe('TagBar (via MainContent)', () => {
 
     render(
       <Wrapper>
-        <MainContent page={pageWithTags} onTagsChange={onTagsChange} />
+        <MainContent page={pageWithTags} onTagsChange={onTagsChange} isEditMode />
       </Wrapper>,
     );
 
@@ -143,7 +149,7 @@ describe('TagBar (via MainContent)', () => {
 
     render(
       <Wrapper>
-        <MainContent page={pageNoTags} onTagsChange={onTagsChange} />
+        <MainContent page={pageNoTags} onTagsChange={onTagsChange} isEditMode />
       </Wrapper>,
     );
 
@@ -160,7 +166,7 @@ describe('TagBar (via MainContent)', () => {
 
     render(
       <Wrapper>
-        <MainContent page={pageWithTags} onTagsChange={onTagsChange} />
+        <MainContent page={pageWithTags} onTagsChange={onTagsChange} isEditMode />
       </Wrapper>,
     );
 
@@ -172,14 +178,18 @@ describe('TagBar (via MainContent)', () => {
     expect(onTagsChange).toHaveBeenCalledWith(['react']);
   });
 
-  it('does not render TagBar when onTagsChange is not provided', () => {
+  it('shows tags as read-only chips when not in edit mode', () => {
     render(
       <Wrapper>
-        {/* No onTagsChange prop → read-only mode */}
-        <MainContent page={pageWithTags} />
+        {/* No isEditMode prop → read-only mode; tags are visible but not editable */}
+        <MainContent page={pageWithTags} onTagsChange={vi.fn()} />
       </Wrapper>,
     );
-    // Tags should not appear since TagBar is not rendered
-    expect(screen.queryByText('react')).not.toBeInTheDocument();
+    // Tags are visible as chips in read-only mode
+    expect(screen.getByText('react')).toBeInTheDocument();
+    expect(screen.getByText('hooks')).toBeInTheDocument();
+    // But the editable input and remove buttons must NOT be present
+    expect(screen.queryByRole('textbox', { name: /add tag/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /remove tag/i })).not.toBeInTheDocument();
   });
 });

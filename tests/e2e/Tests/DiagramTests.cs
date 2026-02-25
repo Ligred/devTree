@@ -37,6 +37,7 @@ public class DiagramTests : E2ETestBase
     public async Task AddDiagramBlock_RendersExcalidrawCanvasInEditMode()
     {
         await App.Sidebar.SelectPageAsync("React Hooks");
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Diagram");
 
         // After adding (new blocks auto-start in edit mode), the Excalidraw
@@ -51,6 +52,7 @@ public class DiagramTests : E2ETestBase
         var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
         var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
         await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
         // In edit mode (viewModeEnabled=false) the Excalidraw App-toolbar is visible.
@@ -75,6 +77,7 @@ public class DiagramTests : E2ETestBase
         var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
         var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
         await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
         // In edit mode the fullscreen toggle lives inside Excalidraw's toolbar
@@ -89,6 +92,7 @@ public class DiagramTests : E2ETestBase
         var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
         var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
         await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
         // Enter fullscreen
@@ -114,6 +118,7 @@ public class DiagramTests : E2ETestBase
         var pageLocator = await App.Sidebar.CreatePageAsync().ConfigureAwait(false);
         var pageTitle = (await pageLocator.InnerTextAsync().ConfigureAwait(false)).Trim();
         await App.Sidebar.SelectPageAsync(pageTitle).ConfigureAwait(false);
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Diagram").ConfigureAwait(false);
 
         // Wait for canvas to appear in edit mode

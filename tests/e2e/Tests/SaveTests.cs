@@ -26,12 +26,13 @@ public class SaveTests : E2ETestBase
     // ── Save-button state ────────────────────────────────────────────────────
 
     /// <summary>
-    /// When a page is first opened (or just created), no local edits exist,
-    /// so the Save button must be disabled.
+    /// When a page is first opened in edit mode with no local edits,
+    /// the Save button must be disabled (isDirty = false).
     /// </summary>
     [Test]
     public async Task SaveButton_IsDisabled_WhenPageIsClean()
     {
+        await App.EnterPageEditModeAsync();
         var saveBtn = Page.GetByTestId("save-page-button");
         await Expect(saveBtn).ToBeDisabledAsync();
     }
@@ -42,6 +43,7 @@ public class SaveTests : E2ETestBase
     [Test]
     public async Task SaveButton_BecomesEnabled_AfterTitleChange()
     {
+        await App.EnterPageEditModeAsync();
         var titleInput = Page.GetByLabel("Page title");
         await titleInput.ClickAsync();
         await titleInput.FillAsync("My Edited Title");
@@ -51,11 +53,12 @@ public class SaveTests : E2ETestBase
     }
 
     /// <summary>
-    /// Adding a text block marks the page dirty and enables the Save button.
+    /// Adding content marks the page dirty and enables the Save button.
     /// </summary>
     [Test]
     public async Task SaveButton_BecomesEnabled_AfterAddingBlock()
     {
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Text");
 
         var saveBtn = Page.GetByTestId("save-page-button");
@@ -69,6 +72,7 @@ public class SaveTests : E2ETestBase
     [Test]
     public async Task CreatePage_WhenDirty_DoesNotRedirect()
     {
+        await App.EnterPageEditModeAsync();
         // Rename current page so we can reliably identify it
         var titleInput = Page.GetByLabel("Page title");
         await titleInput.ClickAsync();
@@ -88,22 +92,26 @@ public class SaveTests : E2ETestBase
     }
 
     /// <summary>
-    /// After clicking Save the page syncs to the server: the button returns to
-    /// disabled (isDirty reset to false).
+    /// After clicking Save the app exits edit mode (Save button disappears,
+    /// Edit button reappears).
     /// </summary>
     [Test]
-    public async Task SaveButton_BecomesDisabled_AfterSave()
+    public async Task SaveButton_ExitsEditMode_AfterSave()
     {
+        await App.EnterPageEditModeAsync();
         // Make a change to dirty the page
         await App.Editor.AddBlockAsync("Text");
 
-        // Verify enabled before save
+        // Verify save button enabled before save
         var saveBtn = Page.GetByTestId("save-page-button");
         await Expect(saveBtn).ToBeEnabledAsync();
 
-        // Save and verify disabled afterwards
+        // Save — app should return to view mode
         await App.SaveAsync();
-        await Expect(saveBtn).ToBeDisabledAsync();
+
+        // Edit button should be visible again (back in view mode)
+        var editBtn = Page.GetByRole(AriaRole.Button, new() { Name = "Edit page", Exact = true });
+        await Expect(editBtn).ToBeVisibleAsync();
     }
 
     // ── Unsaved-changes dialog ───────────────────────────────────────────────
@@ -114,7 +122,8 @@ public class SaveTests : E2ETestBase
     [Test]
     public async Task NavigateAway_WithUnsavedChanges_ShowsDialog()
     {
-        // Dirty the page
+        // Enter edit mode and dirty the page
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Text");
 
         // Create a second page to navigate to
@@ -136,7 +145,8 @@ public class SaveTests : E2ETestBase
     [Test]
     public async Task UnsavedDialog_Cancel_KeepsUserOnPage()
     {
-        // Add a block to dirty the page
+        // Enter edit mode, add a block and type text to dirty the page
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Text");
         await App.Editor.TypeInLastTextBlockAsync("Keep me here");
 
@@ -166,7 +176,8 @@ public class SaveTests : E2ETestBase
     [Test]
     public async Task UnsavedDialog_LeaveWithoutSaving_NavigatesAway()
     {
-        // Dirty the page with a title change
+        // Enter edit mode and dirty the page with a title change
+        await App.EnterPageEditModeAsync();
         var titleInput = Page.GetByLabel("Page title");
         await titleInput.ClickAsync();
         await titleInput.FillAsync("Discarded Title");
@@ -195,7 +206,8 @@ public class SaveTests : E2ETestBase
     [Test]
     public async Task UnsavedDialog_SaveAndLeave_SavesThenNavigates()
     {
-        // Dirty the page
+        // Enter edit mode and dirty the page
+        await App.EnterPageEditModeAsync();
         await App.Editor.AddBlockAsync("Text");
 
         // Create second page and try to navigate to it

@@ -1,0 +1,109 @@
+'use client';
+
+/**
+ * VideoNode — YouTube/video embed as a Tiptap node.
+ *
+ * Attrs: url (string), tags (string[])
+ */
+
+import { Node, mergeAttributes } from '@tiptap/core';
+import { ReactNodeViewRenderer, NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
+import { useEditable } from '../EditableContext';
+import { Video } from 'lucide-react';
+import { BlockTagChips } from '../BlockTagChips';
+
+/** Convert YouTube watch URL to an embed URL; pass through other URLs unchanged. */
+function toEmbedUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+      const videoId =
+        u.searchParams.get('v') ??
+        (u.hostname === 'youtu.be' ? u.pathname.slice(1) : null);
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+    }
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+// ─── Node View ────────────────────────────────────────────────────────────────
+
+function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
+  const { url, tags } = node.attrs as { url: string; tags: string[] };
+  const isEditable = useEditable();
+  const embedUrl = url ? toEmbedUrl(url) : '';
+
+  return (
+    <NodeViewWrapper className="my-2 rounded-xl border border-border bg-card overflow-hidden" data-drag-handle>
+      {/* Header */}
+      <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-3 py-1.5">
+        <Video size={13} className="text-muted-foreground" />
+        <span className="text-xs font-medium text-muted-foreground">Video</span>
+      </div>
+
+      {/* Tags */}
+      <BlockTagChips
+        tags={tags ?? []}
+        isEditable={isEditable}
+        onChange={(t) => updateAttributes({ tags: t })}
+        showEmpty={isEditable}
+      />
+
+      <div className="p-4" onMouseDown={(e) => e.stopPropagation()}>
+        {isEditable && (
+          <input
+            type="url"
+            value={url ?? ''}
+            placeholder="YouTube or video URL…"
+            className="mb-3 w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-ring"
+            onChange={(e) => updateAttributes({ url: e.target.value })}
+          />
+        )}
+        {embedUrl ? (
+          <div className="relative overflow-hidden rounded-lg" style={{ paddingBottom: '56.25%' }}>
+            <iframe
+              src={embedUrl}
+              title="Video"
+              className="absolute inset-0 h-full w-full"
+              allowFullScreen
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
+          </div>
+        ) : (
+          <div className="flex h-32 items-center justify-center rounded-lg border-2 border-dashed border-border">
+            <p className="text-sm text-muted-foreground">Enter a video URL above</p>
+          </div>
+        )}
+      </div>
+    </NodeViewWrapper>
+  );
+}
+
+// ─── Node Definition ──────────────────────────────────────────────────────────
+
+export const VideoNode = Node.create({
+  name: 'videoNode',
+  group: 'block',
+  atom: true,
+  draggable: true,
+  selectable: true,
+
+  addAttributes() {
+    return {
+      url: { default: '' },
+      tags: { default: [] },
+    };
+  },
+
+  parseHTML() { return [{ tag: 'div[data-type="videoNode"]' }]; },
+  renderHTML({ HTMLAttributes }) {
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'videoNode' })];
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(VideoNodeView, {
+      stopEvent: ({ event }) => !event.type.startsWith('drag'),
+    });
+  },
+});

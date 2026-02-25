@@ -86,6 +86,7 @@ import {
   updateFolder as apiUpdateFolder,
   deleteFolder as apiDeleteFolder,
   moveFolder as apiMoveFolder,
+  savePageContent as apiSavePageContent,
   apiPageToPage,
   WorkspaceApiError,
   type ApiPage,
@@ -246,6 +247,25 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   const [isDirty, setIsDirty] = useState(false);
 
   /**
+   * Whether the user is actively editing the page in the unified Tiptap editor.
+   * When false, the editor renders in read-only view mode and the Edit button is shown.
+   * When true, the toolbar and Save/Cancel buttons are visible.
+   */
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  /**
+   * Pending unified-editor content waiting to be saved.
+   * Updated on every editor onChange so we always have the latest JSON.
+   */
+  const pendingContentRef = useRef<import('@tiptap/core').JSONContent | null>(null);
+
+  /**
+   * Set to true just before creating a new page so that the activePageId
+   * change useEffect doesn't immediately reset isEditMode back to false.
+   */
+  const justCreatedPageRef = useRef(false);
+
+  /**
    * Page ID the user intends to navigate to while the current page is dirty.
    *
    * Set when the user clicks a different page in the sidebar while `isDirty`
@@ -325,6 +345,17 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   useEffect(() => {
     treeRootRef.current = treeRoot;
   }, [treeRoot]);
+
+  // Exit edit mode whenever a different page becomes active
+  useEffect(() => {
+    // Skip reset if this activePageId change was from creating a new page
+    if (justCreatedPageRef.current) {
+      justCreatedPageRef.current = false;
+      return;
+    }
+    setIsEditMode(false);
+    pendingContentRef.current = null;
+  }, [activePageId]);
 
   // ─── Derived values ──────────────────────────────────────────────────────────
 
@@ -424,9 +455,16 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
         if (!activeTags.every((t) => pageTags.includes(t))) return false;
       }
 
-      // Text filter: title or any block's content must contain the query
+      // Text filter: title, tags, or content must contain the query
       if (hasQuery) {
         if (page.title.toLowerCase().includes(q)) return true;
+        // Search page tags (so typing a tag name in the search box finds pages)
+        if ((page.tags ?? []).some((tag) => tag.toLowerCase().includes(q))) return true;
+        // Unified-editor pages: JSON-stringify the content tree and search it
+        if (page.content != null) {
+          return JSON.stringify(page.content).toLowerCase().includes(q);
+        }
+        // Legacy block-based pages
         return page.blocks.some((block) => {
           if (typeof block.content === 'string') {
             // Strip HTML tags before matching. The regex is bounded by `>` so
@@ -502,13 +540,15 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   const createFile = useCallback((parentId: string) => {
     const localPageId = newPageId();
     const fileTitle = generateUniqueNameInScope(treeRoot, parentId, 'Untitled');
-    const newPage: Page = { id: localPageId, title: fileTitle, blocks: [] };
-    const shouldAutoOpenNewPage = activePageId == null;
+    const emptyDoc = { type: 'doc', content: [] as import('@tiptap/core').JSONContent[] };
+    const newPage: Page = { id: localPageId, title: fileTitle, blocks: [], content: emptyDoc };
 
     // Optimistic update
     setPages((prev) => [...prev, newPage]);
     setTreeRoot((root) => addFileUnder(root, parentId, localPageId, newPage.title));
-    if (shouldAutoOpenNewPage) setActivePageId(localPageId);
+    justCreatedPageRef.current = true;
+    setActivePageId(localPageId);
+    setIsEditMode(true);
     serverBlocksRef.current.set(localPageId, []);
     serverPagesRef.current.set(localPageId, newPage);
 
@@ -519,12 +559,13 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
       // Swap the optimistic local id with the server-assigned id everywhere.
       // This ensures all subsequent API calls (block create/update/delete) use
       // the correct pageId that exists in the database.
+      const createdPage: Page = { id: created.id, title: created.title, blocks: [], content: emptyDoc };
       setPages((prev) => swapPageId(prev, localPageId, created.id));
       setTreeRoot((root) => replaceNodeId(root, localPageId, created.id));
       setActivePageId((current) => (current === localPageId ? created.id : current));
       serverBlocksRef.current.set(created.id, []);
       serverBlocksRef.current.delete(localPageId);
-      serverPagesRef.current.set(created.id, { ...newPage, id: created.id });
+      serverPagesRef.current.set(created.id, createdPage);
       serverPagesRef.current.delete(localPageId);
     }).catch((err) => {
       console.error('[createFile]', err);
@@ -532,7 +573,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
         showErrorToast(t('tree.duplicateNameError'));
       }
     });
-  }, [activePageId, showErrorToast, t, treeRoot]);
+  }, [showErrorToast, t, treeRoot]);
 
   /**
    * Open the delete-confirmation dialog for a node.
@@ -739,7 +780,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   const handleSelect = useCallback(
     (pageId: string) => {
       if (pageId === activePageId) return;
-      if (isDirty) {
+      if (isDirty && isEditMode) {
         setPendingNavId(pageId);
         return;
       }
@@ -747,7 +788,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
       setActivePageId(pageId);
       setMobileSidebarOpen(false);
     },
-    [activePageId, isDirty],
+    [activePageId, isDirty, isEditMode],
   );
 
   /** Select a page when the user clicks on a tree leaf node. */
@@ -882,10 +923,22 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     const page = pages.find((p) => p.id === activePageId);
     if (!page) return;
 
-    // Always persist the current title on save (cheap, guarantees consistency)
-    await apiUpdatePage(activePageId, { title: page.title }).catch((err) =>
-      console.error('[save:title]', err),
-    );
+    // ── Unified editor path — single PUT with JSON content ─────────────────────
+    if (page.content !== null || pendingContentRef.current !== null) {
+      const contentToSave = pendingContentRef.current ?? page.content ?? { type: 'doc', content: [] };
+      await apiSavePageContent(activePageId, contentToSave).catch((err) =>
+        console.error('[save:content]', err),
+      );
+      // Also persist title / tags in same call when they changed
+      await apiUpdatePage(activePageId, { title: page.title, tags: page.tags }).catch((err) =>
+        console.error('[save:meta]', err),
+      );
+      serverPagesRef.current.set(activePageId, { ...page, content: contentToSave });
+      setIsDirty(false);
+      setSaveFeedback(true);
+      setIsEditMode(false);
+      return;
+    }
 
     const serverBlocks = serverBlocksRef.current.get(activePageId) ?? [];
     const localBlocks = page.blocks;
@@ -965,11 +1018,18 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
 
     setIsDirty(false);
     setSaveFeedback(true);
+    setIsEditMode(false);
   }, [activePageId, pages]);
 
-  /** Save current page then navigate to the pending destination. */
+  /** Save current page then navigate to the pending destination (or exit edit mode). */
   const handleSaveAndLeave = useCallback(async () => {
     await handleSave();
+    if (pendingNavId === '__cancel_edit__') {
+      setIsEditMode(false);
+      setIsDirty(false);
+      setPendingNavId(null);
+      return;
+    }
     if (pendingNavId) {
       setActivePageId(pendingNavId);
       setMobileSidebarOpen(false);
@@ -984,6 +1044,18 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
    * persisted version if they return to it later.
    */
   const handleLeaveWithout = useCallback(() => {
+    // Cancel-edit sentinel — revert content to server snapshot and exit edit mode
+    if (pendingNavId === '__cancel_edit__') {
+      const pageSnap = serverPagesRef.current.get(activePageId ?? '');
+      if (pageSnap && activePageId) {
+        setPages((prev) => prev.map((p) => (p.id === activePageId ? { ...pageSnap } : p)));
+      }
+      pendingContentRef.current = null;
+      setIsEditMode(false);
+      setIsDirty(false);
+      setPendingNavId(null);
+      return;
+    }
     if (pendingNavId) {
       // Revert local edits to the server snapshot
       const pageSnap = serverPagesRef.current.get(activePageId ?? '');
@@ -1014,6 +1086,40 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   const handleCancelPendingNav = useCallback(() => {
     setPendingNavId(null);
   }, []);
+
+  /**
+   * Called by PageEditor on every document change.
+   * Stores the latest JSON so handleSave can persist it, and marks dirty.
+   */
+  const handleContentChange = useCallback(
+    (json: import('@tiptap/core').JSONContent) => {
+      if (!activePageId) return;
+      pendingContentRef.current = json;
+      setPages((prev) =>
+        prev.map((p) => (p.id === activePageId ? { ...p, content: json } : p)),
+      );
+      setIsDirty(true);
+    },
+    [activePageId],
+  );
+
+  /**
+   * Toggle edit mode for the unified editor.
+   * When the user clicks Cancel while there are dirty changes, open the
+   * UnsavedChangesDialog so they can choose Save, Discard, or Stay.
+   */
+  const handleEditModeChange = useCallback(
+    (next: boolean) => {
+      if (!next && isDirty && activePageId) {
+        // Trigger UnsavedChangesDialog by setting pendingNavId to a sentinel
+        setPendingNavId('__cancel_edit__');
+      } else {
+        setIsEditMode(next);
+        if (!next) setIsDirty(false);
+      }
+    },
+    [isDirty, activePageId],
+  );
 
   // ─── Effects ─────────────────────────────────────────────────────────────────
 
@@ -1514,9 +1620,12 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
         onTitleChange={handleTitleChange}
         onTitleBlur={handleTitleBlur}
         titleHasError={titleHasError}
-        onBlocksChange={handleBlocksChange}
         onTagsChange={handleTagsChange}
+        allTagSuggestions={allTags}
         onMobileSidebarToggle={() => setMobileSidebarOpen((v) => !v)}
+        isEditMode={isEditMode}
+        onEditModeChange={handleEditModeChange}
+        onContentChange={handleContentChange}
       />
 
       {errorToast && (

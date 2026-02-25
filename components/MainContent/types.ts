@@ -282,6 +282,9 @@ export type Page = {
   createdAt?: string;
   /** ISO datetime string from the server — when the page was last saved. */
   updatedAt?: string;
+  /** Unified Tiptap JSONContent document. Present when the page uses the new
+   *  unified editor; null/undefined for pages still using legacy blocks. */
+  content?: import('@tiptap/core').JSONContent | null;
 };
 
 // ─── Type guards ─────────────────────────────────────────────────────────────

@@ -23,14 +23,29 @@ public class AppPage(IPage page)
 
     // ── Header ─────────────────────────────────────────────────────────────
 
-    /// <summary>Clicks the Save button in the page-header area (below the title).</summary>
+    /// <summary>
+    /// Clicks the "Edit" header button to enter edit mode.
+    /// No-op when already in edit mode (Save button visible).
+    /// </summary>
+    public async Task EnterPageEditModeAsync()
+    {
+        var editBtn = _page.GetByRole(AriaRole.Button, new() { Name = "Edit page", Exact = true });
+        if (await editBtn.IsVisibleAsync())
+            await editBtn.ClickAsync();
+        // Wait until the Save button appears to confirm we are in edit mode
+        await _page.GetByTestId("save-page-button").WaitForAsync(new() { Timeout = 5_000 });
+    }
+
+    /// <summary>Clicks the Save button and waits until the app returns to view mode (edit mode off).</summary>
     public async Task SaveAsync()
     {
         var saveBtn = _page.GetByTestId("save-page-button");
         await saveBtn.ClickAsync();
-        // Wait until the save completes (isDirty becomes false → button disabled)
-        await _page.Locator("[data-testid='save-page-button']:disabled").First
-            .WaitForAsync(new() { Timeout = 5_000 });
+        // After a successful save the app exits edit mode — the Edit button
+        // becomes visible again as confirmation that the save completed.
+        await _page
+            .GetByRole(AriaRole.Button, new() { Name = "Edit page", Exact = true })
+            .WaitForAsync(new() { Timeout = 10_000 });
     }
 
     /// <summary>Opens the Settings dialog via the user-menu avatar button.</summary>

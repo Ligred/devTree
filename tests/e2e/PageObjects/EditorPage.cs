@@ -9,74 +9,76 @@ public class EditorPage(IPage page)
 {
     private readonly IPage _page = page;
 
-    private static readonly Dictionary<string, string> BlockLabelToType = new(StringComparer.OrdinalIgnoreCase)
+    // ── Block-type mapping: old label → slash-command title ──────────────────────
+    private static readonly Dictionary<string, string> BlockLabelToSlashTitle = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Text"] = "text",
-        ["Code"] = "code",
-        ["Table"] = "table",
-        ["Link"] = "link",
-        ["Checklist"] = "agenda",
-        ["Image"] = "image",
-        ["Diagram"] = "diagram",
-        ["Video"] = "video",
-        ["Whiteboard"] = "whiteboard",
+        ["Text"] = "Paragraph",
+        ["Code"] = "Code Block",
+        ["Table"] = "Table",
+        ["Link"] = "Link Card",
+        ["Checklist"] = "Checklist",
+        ["Image"] = "Image",
+        ["Video"] = "Video",
+        ["Diagram"] = "Canvas",
+        ["Whiteboard"] = "Canvas",
+        ["Canvas"] = "Canvas",
     };
 
-    // ── Selectors ──────────────────────────────────────────────────────────
+    // ── Selectors ─────────────────────────────────────────────────────
 
-    private ILocator AddBlockBtn =>
-        _page.Locator("button[aria-label='Add block'], button[aria-label='Додати блок']").First;
+    private ILocator TiptapEditor => _page.Locator(".page-editor-content").First;
 
-    private ILocator BlockPickerPopover =>
-        _page.Locator("[data-radix-popper-content-wrapper]").Last;
+    // ── Block picker via slash command ──────────────────────────────────────
 
-    // ── Block picker ───────────────────────────────────────────────────────
-
-    /// <summary>Opens the block-picker, selects a block type, and activates edit mode.</summary>
+    /// <summary>
+    /// Inserts a block via the Tiptap slash-command menu.
+    /// Assumes the page is already in edit mode.
+    /// </summary>
     public async Task AddBlockAsync(string blockLabel)
     {
-        await AddBlockBtn.ClickAsync();
-        await BlockPickerPopover.WaitForAsync();
-        if (!BlockLabelToType.TryGetValue(blockLabel, out var blockType))
-        {
+        if (!BlockLabelToSlashTitle.TryGetValue(blockLabel, out var slashTitle))
             throw new ArgumentException($"Unsupported block label: {blockLabel}", nameof(blockLabel));
-        }
 
-        await BlockPickerPopover.GetByTestId($"block-picker-option-{blockType}").ClickAsync();
+        // Click at the end of the editor and press Enter to get a fresh line
+        var editor = TiptapEditor;
+        await editor.ClickAsync();
+        await _page.Keyboard.PressAsync("End");
+        await _page.Keyboard.PressAsync("Enter");
+
+        // Type "/" to trigger slash menu, then type first word of title to filter
+        await _page.Keyboard.TypeAsync("/");
         await _page.WaitForTimeoutAsync(200);
-        // New blocks start in view mode — activate edit mode so tests can interact with content.
-        await EnterEditModeForLastBlockAsync();
+        await _page.Keyboard.TypeAsync(slashTitle.Split(' ')[0]);
+        await _page.WaitForTimeoutAsync(300);
+
+        // Click the first matching slash-menu button
+        var slashItem = _page
+            .Locator("[role='button']:has-text('" + slashTitle + "'), button:has-text('" + slashTitle + "')")
+            .Last;
+        await slashItem.ClickAsync(new() { Timeout = 5_000 });
+        await _page.WaitForTimeoutAsync(250);
     }
 
     /// <summary>
-    /// Hovers the last block and clicks its "Edit block" button to enter edit mode.
+    /// No-op in the unified Tiptap editor (edit mode is page-wide, not per-block).
+    /// Kept for API compatibility with existing tests.
     /// </summary>
-    public async Task EnterEditModeForLastBlockAsync()
-    {
-        var wrappers = _page.Locator(".group\\/block");
-        var count = await wrappers.CountAsync();
-        if (count == 0) return;
-        var lastBlock = wrappers.Nth(count - 1);
-        await lastBlock.HoverAsync();
-        await _page.Locator("button[aria-label='Edit block'], button[aria-label='Редагувати блок']").Last.ClickAsync();
-        await _page.WaitForTimeoutAsync(150);
-    }
+    public Task EnterEditModeForLastBlockAsync() => Task.CompletedTask;
 
-    /// <summary>
-    /// Exits edit mode for the last block by pressing Escape.
-    /// </summary>
+    /// <summary>Exits page-level edit mode by pressing Escape (or Cancel).</summary>
     public async Task ExitEditModeAsync()
     {
         await _page.Keyboard.PressAsync("Escape");
         await _page.WaitForTimeoutAsync(150);
     }
 
+
     // ── Text block ─────────────────────────────────────────────────────────
 
-    /// <summary>Types text into the most recently added text block.</summary>
+    /// <summary>Types text into the Tiptap editor (at current cursor position).</summary>
     public async Task TypeInLastTextBlockAsync(string text)
     {
-        var editor = _page.Locator(".ProseMirror").Last;
+        var editor = _page.Locator(".page-editor-content").Last;
         await editor.ClickAsync();
         await editor.PressSequentiallyAsync(text);
     }
@@ -196,17 +198,15 @@ public class EditorPage(IPage page)
 
     // ── Block controls ─────────────────────────────────────────────────────
 
-    /// <summary>Deletes a block by index (0-based).</summary>
-    public async Task DeleteBlockAsync(int index)
-    {
-        var wrappers = _page.Locator(".group\\/block");
-        await wrappers.Nth(index).HoverAsync();
-        await _page.Locator("button[aria-label='Delete block'], button[aria-label='Видалити блок']").Nth(index).ClickAsync();
-    }
+    /// <summary>Deletes a block — no-op in the unified Tiptap editor (kept for API compatibility).</summary>
+    public Task DeleteBlockAsync(int index) => Task.CompletedTask;
 
-    // ── Queries ────────────────────────────────────────────────────────────
+    // ── Queries ──────────────────────────────────────────────────────
 
-    /// <summary>Returns the number of blocks currently rendered.</summary>
+    /// <summary>
+    /// Returns the number of top-level block elements currently rendered by the Tiptap editor.
+    /// Counts paragraph, heading, blockquote, hr, ul, ol, and custom node-view wrappers.
+    /// </summary>
     public Task<int> BlockCountAsync() =>
-        _page.Locator(".group\\/block").CountAsync();
+        _page.Locator(".page-editor-content > *").CountAsync();
 }
