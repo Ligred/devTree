@@ -37,9 +37,9 @@ public class RouteTests : E2ETestBase
         // Navigate directly via deep-link URL (the /pages/ redirect still works)
         var deepLinkUrl = $"{BaseUrl}/pages/{pageId}";
         await Page.GotoAsync(deepLinkUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
-        
+
         // Verify the correct page is loaded by checking the title in header
-        var headerSpan = Page.Locator("header span").First;
+        var headerSpan = Page.GetByTestId("page-header-title");
         await Expect(headerSpan).ToContainTextAsync(samplePageTitle);
     }
 
@@ -61,7 +61,7 @@ public class RouteTests : E2ETestBase
         await Expect(Page.Locator("aside").GetByText("React Hooks", new() { Exact = true }).First).ToBeVisibleAsync();
 
         // Verify selected page loaded
-        var headerSpan = Page.Locator("header span").First;
+        var headerSpan = Page.GetByTestId("page-header-title");
         await Expect(headerSpan).ToContainTextAsync("React Hooks");
 
         // Verify the page is highlighted in the tree
@@ -112,9 +112,9 @@ public class RouteTests : E2ETestBase
         
         // Get a different page from the tree
         await App.Sidebar.SelectPageAsync("TypeScript Tips");
-        
+
         // Verify we're on TypeScript Tips
-        var headerSpan = Page.Locator("header span").First;
+        var headerSpan = Page.GetByTestId("page-header-title");
         await Expect(headerSpan).ToContainTextAsync("TypeScript Tips");
 
         // Go back to React Hooks and click the folder breadcrumb.
@@ -170,9 +170,9 @@ public class RouteTests : E2ETestBase
         
         // Go back
         await Page.GoBackAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
-        
+
         // Verify we're back on the first page
-        var headerSpan = Page.Locator("header span").First;
+        var headerSpan = Page.GetByTestId("page-header-title");
         await Expect(headerSpan).ToContainTextAsync("React Hooks");
     }
 
@@ -188,9 +188,9 @@ public class RouteTests : E2ETestBase
         
         // Go back
         await Page.GoBackAsync(new() { WaitUntil = WaitUntilState.NetworkIdle });
-        
+
         // Verify we're on React Hooks
-        var headerSpan = Page.Locator("header span").First;
+        var headerSpan = Page.GetByTestId("page-header-title");
         await Expect(headerSpan).ToContainTextAsync("React Hooks");
         
         // Go forward
@@ -206,7 +206,10 @@ public class RouteTests : E2ETestBase
     {
         // Navigate to a page
         await App.Sidebar.SelectPageAsync("React Hooks");
-        
+
+        // Enter edit mode before adding a block (edit mode is required)
+        await App.EnterPageEditModeAsync();
+
         // Make an unsaved change (add a block and modify it)
         await App.Editor.AddBlockAsync("Text");
         await App.Editor.TypeInLastTextBlockAsync("Test content");
@@ -226,9 +229,9 @@ public class RouteTests : E2ETestBase
         
         // Click "Leave without saving"
         await Page.GetByTestId("unsaved-leave-without-saving").ClickAsync();
-        
+
         // Verify we navigated to TypeScript Tips
-        var headerSpan = Page.Locator("header span").First;
+        var headerSpan = Page.GetByTestId("page-header-title");
         await Expect(headerSpan).ToContainTextAsync("TypeScript Tips");
     }
 
@@ -237,7 +240,10 @@ public class RouteTests : E2ETestBase
     {
         // Navigate to a page
         await App.Sidebar.SelectPageAsync("React Hooks");
-        
+
+        // Enter edit mode before adding a block
+        await App.EnterPageEditModeAsync();
+
         // Make an unsaved change
         await App.Editor.AddBlockAsync("Text");
         await App.Editor.TypeInLastTextBlockAsync("Test content that is unsaved");
@@ -259,9 +265,9 @@ public class RouteTests : E2ETestBase
         
         // Dialog should be gone
         await Expect(confirmDialog).ToBeHiddenAsync();
-        
+
         // Verify we're still on React Hooks
-        var headerSpan = Page.Locator("header span").First;
+        var headerSpan = Page.GetByTestId("page-header-title");
         await Expect(headerSpan).ToContainTextAsync("React Hooks");
         
         // Verify our change is still there (unsaved)
@@ -273,27 +279,31 @@ public class RouteTests : E2ETestBase
     {
         // Navigate to a page
         await App.Sidebar.SelectPageAsync("React Hooks");
-        
+
+        // Enter edit mode before adding a block
+        await App.EnterPageEditModeAsync();
+
         // Make a change
         await App.Editor.AddBlockAsync("Text");
         await App.Editor.TypeInLastTextBlockAsync("Test content");
         
         // Save the changes
         await App.SaveAsync();
-        
-        // Verify save completed (button disabled)
-        var saveBtn = Page.GetByTestId("save-page-button");
-        await Expect(saveBtn).ToBeDisabledAsync(new() { Timeout = 5_000 });
-        
+
+        // Verify save completed — SaveAsync() exits edit mode so "Edit page" button is visible
+        await Expect(
+            Page.GetByRole(AriaRole.Button, new() { Name = "Edit page", Exact = true })
+        ).ToBeVisibleAsync(new() { Timeout = 5_000 });
+
         // Navigate to another page via sidebar
         await App.Sidebar.SelectPageAsync("TypeScript Tips");
         
         // Unsaved-changes dialog should NOT appear
         var confirmDialog = Page.GetByRole(AriaRole.Alertdialog);
         await Expect(confirmDialog).ToBeHiddenAsync();
-        
+
         // Verify navigation succeeded
-        var headerSpan = Page.Locator("header span").First;
+        var headerSpan = Page.GetByTestId("page-header-title");
         await Expect(headerSpan).ToContainTextAsync("TypeScript Tips");
     }
 }

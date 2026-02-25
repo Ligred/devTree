@@ -111,6 +111,17 @@ export function PageEditor({ content, editable, onChange, pageId, onEditorReady,
    * would cause a feedback loop killing interactive node views like Monaco).
    */
   const lastLocalContentRef = useRef<string | null>(null);
+
+  /**
+   * Snapshot of the document JSON taken when we enter edit mode.
+   * Tiptap fires a spurious `onUpdate` when `setEditable(true)` is called, even
+   * though no content has changed.  We suppress that initial fire by comparing
+   * the incoming JSON against the snapshot; once the user makes a real edit
+   * (different JSON), the snapshot is cleared and all subsequent changes flow
+   * through normally.
+   */
+  const cleanContentRef = useRef<string | null>(null);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -160,8 +171,19 @@ export function PageEditor({ content, editable, onChange, pageId, onEditorReady,
 
     onUpdate({ editor: e }) {
       const json = e.getJSON();
+      const jsonStr = JSON.stringify(json);
       // Record this JSON so the "sync from outside" effect can skip it
-      lastLocalContentRef.current = JSON.stringify(json);
+      lastLocalContentRef.current = jsonStr;
+      // Don't propagate changes when the editor isn't editable (view mode
+      // can issue setContent calls that should never mark the page dirty).
+      if (!e.isEditable) return;
+      // Suppress the spurious onUpdate that Tiptap fires when setEditable(true)
+      // is called without any real content change.  We detect this by comparing
+      // against the snapshot taken just before entering edit mode.
+      if (cleanContentRef.current !== null) {
+        if (jsonStr === cleanContentRef.current) return; // no real change yet
+        cleanContentRef.current = null;                  // first real edit — ungate
+      }
       onChange?.(json);
     },
 
@@ -172,6 +194,19 @@ export function PageEditor({ content, editable, onChange, pageId, onEditorReady,
       },
     },
   });
+
+  // ── Snapshot doc content when entering edit mode ─────────────────────────
+  // This runs before the setEditable effect (effects run in declaration order),
+  // so we capture the "clean" state before Tiptap's setEditable(true) fires its
+  // spurious onUpdate.
+  useEffect(() => {
+    if (!editor) return;
+    if (editable) {
+      cleanContentRef.current = JSON.stringify(editor.getJSON());
+    } else {
+      cleanContentRef.current = null;
+    }
+  }, [editor, editable]);
 
   // ── Keep editable in sync with prop changes ───────────────────────────────
   useEffect(() => {

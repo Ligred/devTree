@@ -146,7 +146,7 @@ export function MainContent({
           )}
           <span className="sr-only">{page?.title ?? t('main.selectPage')}</span>
           {breadcrumbs.length > 0 ? (
-            <nav aria-label="Breadcrumb" className="min-w-0">
+            <nav aria-label="Breadcrumb" className="min-w-0" data-testid="page-header-title">
               <ol className="flex min-w-0 items-center gap-1 text-sm">
                 {breadcrumbs.map((crumb, index) => (
                   <li key={crumb.id} className="flex min-w-0 items-center gap-1">
@@ -174,7 +174,7 @@ export function MainContent({
               </ol>
             </nav>
           ) : (
-            <span className="min-w-0 truncate text-sm font-medium text-foreground">
+            <span className="min-w-0 truncate text-sm font-medium text-foreground" data-testid="page-header-title">
               {page?.title ?? t('main.selectPage')}
             </span>
           )}
@@ -184,6 +184,7 @@ export function MainContent({
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
+              data-testid="export-markdown-button"
               title={t(I18N_EXPORT_MARKDOWN)}
               aria-label={t(I18N_EXPORT_MARKDOWN)}
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"

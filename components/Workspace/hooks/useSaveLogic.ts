@@ -69,6 +69,8 @@ export type SaveLogicResult = {
   handleEditModeChange: (next: boolean) => void;
   handleTitleChange: (title: string) => void;
   handleTitleBlur: () => void;
+  /** Cancel a pending debounced title-blur save (called by onFileCreated). */
+  cancelTitleBlurSave: () => void;
   handleTagsChange: (tags: string[]) => void;
   handleBlocksChange: (blocks: Block[]) => void;
   handleContentChange: (json: JSONContent) => void;
@@ -102,10 +104,18 @@ export function useSaveLogic({
   const pendingContentRef = useRef<JSONContent | null>(null);
   const justCreatedPageRef = useRef(false);
   const tagsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const titleBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Reset edit mode whenever the active page changes — unless we just created
   // a new page (justCreatedPageRef prevents the reset for that case).
+  // Also cancel any pending title-blur save for the page we are leaving so
+  // that navigating away (via unsaved-changes dialog, new-page creation, etc.)
+  // never persists a draft title to the wrong page.
   useEffect(() => {
+    if (titleBlurTimerRef.current) {
+      clearTimeout(titleBlurTimerRef.current);
+      titleBlurTimerRef.current = null;
+    }
     if (justCreatedPageRef.current) {
       justCreatedPageRef.current = false;
       return;
@@ -342,22 +352,45 @@ export function useSaveLogic({
     }
 
     setTitleHasError(false);
-    void apiUpdatePage(activePageId, { title: page.title })
-      .then(() => {
-        const oldSnap = serverPagesRef.current.get(activePageId);
-        serverPagesRef.current.set(
-          activePageId,
-          oldSnap ? { ...oldSnap, title: page.title } : { ...page, blocks: [...page.blocks] },
-        );
-      })
-      .catch((err) => {
-        console.error('[titleBlur]', err);
-        if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
-          setTitleHasError(true);
-          showErrorToast(t('tree.duplicateNameError'));
-        }
-      });
-  }, [activePageId, pages, showErrorToast, t, treeRoot, serverPagesRef]);
+
+    // When content is dirty the unsaved-changes dialog will handle the full
+    // save (title + content) or discard.  Starting a standalone title save
+    // here would race the "Leave without saving" path and corrupt the DB.
+    if (isDirty) return;
+
+    // Debounce the actual API call so that onFileCreated (triggered by a
+    // simultaneous "New page" click) can cancel it before it fires.  The blur
+    // event always precedes the click event in the same interaction, so a
+    // timer of even 0 ms would be enough — 100 ms gives comfortable headroom.
+    if (titleBlurTimerRef.current) clearTimeout(titleBlurTimerRef.current);
+    const capturedPageId = activePageId;
+    const capturedTitle = page.title;
+    titleBlurTimerRef.current = setTimeout(() => {
+      titleBlurTimerRef.current = null;
+      void apiUpdatePage(capturedPageId, { title: capturedTitle })
+        .then(() => {
+          const oldSnap = serverPagesRef.current.get(capturedPageId);
+          serverPagesRef.current.set(
+            capturedPageId,
+            oldSnap ? { ...oldSnap, title: capturedTitle } : { ...page, blocks: [...page.blocks] },
+          );
+        })
+        .catch((err) => {
+          console.error('[titleBlur]', err);
+          if (err instanceof WorkspaceApiError && (err.status === 409 || err.code === 'DUPLICATE_NAME')) {
+            setTitleHasError(true);
+            showErrorToast(t('tree.duplicateNameError'));
+          }
+        });
+    }, 100);
+  }, [activePageId, isDirty, pages, showErrorToast, t, treeRoot, serverPagesRef, titleBlurTimerRef]);
+
+  const cancelTitleBlurSave = useCallback(() => {
+    if (titleBlurTimerRef.current) {
+      clearTimeout(titleBlurTimerRef.current);
+      titleBlurTimerRef.current = null;
+    }
+  }, []);
 
   // ── handleTagsChange ───────────────────────────────────────────────────────
 
@@ -424,6 +457,7 @@ export function useSaveLogic({
     handleEditModeChange,
     handleTitleChange,
     handleTitleBlur,
+    cancelTitleBlurSave,
     handleTagsChange,
     handleBlocksChange,
     handleContentChange,

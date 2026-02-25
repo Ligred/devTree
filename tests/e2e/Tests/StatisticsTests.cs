@@ -21,7 +21,7 @@ public class StatisticsTests : E2ETestBase
         await statsBtn.ClickAsync();
 
         // Wait for the statistics page header to appear
-        await Expect(Page.Locator("header").GetByText("Statistics").First).ToBeVisibleAsync(new() { Timeout = 5_000 });
+        await Expect(Page.Locator("h1").GetByText("Statistics").First).ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
 
     [Test]
@@ -30,7 +30,7 @@ public class StatisticsTests : E2ETestBase
         // Go to statistics first
         var statsBtn = Page.Locator("nav[aria-label='Application sections'] button[aria-label='Statistics']").First;
         await statsBtn.ClickAsync();
-        await Expect(Page.Locator("header").GetByText("Statistics").First).ToBeVisibleAsync(new() { Timeout = 5_000 });
+        await Expect(Page.Locator("h1").GetByText("Statistics").First).ToBeVisibleAsync(new() { Timeout = 5_000 });
 
         // Click the Notebook item in the ActivityBar
         var notebookBtn = Page.Locator("nav[aria-label='Application sections'] button[aria-label='Notebook']").First;
@@ -60,7 +60,7 @@ public class StatisticsTests : E2ETestBase
         await Page.GotoAsync($"{BaseUrl}/statistics", new() { WaitUntil = WaitUntilState.NetworkIdle });
 
         // Wait for page to be ready
-        await Expect(Page.Locator("header").GetByText("Statistics").First).ToBeVisibleAsync(new() { Timeout = 5_000 });
+        await Expect(Page.Locator("h1").GetByText("Statistics").First).ToBeVisibleAsync(new() { Timeout = 5_000 });
 
         // Click the Settings button in the ActivityBar
         await App.OpenSettingsAsync();

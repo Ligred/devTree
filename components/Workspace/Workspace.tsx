@@ -104,9 +104,21 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     t,
     setActivePageId,
     onFileCreated: (pageId) => {
+      // Cancel any debounced title-blur save for the page we're leaving.
+      // Without this, clicking "New page" while the title input is focused
+      // would first blur the input (saving the draft title to the DB) and
+      // then navigate away — corrupting the old page's title in the database.
+      saveLogic.cancelTitleBlurSave();
       saveLogic.justCreatedPageRef.current = true;
       setActivePageId(pageId);
       saveLogic.setIsEditMode(true);
+    },
+    onPageIdReplaced: (oldId, newId) => {
+      // When the API returns the real DB ID for a newly created page, we need to
+      // update activePageId without triggering the edit-mode reset in useSaveLogic.
+      // Setting justCreatedPageRef to true prevents the reset.
+      saveLogic.justCreatedPageRef.current = true;
+      setActivePageId((current) => (current === oldId ? newId : current));
     },
   });
 

@@ -17,6 +17,7 @@ public class EditorPage(IPage page)
         ["Checklist"] = "Checklist",
         ["Image"] = "Image",
         ["Video"] = "Video",
+        ["Audio"] = "Audio",
         ["Diagram"] = "Canvas",
         ["Whiteboard"] = "Canvas",
         ["Canvas"] = "Canvas",
@@ -200,7 +201,61 @@ public class EditorPage(IPage page)
     /// <summary>
     /// Returns the number of top-level block elements currently rendered by the Tiptap editor.
     /// Counts paragraph, heading, blockquote, hr, ul, ol, and custom node-view wrappers.
+    /// Waits for the editor container to appear before counting (handles async Tiptap initialisation).
     /// </summary>
-    public Task<int> BlockCountAsync() =>
-        _page.Locator(".page-editor-content > *").CountAsync();
+    public async Task<int> BlockCountAsync()
+    {
+        var container = _page.Locator(".page-editor-content");
+        try
+        {
+            await container.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 10_000 });
+        }
+        catch
+        {
+            // Container never appeared — return 0.
+            return 0;
+        }
+        // Give Tiptap a brief moment to render content into the container.
+        await _page.WaitForTimeoutAsync(500);
+        return await _page.Locator(".page-editor-content > *").CountAsync();
+    }
+
+    // ── Link Card block ────────────────────────────────────────────────────────
+
+    /// <summary>Fills the URL input of the last link card block.</summary>
+    public async Task SetLinkCardUrlAsync(string url)
+    {
+        var urlInput = _page.GetByPlaceholder("URL\u2026").Last;
+        await urlInput.FillAsync(url);
+        await _page.WaitForTimeoutAsync(300);
+    }
+
+    // ── Audio block ────────────────────────────────────────────────────────────
+
+    /// <summary>Fills the URL input of the last audio block.</summary>
+    public async Task SetAudioUrlAsync(string url)
+    {
+        var urlInput = _page.GetByPlaceholder("Audio URL (mp3, ogg, etc.)\u2026").Last;
+        await urlInput.FillAsync(url);
+        await _page.WaitForTimeoutAsync(300);
+    }
+
+    // ── Toolbar helpers ────────────────────────────────────────────────────────
+
+    /// <summary>Returns the formatting toolbar container (only visible in edit mode).</summary>
+    public ILocator Toolbar =>
+        _page.Locator("button[title='Bold (Ctrl+B)']").Locator("xpath=ancestor::div[contains(@class,'border-b')]").First;
+
+    /// <summary>Clicks a toolbar button by its exact title attribute value.</summary>
+    public async Task ClickToolbarButtonAsync(string title)
+    {
+        var btn = _page.Locator($"button[title='{title}']").First;
+        await btn.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
+        await btn.ClickAsync();
+        await _page.WaitForTimeoutAsync(150);
+    }
+
+    /// <summary>Returns true when the Bold toolbar button is visible (i.e. the toolbar is rendered).</summary>
+    public Task<bool> IsToolbarVisibleAsync() =>
+        _page.Locator("button[title='Bold (Ctrl+B)']").First.IsVisibleAsync();
 }

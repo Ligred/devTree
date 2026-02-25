@@ -25,15 +25,24 @@ public class AppPage(IPage page)
 
     /// <summary>
     /// Clicks the "Edit" header button to enter edit mode.
-    /// No-op when already in edit mode (Save button visible).
+    /// Waits for the Edit button to become visible first (the page may still be
+    /// loading after navigation), then skips the click if already in edit mode.
     /// </summary>
     public async Task EnterPageEditModeAsync()
     {
         var editBtn = _page.GetByRole(AriaRole.Button, new() { Name = "Edit page", Exact = true });
-        if (await editBtn.IsVisibleAsync())
-            await editBtn.ClickAsync();
-        // Wait until the Save button appears to confirm we are in edit mode
-        await _page.GetByTestId("save-page-button").WaitForAsync(new() { Timeout = 5_000 });
+        var saveBtn = _page.GetByTestId("save-page-button");
+
+        // Fast-path: already in edit mode — Save button is visible.
+        if (await saveBtn.IsVisibleAsync())
+            return;
+
+        // Wait for the Edit button to appear (the page may still be navigating / rendering).
+        await editBtn.WaitForAsync(new() { Timeout = 8_000, State = WaitForSelectorState.Visible });
+        await editBtn.ClickAsync();
+
+        // Confirm edit mode was activated.
+        await saveBtn.WaitForAsync(new() { Timeout = 10_000 });
     }
 
     /// <summary>Clicks the Save button and waits until the app returns to view mode (edit mode off).</summary>

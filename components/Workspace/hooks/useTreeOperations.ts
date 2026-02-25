@@ -77,6 +77,11 @@ export type TreeOperationsParams = {
    * justCreatedPageRef flag.
    */
   onFileCreated: (pageId: string, page: Page) => void;
+  /**
+   * Called when the API resolves and the temp page ID is replaced by the real DB ID.
+   * Workspace.tsx uses this to update activePageId without resetting edit mode.
+   */
+  onPageIdReplaced: (oldId: string, newId: string) => void;
   /** Called so delete can clear the active page if it was deleted. */
   setActivePageId: React.Dispatch<React.SetStateAction<string | null>>;
 };
@@ -108,6 +113,7 @@ export function useTreeOperations({
   showErrorToast,
   t,
   onFileCreated,
+  onPageIdReplaced,
   setActivePageId,
 }: TreeOperationsParams): TreeOperationsResult {
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
@@ -161,7 +167,7 @@ export function useTreeOperations({
     (parentId: string) => {
       const localPageId = newPageId();
       const fileTitle = generateUniqueNameInScope(treeRoot, parentId, 'Untitled');
-      const emptyDoc: JSONContent = { type: 'doc', content: [] };
+      const emptyDoc: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] };
       const newPage: Page = { id: localPageId, title: fileTitle, blocks: [], content: emptyDoc };
 
       // Optimistic updates
@@ -184,6 +190,8 @@ export function useTreeOperations({
           serverBlocksRef.current.delete(localPageId);
           serverPagesRef.current.set(created.id, createdPage);
           serverPagesRef.current.delete(localPageId);
+          // Notify Workspace to update activePageId without resetting edit mode.
+          onPageIdReplaced(localPageId, created.id);
         })
         .catch((err) => {
           console.error('[createFile]', err);
@@ -192,7 +200,7 @@ export function useTreeOperations({
           }
         });
     },
-    [showErrorToast, t, treeRoot, setTreeRoot, setPages, dbFolderIds, serverBlocksRef, serverPagesRef, onFileCreated],
+    [showErrorToast, t, treeRoot, setTreeRoot, setPages, dbFolderIds, serverBlocksRef, serverPagesRef, onFileCreated, onPageIdReplaced],
   );
 
   // ── handleDeleteNode (open dialog) ─────────────────────────────────────────
