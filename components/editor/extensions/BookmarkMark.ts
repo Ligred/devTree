@@ -29,12 +29,12 @@ export const BookmarkMark = Mark.create({
     return {
       id: {
         default: null,
-        parseHTML: (el) => (el as HTMLElement).dataset.bookmarkId ?? null,
+        parseHTML: (el) => el.dataset.bookmarkId ?? null,
         renderHTML: (attrs) => (attrs.id ? { 'data-bookmark-id': attrs.id } : {}),
       },
       label: {
         default: '',
-        parseHTML: (el) => (el as HTMLElement).dataset.bookmarkLabel ?? '',
+        parseHTML: (el) => el.dataset.bookmarkLabel ?? '',
         renderHTML: (attrs) => ({ 'data-bookmark-label': attrs.label ?? '' }),
       },
     };
@@ -45,10 +45,14 @@ export const BookmarkMark = Mark.create({
   },
 
   renderHTML({ HTMLAttributes }) {
+    const bookmarkLabel = typeof HTMLAttributes['data-bookmark-label'] === 'string'
+      ? HTMLAttributes['data-bookmark-label']
+      : '';
     return [
       'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {
         class: 'tiptap-bookmark',
+        title: bookmarkLabel,
       }),
       0,
     ];

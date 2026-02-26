@@ -22,7 +22,7 @@
  */
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { Download, Edit2, Filter, Menu, Save, Search, Tag, X, XCircle } from 'lucide-react';
+import { Bookmark, Download, Edit2, Filter, Menu, Save, Search, Tag, X, XCircle } from 'lucide-react';
 import type { JSONContent } from '@tiptap/react';
 import type { Editor } from '@tiptap/core';
 
@@ -35,6 +35,7 @@ import { PageMeta } from './PageMeta';
 import { PageTitle } from './PageTitle';
 import type { Page } from './types';
 import { PageEditor } from '@/components/editor/PageEditor';
+import { BookmarksPanel } from '@/components/editor/BookmarksPanel';
 import { EditorToolbar } from '@/components/editor/EditorToolbar';
 
 const I18N_EXPORT_MARKDOWN = 'main.exportMarkdown';
@@ -91,6 +92,7 @@ export function MainContent({
 
   /** Editor instance forwarded from PageEditor — used to render the toolbar here */
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
 
   /** Active inline-tag filter — tags clicked in the per-page tag filter bar. */
   const [activeFilterTags, setActiveFilterTags] = useState<string[]>([]);
@@ -129,6 +131,10 @@ export function MainContent({
   // ── Reset filter when page changes ───────────────────────────────────────
   useEffect(() => {
     setActiveFilterTags([]);
+  }, [page?.id]);
+
+  useEffect(() => {
+    setBookmarksOpen(false);
   }, [page?.id]);
 
   let headerTitleNode: React.ReactNode;
@@ -268,6 +274,30 @@ export function MainContent({
               <Download size={14} />
               <span className="hidden sm:inline">{t(I18N_EXPORT_MARKDOWN)}</span>
             </button>
+
+            {editorInstance && (
+              <div className="relative">
+                <button
+                  type="button"
+                  title="Bookmarks"
+                  aria-label="Bookmarks"
+                  className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => setBookmarksOpen((v) => !v)}
+                >
+                  <Bookmark size={14} />
+                  <span className="hidden sm:inline">Bookmarks</span>
+                </button>
+
+                {bookmarksOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" aria-hidden onClick={() => setBookmarksOpen(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-1">
+                      <BookmarksPanel editor={editorInstance} onClose={() => setBookmarksOpen(false)} />
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Edit-mode toggle — Edit/Save/Cancel */}
             {isEditMode ? (

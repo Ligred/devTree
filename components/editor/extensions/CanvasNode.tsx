@@ -177,7 +177,6 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   return (
     <NodeViewWrapper
       className={BLOCK_NODE_WRAPPER_CLASS}
-      data-drag-handle
     >
       {fullscreen ? (
         // Placeholder shown in the doc while the fullscreen portal is active.

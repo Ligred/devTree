@@ -21,7 +21,7 @@ function AudioNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const isEditable = useEditable();
 
   return (
-    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS}>
       <BlockHeader icon={<Volume2 size={13} className="text-muted-foreground" />} title="Audio" />
 
       {/* Tags */}

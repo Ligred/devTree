@@ -21,7 +21,7 @@ function LinkCardNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const displayLabel = label || url || 'Link';
 
   return (
-    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS}>
       {/* Tags */}
       <BlockTagChips
         tags={tags ?? []}

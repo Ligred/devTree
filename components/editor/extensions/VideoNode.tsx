@@ -38,7 +38,7 @@ function VideoNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   const embedUrl = url ? toEmbedUrl(url) : '';
 
   return (
-    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS}>
       <BlockHeader icon={<Video size={13} className="text-muted-foreground" />} title="Video" />
 
       {/* Tags */}

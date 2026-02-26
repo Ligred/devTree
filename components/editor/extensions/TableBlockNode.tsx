@@ -58,7 +58,7 @@ function TableBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
   };
 
   return (
-    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS} data-drag-handle>
+    <NodeViewWrapper className={BLOCK_NODE_WRAPPER_CLASS}>
       <BlockHeader
         icon={<Table size={13} className="text-muted-foreground" />}
         title="Table"

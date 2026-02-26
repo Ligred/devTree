@@ -18,7 +18,7 @@ export const BLOCK_NODE_WRAPPER_CLASS =
 export const BLOCK_ATOM_SPEC = {
   group: 'block',
   atom: true,
-  draggable: true,
+  draggable: false,
   selectable: true,
 } as const;
 
