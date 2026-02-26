@@ -38,7 +38,7 @@ import { signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { LogOut, Settings } from 'lucide-react';
 
 import { type Locale, useI18n } from '@/lib/i18n';

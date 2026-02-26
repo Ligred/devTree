@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import { BookOpen, Flame } from 'lucide-react';
 
 import { SettingsDialog } from '@/components/features/SettingsDialog/SettingsDialog';
@@ -94,7 +94,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       </motion.header>
 
       {/* ── Body: ActivityBar + page content ── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden md:flex-row">
         <ActivityBar />
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Motivation banner — shown once per session (on any page) */}

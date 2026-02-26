@@ -310,9 +310,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           {/* Tabs: horizontal on mobile, vertical sidebar on desktop */}
           <nav
             className={cn(
-              'border-border bg-muted/30 flex shrink-0 flex-row gap-0 border-b py-2 sm:flex-col sm:border-r sm:border-b-0 sm:py-2',
+              'border-border bg-muted/30 flex shrink-0 flex-row gap-0 overflow-x-auto overflow-y-hidden border-b py-2 [scrollbar-width:none] sm:flex-col sm:overflow-visible sm:border-r sm:border-b-0 sm:py-2',
               'w-full sm:w-44',
             )}
+            style={{ WebkitOverflowScrolling: 'touch' }}
             aria-label={t('settings.title')}
           >
             {tabs.map(({ id, labelKey, icon }) => (
@@ -321,7 +322,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 type="button"
                 onClick={() => setActiveTab(id)}
                 className={cn(
-                  'motion-interactive flex flex-1 items-center justify-center gap-2 px-3 py-2.5 text-center text-sm font-medium transition-colors sm:flex-initial sm:justify-start sm:px-4 sm:text-left',
+                  'motion-interactive flex shrink-0 items-center justify-center gap-2 px-3 py-2.5 text-center text-sm font-medium whitespace-nowrap transition-colors sm:flex-initial sm:justify-start sm:px-4 sm:text-left',
                   activeTab === id
                     ? 'bg-background text-foreground border-b-2 border-indigo-600 sm:border-r-2 sm:border-b-0 dark:border-indigo-400'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground',
@@ -338,7 +339,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 >
                   {icon}
                 </span>
-                <span>{t(labelKey)}</span>
+                <span className="hidden sm:inline">{t(labelKey)}</span>
               </button>
             ))}
           </nav>

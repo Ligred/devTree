@@ -24,7 +24,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Editor } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   Bookmark,
   Download,

@@ -4,7 +4,7 @@ import React from 'react';
 
 import { usePathname, useRouter } from 'next/navigation';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'motion/react';
 import { BarChart2, BookHeart, BookOpen, Settings } from 'lucide-react';
 
 import { useSettingsDialog } from '@/components/features/SettingsDialog/useSettingsDialog';
@@ -73,13 +73,14 @@ export function ActivityBar() {
       <motion.nav
         key={`activity-bar-${activeId}`}
         aria-label="Application sections"
-        className="alive-surface bg-background flex h-full w-12 shrink-0 flex-col items-center gap-1 border-r py-2"
+        className="alive-surface bg-background flex h-12 w-full shrink-0 flex-row items-center gap-1 overflow-x-auto overflow-y-hidden border-b px-2 [scrollbar-width:none] md:h-full md:w-12 md:flex-col md:overflow-visible md:border-r md:border-b-0 md:px-0 md:py-2"
+        style={{ WebkitOverflowScrolling: 'touch' }}
         initial={reducedMotion ? false : { x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 360, damping: 30, mass: 0.9 }}
       >
         {/* Top section items */}
-        <div className="flex flex-1 flex-col gap-1">
+        <div className="flex flex-none flex-row items-center gap-1 md:flex-1 md:flex-col">
           {visibleItems.map((item) => (
             <ActivityBarItem
               key={item.id}

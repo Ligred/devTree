@@ -21,7 +21,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useRouter } from 'next/navigation';
 
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ChevronLeft, ChevronRight, FilePlus, FolderPlus, Search, X } from 'lucide-react';
 
 import { FileExplorer } from '@/components/features/FileExplorer/FileExplorer';
@@ -56,6 +56,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [leftPanelHidden, setLeftPanelHidden] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [isPageTransitioning, setIsPageTransitioning] = useState(false);
   const [transitionStartedAt, setTransitionStartedAt] = useState<number | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
@@ -408,8 +409,48 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     return () => globalThis.removeEventListener('keydown', onKey);
   }, []);
 
+  // Track viewport mode (desktop vs mobile) for responsive motion behavior.
+  useEffect(() => {
+    const media = globalThis.matchMedia?.('(min-width: 768px)');
+    if (!media) return;
+    const update = () => setIsDesktop(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  // Mobile drawer UX: lock body scroll while open and allow Escape to close.
+  useEffect(() => {
+    if (!mobileSidebarOpen || isDesktop) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileSidebarOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isDesktop, mobileSidebarOpen]);
+
   // ─── Render ──────────────────────────────────────────────────────────────
-  const isCollapsedDesktop = leftPanelHidden && !mobileSidebarOpen;
+  const isCollapsedDesktop = isDesktop && leftPanelHidden;
+  const sidebarWidth = isCollapsedDesktop ? 40 : 256;
+  const showSidebar = isDesktop || mobileSidebarOpen;
+  let sidebarTransition:
+    | { duration: number }
+    | { duration: number; ease: [number, number, number, number] };
+  if (reducedMotion) {
+    sidebarTransition = { duration: 0.01 };
+  } else if (isDesktop) {
+    sidebarTransition = { duration: 0.34, ease: [0.22, 1, 0.36, 1] };
+  } else {
+    sidebarTransition = { duration: 0.26, ease: [0.22, 1, 0.36, 1] };
+  }
 
   return (
     <div className="bg-background text-foreground flex h-full overflow-hidden font-sans">
@@ -440,57 +481,59 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
       </AnimatePresence>
 
       {/* ─── Sidebar ───────────────────────────────────────────────────────── */}
-      <motion.aside
-        className={cn(
-          'alive-surface border-border bg-card flex shrink-0 flex-col border-r shadow-sm overflow-hidden',
-          'fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-out',
-          'md:relative md:z-auto',
-          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full',
-          'md:translate-x-0',
-        )}
-        initial={false}
-        animate={{ width: isCollapsedDesktop ? 40 : 256 }}
-        transition={
-          reducedMotion
-            ? { duration: 0.01 }
-            : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }
-        }
-      >
-        <div className="flex h-full w-64 min-w-64 flex-col">
+      <AnimatePresence initial={false}>
+        {showSidebar && (
+          <motion.aside
+            key={isDesktop ? 'desktop-sidebar' : 'mobile-sidebar'}
+            className={cn(
+              'alive-surface border-border bg-card flex shrink-0 flex-col border-r shadow-sm overflow-hidden',
+              isDesktop
+                ? 'relative z-auto'
+                : 'fixed inset-y-0 left-0 z-50',
+            )}
+            initial={isDesktop ? false : { x: '-100%' }}
+            animate={isDesktop ? { width: sidebarWidth, x: 0 } : { width: '100vw', x: 0 }}
+            exit={isDesktop ? undefined : { x: '-100%' }}
+            transition={sidebarTransition}
+          >
+        <div className={cn('flex h-full flex-col', isDesktop ? 'w-64 min-w-64' : 'w-screen min-w-screen')}>
           {/* Sidebar header */}
           <div className="border-border flex items-center justify-between border-b px-4 py-3">
             <h1 className="text-primary text-xl font-semibold tracking-tight">{t('app.title')}</h1>
             <button
               type="button"
-              aria-label={t('sidebar.hide')}
+              aria-label={isDesktop ? t('sidebar.hide') : 'Close sidebar'}
               className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
-              onClick={() => setLeftPanelHidden(true)}
+              onClick={() => {
+                if (isDesktop) setLeftPanelHidden(true);
+                else setMobileSidebarOpen(false);
+              }}
             >
-              <ChevronLeft size={20} />
+              {isDesktop ? <ChevronLeft size={20} /> : <X size={20} />}
             </button>
           </div>
 
           {/* New page / folder buttons */}
-          <div className="border-border flex gap-2 border-b px-3 py-3">
+          <div className="border-border flex gap-2 border-b px-3 py-2.5">
             <button
               type="button"
               aria-label={t('sidebar.newPage')}
               data-testid="sidebar-new-page"
-              className="motion-interactive border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+              className="motion-interactive border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-3 sm:text-sm"
               onClick={() => treeOps.createFile(ROOT_ID)}
             >
-              <FilePlus size={16} />
-              {t('sidebar.newPage')}
+              <FilePlus size={16} className="shrink-0" />
+              <span className="truncate">{t('sidebar.newPage')}</span>
             </button>
             <button
               type="button"
               aria-label={t('sidebar.newFolder')}
               data-testid="sidebar-new-folder"
-              className="motion-interactive border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground flex flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
+              className="motion-interactive border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-3 sm:text-sm"
               onClick={() => treeOps.createFolder(ROOT_ID)}
             >
-              <FolderPlus size={16} />
-              {t('sidebar.newFolder')}
+              <FolderPlus size={16} className="shrink-0" />
+              <span className="truncate">{t('sidebar.newFolder')}</span>
             </button>
           </div>
 
@@ -646,7 +689,9 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
             <ChevronRight size={20} />
           </button>
         </motion.div>
-      </motion.aside>
+          </motion.aside>
+        )}
+      </AnimatePresence>
 
       {/* ─── Main content ───────────────────────────────────────────────────── */}
       <MainContent
