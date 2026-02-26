@@ -368,7 +368,7 @@ function buildSuggestionOptions(): Omit<SuggestionOptions, 'editor'> {
 
 // ─── Extension ────────────────────────────────────────────────────────────────
 
-export const SlashCommand = Extension.create({
+const SlashCommand = Extension.create({
   name: 'slashCommand',
 
   addOptions() {

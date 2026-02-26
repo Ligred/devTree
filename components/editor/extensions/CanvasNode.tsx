@@ -1,5 +1,7 @@
 'use client';
 
+import '@excalidraw/excalidraw/index.css';
+
 /**
  * CanvasNode — Excalidraw drawing canvas as a Tiptap node.
  *

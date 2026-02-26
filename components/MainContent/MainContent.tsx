@@ -554,7 +554,6 @@ function TagBar({ tags, onChange, isEditable = true, suggestions = [] }: TagBarP
       {showSuggestions && filteredSuggestions.length > 0 && (
         <ul
           ref={suggestionsRef}
-          role="menu"
           aria-label="Tag suggestions"
           className="absolute left-0 top-full z-50 mt-1 max-h-40 w-48 overflow-y-auto rounded-lg border border-border bg-popover py-1 shadow-md"
         >
@@ -562,7 +561,6 @@ function TagBar({ tags, onChange, isEditable = true, suggestions = [] }: TagBarP
             <li key={s}>
               <button
                 type="button"
-                role="menuitem"
                 className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-foreground hover:bg-accent hover:text-accent-foreground"
                 onMouseDown={(e) => {
                   e.preventDefault(); // don't blur the input
