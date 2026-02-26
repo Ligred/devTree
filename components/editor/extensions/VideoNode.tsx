@@ -18,7 +18,13 @@ import { BLOCK_ATOM_SPEC, BLOCK_NODE_WRAPPER_CLASS, blockStopEvent } from './nod
 function toEmbedUrl(url: string): string {
   try {
     const u = new URL(url);
-    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be')) {
+    const allowedYouTubeHosts = new Set([
+      'youtube.com',
+      'www.youtube.com',
+      'm.youtube.com',
+      'youtu.be',
+    ]);
+    if (allowedYouTubeHosts.has(u.hostname)) {
       const videoId =
         u.searchParams.get('v') ??
         (u.hostname === 'youtu.be' ? u.pathname.slice(1) : null);
