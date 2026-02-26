@@ -229,41 +229,36 @@ function blockToMarkdown(block: Block): string {
  * conversion: `npm install turndown @types/turndown`.
  */
 function htmlToMarkdown(html: string): string {
-  return (
-    html
-      // Block-level elements — order matters: headings before paragraphs
-      .replaceAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1')
-      .replaceAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1')
-      .replaceAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1')
-      .replaceAll(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, '> $1')
-      .replaceAll(/<hr[^>]*\/?>/gi, '\n---\n')
-      // Inline formatting
-      .replaceAll(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**')
-      .replaceAll(/<b[^>]*>([\s\S]*?)<\/b>/gi, '**$1**')
-      .replaceAll(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*')
-      .replaceAll(/<i[^>]*>([\s\S]*?)<\/i>/gi, '*$1*')
-      .replaceAll(/<s[^>]*>([\s\S]*?)<\/s>/gi, '~~$1~~')
-      .replaceAll(/<del[^>]*>([\s\S]*?)<\/del>/gi, '~~$1~~')
-      .replaceAll(/<code[^>]*>([\s\S]*?)<\/code>/gi, '`$1`')
-      // List items (simplified — no nesting depth)
-      .replaceAll(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1')
-      .replaceAll(/<\/?[ou]l[^>]*>/gi, '')
-      // Paragraphs and line breaks. Regexes are bounded (safe from backtracking).
-      .replaceAll(/<br[^>]*\/?>/gi, '\n')
-      .replaceAll(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n')
-      // Strip remaining tags
-      // eslint-disable-next-line sonarjs/slow-regex -- bounded patterns, safe
-      .replaceAll(/<[^>]+>/g, '')
-      // Decode common HTML entities
-      .replaceAll('&nbsp;', ' ')
-      .replaceAll('&lt;', '<')
-      .replaceAll('&gt;', '>')
-      .replaceAll('&amp;', '&')
-      .replaceAll('&quot;', '"')
-      // Normalise whitespace: collapse 3+ newlines → 2
-      .replaceAll(/\n{3,}/g, '\n\n')
-      .trim()
-  );
+  // Phase 1: structured HTML → Markdown equivalents
+  let partial = html
+    // Block-level elements — order matters: headings before paragraphs
+    .replaceAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, '# $1')
+    .replaceAll(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, '## $1')
+    .replaceAll(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, '### $1')
+    .replaceAll(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, '> $1')
+    .replaceAll(/<hr[^>]*\/?>/gi, '\n---\n')
+    // Inline formatting
+    .replaceAll(/<strong[^>]*>([\s\S]*?)<\/strong>/gi, '**$1**')
+    .replaceAll(/<b[^>]*>([\s\S]*?)<\/b>/gi, '**$1**')
+    .replaceAll(/<em[^>]*>([\s\S]*?)<\/em>/gi, '*$1*')
+    .replaceAll(/<i[^>]*>([\s\S]*?)<\/i>/gi, '*$1*')
+    .replaceAll(/<s[^>]*>([\s\S]*?)<\/s>/gi, '~~$1~~')
+    .replaceAll(/<del[^>]*>([\s\S]*?)<\/del>/gi, '~~$1~~')
+    .replaceAll(/<code[^>]*>([\s\S]*?)<\/code>/gi, '`$1`')
+    // List items (simplified — no nesting depth)
+    .replaceAll(/<li[^>]*>([\s\S]*?)<\/li>/gi, '- $1')
+    .replaceAll(/<\/?[ou]l[^>]*>/gi, '')
+    // Paragraphs and line breaks. Regexes are bounded (safe from backtracking).
+    .replaceAll(/<br[^>]*\/?>/gi, '\n')
+    .replaceAll(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n');
+
+  // Phase 2 & 3: use DOMParser to safely strip remaining tags and decode HTML entities.
+  // DOMParser handles both in one pass without regex, avoiding ReDoS risk entirely.
+  const doc = new DOMParser().parseFromString(partial, 'text/html');
+  return (doc.body.textContent ?? '')
+    // Normalise whitespace: collapse 3+ newlines → 2
+    .replaceAll(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 /**

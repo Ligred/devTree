@@ -211,11 +211,9 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
         if (page.content != null) return JSON.stringify(page.content).toLowerCase().includes(q);
         return page.blocks.some((block) => {
           if (typeof block.content === 'string') {
-            // eslint-disable-next-line sonarjs/slow-regex -- bounded by `>`, safe for this input size
-            return block.content
-              .replaceAll(/<[^>]+>/g, '')
-              .toLowerCase()
-              .includes(q);
+            // Use DOMParser to safely extract text — no regex, no ReDoS risk
+            const doc = new DOMParser().parseFromString(block.content, 'text/html');
+            return (doc.body.textContent ?? '').toLowerCase().includes(q);
           }
           return JSON.stringify(block.content).toLowerCase().includes(q);
         });

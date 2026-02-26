@@ -33,7 +33,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
     const trimmedEmail = email.trim().toLowerCase();
-    if (!EMAIL_REGEX.test(trimmedEmail)) {
+    // RFC 5321 caps addresses at 254 chars; rejecting longer inputs prevents ReDoS
+    if (trimmedEmail.length > 254 || !EMAIL_REGEX.test(trimmedEmail)) {
       return NextResponse.json({ error: 'Please enter a valid email address' }, { status: 400 });
     }
     if (!password || typeof password !== 'string') {

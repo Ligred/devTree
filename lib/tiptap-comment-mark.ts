@@ -18,7 +18,8 @@ function escapeCommentForAttr(text: string): string {
 
 /** Reverse escapeCommentForAttr when parsing from the DOM (e.g. in parseHTML). */
 function unescapeCommentFromAttr(text: string): string {
-  return text.replaceAll('&quot;', '"').replaceAll('&amp;', '&').replaceAll('&lt;', '<');
+  // Decode &amp; last to prevent double-decoding (e.g. &amp;lt; → &lt; not <)
+  return text.replaceAll('&quot;', '"').replaceAll('&lt;', '<').replaceAll('&amp;', '&');
 }
 
 /** Module augmentation so editor.chain().setComment(...) and .unsetComment() are typed in TypeScript. */
