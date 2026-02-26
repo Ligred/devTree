@@ -10,6 +10,7 @@
   "ignoreExportsUsedInFile": true,
 
   "ignoreDependencies": [
+    "@types/dom-speech-recognition",
     "@vitest/coverage-v8",
     "postcss",
     "tailwindcss",

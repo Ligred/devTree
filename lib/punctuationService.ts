@@ -32,16 +32,44 @@ const COORDINATING_CONJUNCTIONS = {
  */
 const INTRODUCTORY_PHRASES = {
   en: [
-    'however', 'therefore', 'furthermore', 'moreover', 'meanwhile',
-    'in addition', 'for example', 'in fact', 'by the way',
-    'first', 'second', 'third', 'finally', 'lastly',
-    'well', 'yes', 'no', 'okay', 'alright',
+    'however',
+    'therefore',
+    'furthermore',
+    'moreover',
+    'meanwhile',
+    'in addition',
+    'for example',
+    'in fact',
+    'by the way',
+    'first',
+    'second',
+    'third',
+    'finally',
+    'lastly',
+    'well',
+    'yes',
+    'no',
+    'okay',
+    'alright',
   ],
   uk: [
-    'однак', 'тому', 'крім того', 'більше того', 'тим часом',
-    'наприклад', 'насправді', 'до речі',
-    'по-перше', 'по-друге', 'по-третє', 'нарешті', 'зрештою',
-    'так', 'ні', 'добре', 'гаразд',
+    'однак',
+    'тому',
+    'крім того',
+    'більше того',
+    'тим часом',
+    'наприклад',
+    'насправді',
+    'до речі',
+    'по-перше',
+    'по-друге',
+    'по-третє',
+    'нарешті',
+    'зрештою',
+    'так',
+    'ні',
+    'добре',
+    'гаразд',
   ],
 };
 
@@ -49,7 +77,23 @@ const INTRODUCTORY_PHRASES = {
  * Sentence starters that indicate a new sentence
  */
 const SENTENCE_STARTERS = {
-  en: ['i', 'we', 'they', 'he', 'she', 'it', 'you', 'there', 'this', 'that', 'these', 'those', 'the', 'a', 'an'],
+  en: [
+    'i',
+    'we',
+    'they',
+    'he',
+    'she',
+    'it',
+    'you',
+    'there',
+    'this',
+    'that',
+    'these',
+    'those',
+    'the',
+    'a',
+    'an',
+  ],
   uk: ['я', 'ми', 'ти', 'ви', 'він', 'вона', 'воно', 'вони', 'це', 'той', 'та', 'те', 'ці'],
 };
 
@@ -57,7 +101,27 @@ const SENTENCE_STARTERS = {
  * Question indicators (words that suggest a question)
  */
 const QUESTION_WORDS = {
-  en: ['what', 'when', 'where', 'who', 'whom', 'whose', 'why', 'how', 'which', 'is', 'are', 'do', 'does', 'did', 'can', 'could', 'would', 'should', 'will'],
+  en: [
+    'what',
+    'when',
+    'where',
+    'who',
+    'whom',
+    'whose',
+    'why',
+    'how',
+    'which',
+    'is',
+    'are',
+    'do',
+    'does',
+    'did',
+    'can',
+    'could',
+    'would',
+    'should',
+    'will',
+  ],
   uk: ['що', 'коли', 'де', 'хто', 'кого', 'чий', 'чому', 'як', 'який', 'яка', 'яке', 'які', 'чи'],
 };
 
@@ -65,15 +129,12 @@ const QUESTION_WORDS = {
 
 /**
  * Add intelligent punctuation to plain text.
- * 
+ *
  * @param text - Plain text without punctuation (from speech recognition)
  * @param language - Language code ('en' or 'uk')
  * @returns Text with punctuation added
  */
-export async function addPunctuation(
-  text: string,
-  language: 'en' | 'uk' = 'en',
-): Promise<string> {
+export async function addPunctuation(text: string, language: 'en' | 'uk' = 'en'): Promise<string> {
   if (!text.trim()) return text;
 
   // Split into words
@@ -117,13 +178,15 @@ function processWordsForPunctuation(words: string[], language: 'en' | 'uk'): str
     }
 
     // 2. Add comma before coordinating conjunctions in longer sentences
-    if (shouldAddCommaBeforeConjunction(
-      currentSentenceLength,
-      wordLower,
-      nextWord,
-      prevWord,
-      language,
-    )) {
+    if (
+      shouldAddCommaBeforeConjunction(
+        currentSentenceLength,
+        wordLower,
+        nextWord,
+        prevWord,
+        language,
+      )
+    ) {
       result[result.length - 1] += ',';
     }
 
@@ -133,7 +196,15 @@ function processWordsForPunctuation(words: string[], language: 'en' | 'uk'): str
     }
 
     // 4. Add period at natural breaks (after 12+ words without punctuation)
-    if (shouldAddPeriodAtBreak(currentSentenceLength, nextWord, nextWordLower, punctuatedWord, language)) {
+    if (
+      shouldAddPeriodAtBreak(
+        currentSentenceLength,
+        nextWord,
+        nextWordLower,
+        punctuatedWord,
+        language,
+      )
+    ) {
       punctuatedWord += '.';
       currentSentenceLength = 0;
     }
@@ -159,20 +230,25 @@ function matchesPhrase(index: number, words: string[], phraseWords: string[]): b
   if (phraseWords[0] !== words[index].toLowerCase()) {
     return false;
   }
-  
+
   for (let j = 0; j < phraseWords.length; j++) {
     if (index + j >= words.length || words[index + j].toLowerCase() !== phraseWords[j]) {
       return false;
     }
   }
-  
+
   return true;
 }
 
 /**
  * Add phrase words to result with comma after last word.
  */
-function addPhraseWithComma(index: number, words: string[], phraseLength: number, result: string[]): void {
+function addPhraseWithComma(
+  index: number,
+  words: string[],
+  phraseLength: number,
+  result: string[],
+): void {
   for (let j = 0; j < phraseLength - 1; j++) {
     result.push(words[index + j]);
   }
@@ -195,13 +271,13 @@ function processIntroductoryPhrase(
   }
 
   const phrases = INTRODUCTORY_PHRASES[language];
-  if (!phrases.some(phrase => wordLower === phrase.split(' ')[0])) {
+  if (!phrases.some((phrase) => wordLower === phrase.split(' ')[0])) {
     return 0;
   }
 
   for (const phrase of phrases) {
     const phraseWords = phrase.split(' ');
-    
+
     if (matchesPhrase(index, words, phraseWords)) {
       addPhraseWithComma(index, words, phraseWords.length, result);
       return phraseWords.length - 1;
@@ -217,11 +293,7 @@ function shouldAddPeriodBeforeStarter(
   nextWordLower: string,
   language: 'en' | 'uk',
 ): boolean {
-  return (
-    index > 0 &&
-    sentenceLength >= 5 &&
-    SENTENCE_STARTERS[language].includes(nextWordLower)
-  );
+  return index > 0 && sentenceLength >= 5 && SENTENCE_STARTERS[language].includes(nextWordLower);
 }
 
 function shouldAddCommaBeforeConjunction(
@@ -240,11 +312,7 @@ function shouldAddCommaBeforeConjunction(
   );
 }
 
-function addFinalPunctuation(
-  word: string,
-  result: string[],
-  language: 'en' | 'uk',
-): string {
+function addFinalPunctuation(word: string, result: string[], language: 'en' | 'uk'): string {
   const firstWord = result[0]?.toLowerCase().replace(/[^a-zа-яіїєґ]/g, '') || '';
   if (QUESTION_WORDS[language].includes(firstWord)) {
     return word + '?';

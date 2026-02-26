@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { addPunctuation } from './punctuationService';
 
@@ -28,7 +28,10 @@ describe('punctuationService', () => {
     });
 
     it('adds commas for conjunctions in longer sentences', async () => {
-      const result = await addPunctuation('i went to the store and bought some milk and then came home', 'en');
+      const result = await addPunctuation(
+        'i went to the store and bought some milk and then came home',
+        'en',
+      );
       // Should have at least one comma or period
       expect(result).toMatch(/[,.]/);
     });
@@ -45,7 +48,10 @@ describe('punctuationService', () => {
     });
 
     it('handles Ukrainian conjunctions', async () => {
-      const result = await addPunctuation('я пішов до магазину і купив молоко і потім повернувся додому', 'uk');
+      const result = await addPunctuation(
+        'я пішов до магазину і купив молоко і потім повернувся додому',
+        'uk',
+      );
       expect(result).toMatch(/[,.]/);
     });
 
@@ -58,7 +64,7 @@ describe('punctuationService', () => {
     it('detects sentences in longer text', async () => {
       const result = await addPunctuation(
         'this is the first sentence this is the second sentence this is the third',
-        'en'
+        'en',
       );
       // Should have multiple sentence-ending punctuation marks
       const periods = (result.match(/\./g) || []).length;

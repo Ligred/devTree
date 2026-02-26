@@ -142,55 +142,103 @@ public class SidebarPage(IPage page)
     /// <summary>Creates a new folder and optionally renames it.</summary>
     public async Task<ILocator> CreateFolderAsync(string name = "")
     {
+        // Capture any pre-existing "New folder*" names so we can identify the newly created one.
+        var existingNewFolders = await GetExistingNewFolderNamesAsync();
+
         await NewFolderBtn.ClickAsync();
-        await _page.WaitForTimeoutAsync(300);
+
+        // Wait for a new "New folder*" item to appear that wasn't there before.
+        ILocator? newFolderLocator = null;
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            await _page.WaitForTimeoutAsync(300);
+            var candidates = _page.Locator("aside").GetByText(new System.Text.RegularExpressions.Regex(@"^New folder(\s+\d+)?$"));
+            var count = await candidates.CountAsync();
+            for (var i = 0; i < count; i++)
+            {
+                var text = (await candidates.Nth(i).InnerTextAsync()).Trim();
+                if (!existingNewFolders.Contains(text))
+                {
+                    newFolderLocator = candidates.Nth(i);
+                    break;
+                }
+            }
+            if (newFolderLocator != null) break;
+        }
+
+        if (newFolderLocator == null)
+        {
+            // Fallback: just grab the first "New folder" item
+            newFolderLocator = _page.Locator("aside").GetByText(new System.Text.RegularExpressions.Regex(@"^New folder(\s+\d+)?$")).First;
+            await newFolderLocator.WaitForAsync(new() { Timeout = 10_000 });
+        }
 
         if (!string.IsNullOrEmpty(name))
         {
-            await RenameLastItemAsync(name);
+            await RenameNewFolderAsync(newFolderLocator, name);
             // After rename, explicitly wait for the renamed text to appear
-            var locator = _page.GetByText(name).First;
+            var locator = _page.Locator("aside").GetByText(name, new() { Exact = true }).First;
             await locator.WaitForAsync(new() { Timeout = 15_000 });
             return locator;
         }
         else
         {
-            // If no name provided, wait for "New folder" text to appear
-            var locator = _page.GetByText("New folder").First;
-            await locator.WaitForAsync();
-            return locator;
+            return newFolderLocator;
         }
+    }
+
+    private async Task<HashSet<string>> GetExistingNewFolderNamesAsync()
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var matches = _page.Locator("aside").GetByText(new System.Text.RegularExpressions.Regex(@"^New folder(\s+\d+)?$"));
+        var count = await matches.CountAsync();
+        for (var i = 0; i < count; i++)
+        {
+            var text = (await matches.Nth(i).InnerTextAsync()).Trim();
+            names.Add(text);
+        }
+        return names;
+    }
+
+    /// <summary>Double-clicks a specific folder locator to enter rename mode and types a new name.</summary>
+    private async Task RenameNewFolderAsync(ILocator folderLocator, string newName)
+    {
+        await folderLocator.ScrollIntoViewIfNeededAsync();
+        await folderLocator.DblClickAsync();
+
+        // Wait for the inline rename input to appear
+        var input = _page.GetByRole(AriaRole.Textbox).Last;
+        await input.WaitForAsync();
+
+        await input.ClearAsync();
+        await input.PressSequentiallyAsync(newName);
+        await _page.WaitForTimeoutAsync(150);
+        await input.PressAsync("Enter");
+        await _page.WaitForTimeoutAsync(500);
     }
 
     /// <summary>Double-clicks the last tree item to enter rename mode and types a name.</summary>
     public async Task RenameLastItemAsync(string newName)
     {
-        // The last row in the accordion (newly created) gets an inline rename input on double-click
+        // The last row in the accordion gets an inline rename input on double-click.
+        // Note: with sorted tree, the last item may not be the most recently created one.
+        // Use RenameNewFolderAsync for newly created folders instead.
         var items = _page.Locator("[data-radix-accordion-item]");
         var count = await items.CountAsync();
         if (count == 0) return;
 
         var lastItem = items.Nth(count - 1);
-        
-        // Scroll into view before interacting
+
         await lastItem.ScrollIntoViewIfNeededAsync();
         await lastItem.DblClickAsync();
 
-        // Wait for the input to appear after double-click
         var input = _page.GetByRole(AriaRole.Textbox).Last;
         await input.WaitForAsync();
 
-        // Clear any existing text and type the new name
         await input.ClearAsync();
         await input.PressSequentiallyAsync(newName);
-
-        // Wait for text to be entered
         await _page.WaitForTimeoutAsync(150);
-        
-        // Press Enter to commit the rename
         await input.PressAsync("Enter");
-
-        // Wait for the input to disappear and the tree to update
         await _page.WaitForTimeoutAsync(500);
     }
 
@@ -302,6 +350,29 @@ public class SidebarPage(IPage page)
         var deleteBtn = last.GetByRole(AriaRole.Button, new() { Name = "Delete", Exact = true });
         await deleteBtn.WaitForAsync(new() { Timeout = 5_000 });
         await deleteBtn.ClickAsync();
+    }
+
+    /// <summary>
+    /// Hovers a folder item by name, opens "More actions" dropdown, and clicks "Delete".
+    /// Folders show 4 actions (delete, rename, newFile, newFolder) → rendered inside a Radix DropdownMenu.
+    /// </summary>
+    public async Task DeleteFolderByNameAsync(string folderName)
+    {
+        var folderItem = _page.Locator("aside").GetByText(folderName, new() { Exact = true }).First;
+        await folderItem.WaitForAsync(new() { Timeout = 10_000 });
+        await folderItem.ScrollIntoViewIfNeededAsync();
+        await folderItem.HoverAsync();
+
+        // Folders have 4 actions → overflow dropdown with "More actions" trigger.
+        var accordionItem = _page.Locator("aside [data-radix-accordion-item]")
+            .Filter(new LocatorFilterOptions { HasText = folderName });
+        var moreBtn = accordionItem.GetByRole(AriaRole.Button, new() { Name = "More actions", Exact = true });
+        await moreBtn.WaitForAsync(new() { Timeout = 5_000 });
+        await moreBtn.ClickAsync();
+
+        var deleteItem = _page.GetByRole(AriaRole.Menuitem, new() { Name = "Delete", Exact = true });
+        await deleteItem.WaitForAsync(new() { Timeout = 5_000 });
+        await deleteItem.ClickAsync();
     }
 
     /// <summary>

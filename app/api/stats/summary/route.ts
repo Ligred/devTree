@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
@@ -8,13 +10,7 @@ export async function GET(req: NextRequest) {
   const { userId } = auth;
 
   try {
-    const [
-      totalPages,
-      totalBlocks,
-      sessionAgg,
-      pageTimeAgg,
-      streak,
-    ] = await Promise.all([
+    const [totalPages, totalBlocks, sessionAgg, pageTimeAgg, streak] = await Promise.all([
       prisma.page.count({ where: { ownerId: userId } }),
       prisma.block.count({ where: { page: { ownerId: userId } } }),
       prisma.userSession.aggregate({

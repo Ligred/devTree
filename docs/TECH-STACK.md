@@ -115,20 +115,20 @@ This document describes every major library and technology used in the project: 
 
 - **What:** Headless rich-text editor built on ProseMirror.
 - **Why:** Extensible (custom nodes, marks), good DX; we use it for the “text” block.
-- **Where:** `components/MainContent/blocks/TextBlock.tsx`. Extensions: StarterKit, placeholder, link, etc. Global editor styles in `globals.css` (Tiptap/ProseMirror section).
+- **Where:** `components/features/editor/PageEditor.tsx` and `extensions/` (e.g. `extensions/CodeBlockNode.tsx`). Extensions: StarterKit, placeholder, link, etc. Global editor styles in `globals.css` (Tiptap/ProseMirror section).
 - **Data:** Content stored as HTML string in block `content`.
 
 ### Monaco Editor (@monaco-editor/react)
 
 - **What:** VS Code’s editor engine; syntax highlighting, multi-language.
 - **Why:** Best-in-class code editing in the browser.
-- **Where:** `components/MainContent/blocks/CodeBlock.tsx`. Theme synced with app theme (`vs` / `vs-dark`) via `useTheme().resolvedTheme`.
+- **Where:** `components/features/editor/extensions/CodeBlockNode.tsx`. Theme synced with app theme (`vs` / `vs-dark`) via `useTheme().resolvedTheme`.
 
 ### @excalidraw/excalidraw 0.18
 
 - **What:** Infinite-canvas visual editor with hand-drawn aesthetic (shapes, arrows, text, freehand, images, Mermaid insert).
 - **Why:** Replaces the previous code-only Mermaid integration; gives users a graphical diagramming experience without requiring Mermaid syntax knowledge. Native Mermaid insert is still available via the "Mermaid diagram" button.
-- **Where:** `components/MainContent/blocks/DiagramBlock.tsx`. Diagram state (elements + appState) is serialised to JSON and stored per-block in `content.code`. Library items sync cross-device via `/api/user/libraries`.
+- **Where:** `components/features/editor/extensions/CanvasNode.tsx`. Diagram state (elements + appState) is serialised to JSON and stored per-block in the node's attributes. Library items sync cross-device via `/api/user/libraries`.
 - **Coordinate fix:** Excalidraw caches `offsetLeft`/`offsetTop` for pointer math. An `onPointerDownCapture` handler on the wrapper div calls `refresh()` before each interaction so the coordinates are always correct even when lazy-loaded content above the block shifts it after mount.
 
 ### @dnd-kit (core, sortable, modifiers, utilities)
@@ -183,7 +183,7 @@ This document describes every major library and technology used in the project: 
 
 - **What:** Minimal global state store with optional persistence.
 - **Why:** Lightweight; `useSettingsStore` for feature flags (tags per page, tags per block) with `localStorage` persistence.
-- **Where:** `lib/settingsStore.ts` — `tagsPerPageEnabled`, `tagsPerBlockEnabled`; persisted to `localStorage['learning-tree-settings']`. Used in SettingsDialog and MainContent/Workspace.
+- **Where:** `lib/stores/settingsStore.ts` — `tagsPerPageEnabled`, `tagsPerBlockEnabled`; persisted to `localStorage['learning-tree-settings']`. Used in SettingsDialog and MainContent/Workspace. Other stores: `lib/stores/recordingStore.ts`, `lib/stores/statsStore.ts`, `lib/stores/uiStore.ts`. All stores are barrel-exported from `lib/stores/index.ts`.
 
 ### localStorage
 
@@ -210,7 +210,7 @@ This document describes every major library and technology used in the project: 
 
 - **What:** Isolated component development and documentation; stories per component.
 - **Why:** Visual testing, design review, documentation without running full app.
-- **Where:** `stories/*.stories.tsx` (and `*.stories.ts`). Next.js + Vite integration. Run: `pnpm storybook`.
+- **Where:** Stories are co-located alongside components in `__stories__/` directories (e.g. `components/features/Workspace/__stories__/*.stories.tsx`, `app/__stories__/*.stories.tsx`). Storybook template stories (Button, Header, Page) remain in `stories/`. Next.js + Vite integration. Run: `pnpm storybook`.
 
 ### ESLint 9 (flat config)
 

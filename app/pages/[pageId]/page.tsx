@@ -96,7 +96,7 @@ type PageProps = {
 export default async function PageByIdRoute({ params }: Readonly<PageProps>) {
   // In Next.js 15+, params is a Promise - must await it
   const { pageId } = await params;
-  
+
   // Redirect to root with page ID as query parameter
   // This ensures Workspace stays mounted at root route
   redirect(`/notebook?page=${encodeURIComponent(pageId)}`);

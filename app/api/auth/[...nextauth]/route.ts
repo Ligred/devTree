@@ -1,12 +1,13 @@
 import NextAuth from 'next-auth';
-import type { NextRequest } from 'next/server';
 import Credentials from 'next-auth/providers/credentials';
 import GitHub from 'next-auth/providers/github';
 import Google from 'next-auth/providers/google';
+import type { NextRequest } from 'next/server';
+
 import { PrismaAdapter } from '@auth/prisma-adapter';
 
-import { prisma } from '@/lib/prisma';
 import { verifyPassword } from '@/lib/auth/password';
+import { prisma } from '@/lib/prisma';
 
 // Auth.js v5: JWT sessions (stateless, good for Vercel serverless + Neon).
 // PrismaAdapter creates/updates User + Account for OAuth; Credentials for email/password.
@@ -25,10 +26,7 @@ const authConfig = {
           where: { email: (credentials.email as string).trim().toLowerCase() },
         });
         if (!user?.password) return null;
-        const ok = await verifyPassword(
-          credentials.password as string,
-          user.password,
-        );
+        const ok = await verifyPassword(credentials.password as string, user.password);
         if (!ok) return null;
         return {
           id: user.id,
@@ -85,24 +83,17 @@ const { handlers, auth } = NextAuth(authConfig);
 export { auth };
 
 // Wrap so errors return JSON instead of HTML 500 (avoids "Unexpected token '<'" in SessionProvider).
-async function handleAuth(
-  req: NextRequest,
-  handler: (req: NextRequest) => Promise<Response>,
-) {
+async function handleAuth(req: NextRequest, handler: (req: NextRequest) => Promise<Response>) {
   try {
     return await handler(req);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Authentication configuration error';
+    const message = err instanceof Error ? err.message : 'Authentication configuration error';
     const hint =
       !process.env.AUTH_SECRET && !process.env.NEXTAUTH_SECRET
         ? ' Set AUTH_SECRET in .env.local (e.g. run: npx auth secret).'
         : '';
     console.error('[auth]', message, err);
-    return Response.json(
-      { error: 'ConfigurationError', message: message + hint },
-      { status: 500 },
-    );
+    return Response.json({ error: 'ConfigurationError', message: message + hint }, { status: 500 });
   }
 }
 
@@ -113,4 +104,3 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   return handleAuth(req, handlers.POST);
 }
-

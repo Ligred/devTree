@@ -1,9 +1,9 @@
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 
-import { prisma } from '@/lib/prisma';
 import { hashPassword, verifyPassword } from '@/lib/auth/password';
+import { prisma } from '@/lib/prisma';
 
 const MIN_LENGTH = 8;
 const HAS_UPPERCASE = /[A-Z]/;
@@ -36,7 +36,8 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const currentPassword = typeof body.currentPassword === 'string' ? body.currentPassword : undefined;
+  const currentPassword =
+    typeof body.currentPassword === 'string' ? body.currentPassword : undefined;
   const newPassword = typeof body.newPassword === 'string' ? body.newPassword : undefined;
   if (!currentPassword || !newPassword) {
     return NextResponse.json(

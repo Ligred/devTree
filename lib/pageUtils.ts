@@ -11,7 +11,6 @@
  *   - Support export to JSON (round-trip format) or plain text.
  *   - Persist page stats to a database for "recently read" / progress tracking.
  */
-
 import type {
   AgendaBlockContent,
   AudioBlockContent,
@@ -22,7 +21,7 @@ import type {
   LinkBlockContent,
   Page,
   TableBlockContent,
-} from '@/components/MainContent/types';
+} from '@/components/features/MainContent/types';
 
 // ─── Page stats ───────────────────────────────────────────────────────────────
 
@@ -187,9 +186,7 @@ function blockToMarkdown(block: Block): string {
       const c = content as AgendaBlockContent;
       const titleLine = c.title ? `**${c.title}**\n` : '';
       // GFM task list syntax
-      const items = c.items
-        .map((i) => `- [${i.checked ? 'x' : ' '}] ${i.text}`)
-        .join('\n');
+      const items = c.items.map((i) => `- [${i.checked ? 'x' : ' '}] ${i.text}`).join('\n');
       return titleLine + items;
     }
 
@@ -310,7 +307,7 @@ export function extractInlineTagsFromContent(
   if (!node) return [];
   const tags = new Set<string>();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line sonarjs/cognitive-complexity, @typescript-eslint/no-explicit-any -- deep recursive tree walk with multiple node types
   function walk(n: any): void {
     if (!n || typeof n !== 'object') return;
     // Block-level tags stored in custom node attrs (ChecklistNode, CodeBlockNode, etc.)
@@ -336,4 +333,3 @@ export function extractInlineTagsFromContent(
   walk(node);
   return Array.from(tags).sort();
 }
-

@@ -1,8 +1,14 @@
 /** @vitest-environment happy-dom */
+import { signIn } from 'next-auth/react';
+
+import '@testing-library/jest-dom/vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import '@testing-library/jest-dom/vitest';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { I18nProvider } from '@/lib/i18n';
+
+import LoginPage from './page';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -12,10 +18,6 @@ vi.mock('next/navigation', () => ({
 vi.mock('next-auth/react', () => ({
   signIn: vi.fn(),
 }));
-
-import { I18nProvider } from '@/lib/i18n';
-import LoginPage from './page';
-import { signIn } from 'next-auth/react';
 
 function Wrapper({ children }: Readonly<{ children: React.ReactNode }>) {
   return <I18nProvider initialLocale="en">{children}</I18nProvider>;
@@ -60,10 +62,14 @@ describe('LoginPage', () => {
     await user.type(screen.getByPlaceholderText(/enter your password/i), 'password123');
     await user.click(screen.getByRole('button', { name: /sign in/i }));
 
-    expect(signIn).toHaveBeenCalledWith('credentials', expect.objectContaining({
-      email: 'test@example.com',
-      password: 'password123',
-      redirect: false,
-    }));
+    expect(signIn).toHaveBeenCalledWith(
+      'credentials',
+      expect.objectContaining({
+        email: 'test@example.com',
+        // eslint-disable-next-line sonarjs/no-hardcoded-passwords -- test credential, not a real password
+        password: 'password123',
+        redirect: false,
+      }),
+    );
   });
 });

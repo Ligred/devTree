@@ -75,38 +75,34 @@ All page/block state lives in React's `useState` (in `Workspace.tsx`) rather tha
 ```mermaid
 graph TD
     App["app/page.tsx\n(entry point)"]
-    App --> Providers["Providers\n(ThemeProvider + I18nProvider)"]
-    Providers --> Workspace
+    App --> Providers["shared/providers.tsx\n(ThemeProvider + I18nProvider)"]
+    Providers --> AppShell["shared/AppShell.tsx"]
+    AppShell --> ActivityBar["shared/ActivityBar\n(navigation sidebar)"]
+    AppShell --> Workspace["features/Workspace\n(all page state lives here)"]
 
-    Workspace["Workspace\n(all state lives here)"]
-    Workspace --> Sidebar["Sidebar\n(FileExplorer + search)"]
-    Workspace --> MainContent["MainContent\n(header + editor + stats)"]
-    Workspace --> DeleteConfirmDialog
+    Workspace --> FileExplorer["features/FileExplorer\n(tree-view UI)"]
+    Workspace --> MainContent["features/MainContent\n(header + page editor + stats)"]
+    Workspace --> Dialogs["DeleteConfirmDialog\nUnsavedChangesDialog"]
 
-    Sidebar --> FileExplorer["FileExplorer\n(tree-view UI)"]
     FileExplorer --> FolderRenameRow
 
     MainContent --> PageTitle
-    MainContent --> BlockEditor["BlockEditor\n(DnD grid)"]
-    MainContent --> UserMenu
-    MainContent --> SettingsDialog
+    MainContent --> PageEditor["features/editor/PageEditor\n(Tiptap rich text)"]
+    MainContent --> EditorToolbar["features/editor/EditorToolbar\n(voice dictation, formatting)"]
+    MainContent --> shared_UserMenu["shared/UserMenu"]
+    MainContent --> SettingsDialog["features/SettingsDialog"]
 
-    BlockEditor --> BlockWrapper["BlockWrapper × N\n(drag handle + controls)"]
-    BlockEditor --> BlockPicker
-
-    BlockWrapper --> TextBlock
-    BlockWrapper --> CodeBlock
-    BlockWrapper --> TableBlock
-    BlockWrapper --> AgendaBlock
-    BlockWrapper --> LinkBlock
-    BlockWrapper --> ImageBlock
-    BlockWrapper --> AudioBlock
-    BlockWrapper --> DiagramBlock
-    BlockWrapper --> VideoBlock
-    BlockWrapper --> WhiteboardBlock
+    PageEditor --> Extensions["extensions/\nCodeBlockNode, AudioNode\nCanvasNode (Excalidraw)\nImageNode, VideoNode..."]
 ```
 
-**Why is all state in `Workspace`?**
+**Component organisation:**
+
+Components are split into two layers under `components/`:
+
+- `features/` — domain-specific components: `Workspace`, `editor`, `MainContent`, `FileExplorer`, `Statistics`, `SettingsDialog`
+- `shared/` — reusable components: `ActivityBar`, `UserMenu`, `ui/` (Radix primitives), `AppShell`, `RecordingIndicator`, `providers`
+
+Stories are co-located next to components in `__stories__/` subdirectories (e.g. `components/features/Workspace/__stories__/`). The top-level `stories/` directory is kept only for Storybook template pages (Button, Header, Page).
 
 This is the "lifting state up" pattern. The sidebar needs to know which page is active (to highlight it in the tree). `MainContent` needs the active page's blocks. Rather than duplicating state or using global state, both components receive what they need as props from their common ancestor (`Workspace`).
 
@@ -759,22 +755,24 @@ Monaco has its own internal theme (`vs` / `vs-dark`). We use `useTheme().resolve
 ```mermaid
 graph TD
     subgraph Unit["Unit Tests (Vitest + Testing Library)"]
-        UBlock["Block components\n(TextBlock, CodeBlock, ...)"]
+        UBlock["Editor extensions\n(PageEditor.blocks.test)"] 
         UTypes["Type guards\n(types.test.ts)"]
         UUtils["Utility functions\n(treeUtils, pageUtils)"]
         UI18n["i18n hook\n(i18n.test.tsx)"]
+        UStores["Zustand stores\n(recordingStore, statsStore)"]
     end
 
     subgraph Visual["Visual Tests (Storybook)"]
-        SBlock["Block stories"]
-        SWorkspace["Workspace stories"]
-        SDialogs["Dialog stories"]
+        SFeature["features/ stories\n(Workspace, Statistics...)"] 
+        SShared["shared/ stories\n(ActivityBar, UserMenu)"] 
+        SVoice["voice-dictation/ stories"]
     end
 
-    subgraph E2E["E2E Tests (C# .NET 9 + Playwright)"]
+    subgraph E2E["E2E Tests (C# .NET 10 + Playwright)"]
         ESidebar["SidebarTests\n(navigation, create, delete)"]
         EEditor["EditorTests\n(add/edit blocks)"]
         ESettings["SettingsTests\n(theme, language)"]
+        ENotebook["NotebookTests\n(folder ops, page ops)"]
     end
 
     Unit --> Visual --> E2E
@@ -784,9 +782,9 @@ graph TD
 
 | Layer | Count | Speed | Confidence | Cost |
 |-------|-------|-------|-----------|------|
-| Unit tests | ~229 | ~3s | Component logic | Low |
+| Unit tests | ~260 | ~3s | Component logic + stores | Low |
 | Storybook stories | ~20 | Manual | Visual appearance | Low |
-| E2E tests | ~32 | ~60s | Full user journeys | High |
+| E2E tests | ~98 | ~60s | Full user journeys | High |
 
 **Unit test philosophy:**
 

@@ -54,8 +54,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'title is required' }, { status: 400 });
   }
 
-  const folderId =
-    typeof body.folderId === 'string' && body.folderId ? body.folderId : null;
+  const folderId = typeof body.folderId === 'string' && body.folderId ? body.folderId : null;
 
   // Verify the folder belongs to this user (if provided)
   if (folderId) {
@@ -110,9 +109,12 @@ export async function POST(req: NextRequest) {
     });
 
     // Emit PAGE_CREATED content event (best-effort; failure is non-fatal)
-    void prisma.contentEvent.create({
-      data: { userId, type: 'PAGE_CREATED', pageId: page.id, folderId: folderId ?? null },
-    }).catch(() => {});
+    // eslint-disable-next-line sonarjs/void-use -- best-effort fire-and-forget, failure is non-fatal
+    void prisma.contentEvent
+      .create({
+        data: { userId, type: 'PAGE_CREATED', pageId: page.id, folderId: folderId ?? null },
+      })
+      .catch(() => {});
 
     return NextResponse.json(page, { status: 201 });
   } catch (err) {

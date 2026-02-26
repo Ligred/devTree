@@ -55,7 +55,6 @@
  *   re-fetch from the library URL on the server so that we avoid server-side
  *   CORS blockers.
  */
-
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -225,7 +224,7 @@ export async function POST(req: NextRequest) {
     },
     create: {
       sourceUrl: normalised,
-        name: name || (normalised.split('/').pop()?.replace('.excalidrawlib', '') ?? normalised),
+      name: name || (normalised.split('/').pop()?.replace('.excalidrawlib', '') ?? normalised),
       items: items as any,
     },
   });
@@ -271,10 +270,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (!isPatchBody(body)) {
-    return NextResponse.json(
-      { error: 'Body must contain items (array)' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Body must contain items (array)' }, { status: 400 });
   }
 
   const { items } = body;
@@ -302,10 +298,7 @@ export async function PATCH(req: NextRequest) {
   const MAX_SERIALISED_BYTES = 200 * 1024;
   const serialised = JSON.stringify(items);
   if (serialised.length > MAX_SERIALISED_BYTES) {
-    return NextResponse.json(
-      { error: 'items payload exceeds the 200 KB limit' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'items payload exceeds the 200 KB limit' }, { status: 400 });
   }
 
   // ── Persist ─────────────────────────────────────────────────────────────────

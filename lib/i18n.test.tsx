@@ -4,7 +4,7 @@
 import '@testing-library/jest-dom/vitest';
 import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { I18nProvider, useI18n } from './i18n';
 
@@ -41,9 +41,7 @@ describe('I18n', () => {
       </I18nProvider>,
     );
     const withinContainer = (id: string) => container.querySelector(`[data-testid="${id}"]`);
-    expect(withinContainer('main.selectPage')).toHaveTextContent(
-      'Select or create a page',
-    );
+    expect(withinContainer('main.selectPage')).toHaveTextContent('Select or create a page');
     expect(withinContainer('main.save')).toHaveTextContent('Save');
   });
 
@@ -70,9 +68,7 @@ describe('I18n', () => {
     expect(getByTestId('locale')).toHaveTextContent('en');
     await user.click(getByRole('Set UA')!);
     expect(getByTestId('locale')).toHaveTextContent('uk');
-    expect(getByTestId('main.selectPage')).toHaveTextContent(
-      'Виберіть або створіть сторінку',
-    );
+    expect(getByTestId('main.selectPage')).toHaveTextContent('Виберіть або створіть сторінку');
     await user.click(getByRole('Set EN')!);
     expect(getByTestId('locale')).toHaveTextContent('en');
   });

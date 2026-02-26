@@ -1,16 +1,19 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+
+import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { signIn } from 'next-auth/react';
-import { useState, useEffect, useMemo } from 'react';
-import { Eye, EyeOff, Check, X } from 'lucide-react';
 
-import { useI18n, type Locale } from '@/lib/i18n';
+import { Check, Eye, EyeOff, X } from 'lucide-react';
+
+import { type Locale, useI18n } from '@/lib/i18n';
 
 type AuthMode = 'login' | 'register';
 
 // ─── Validation & password strength ────────────────────────────────────────
+// eslint-disable-next-line sonarjs/slow-regex -- standard email validation regex, bounded by @ and domain separators
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const PASSWORD_RULES = {
@@ -86,6 +89,7 @@ const LOCALE_OPTIONS: { id: Locale; label: string }[] = [
   { id: 'uk', label: 'UA' },
 ];
 
+// eslint-disable-next-line sonarjs/cognitive-complexity -- combined login/register form has inherent complexity
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -120,6 +124,7 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- calling setState in useEffect is valid React
     setMode(modeParam === 'register' ? 'register' : 'login');
     if (searchParams.get('registered') === '1') setJustRegistered(true);
   }, [modeParam, searchParams]);
@@ -208,8 +213,7 @@ export default function LoginPage() {
   };
 
   const formTitle = mode === 'login' ? t('auth.welcomeBack') : t('auth.createAccount');
-  const formSubtitle =
-    mode === 'login' ? t('auth.signInSubtitle') : t('auth.registerSubtitle');
+  const formSubtitle = mode === 'login' ? t('auth.signInSubtitle') : t('auth.registerSubtitle');
   const primaryLabel = mode === 'login' ? t('auth.signIn') : t('auth.createAccountButton');
   const primaryLoading = mode === 'login' ? t('auth.signingIn') : t('auth.creatingAccount');
 
@@ -223,7 +227,9 @@ export default function LoginPage() {
       {/* Left panel: branding */}
       <div className="flex min-h-[40vh] flex-col justify-center bg-linear-to-b from-[#1e3a5f] to-[#0f172a] px-6 py-8 text-white lg:min-h-screen lg:w-[42%] lg:px-10 lg:py-12">
         <div className="flex items-center justify-between">
-          <span className="text-xl font-bold tracking-tight lg:text-2xl">{t('auth.learningTree')}</span>
+          <span className="text-xl font-bold tracking-tight lg:text-2xl">
+            {t('auth.learningTree')}
+          </span>
           <div className="flex gap-1 rounded-md border border-white/20 bg-white/5 p-0.5">
             {LOCALE_OPTIONS.map(({ id, label }) => (
               <button
@@ -238,7 +244,7 @@ export default function LoginPage() {
             ))}
           </div>
         </div>
-        <h1 className="mt-8 text-2xl font-bold leading-tight tracking-tight lg:text-3xl">
+        <h1 className="mt-8 text-2xl leading-tight font-bold tracking-tight lg:text-3xl">
           {mode === 'login' ? t('auth.loginTitle') : t('auth.registerTitle')}
         </h1>
         <p className="mt-2 text-[0.9375rem] leading-relaxed text-white/80">
@@ -247,10 +253,10 @@ export default function LoginPage() {
       </div>
 
       {/* Right panel: form */}
-      <div className="flex flex-1 items-center justify-center bg-background px-4 py-8 text-foreground lg:px-12">
+      <div className="bg-background text-foreground flex flex-1 items-center justify-center px-4 py-8 lg:px-12">
         <div className="w-full max-w-md">
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">{formTitle}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{formSubtitle}</p>
+          <h2 className="text-foreground text-2xl font-bold tracking-tight">{formTitle}</h2>
+          <p className="text-muted-foreground mt-1 text-sm">{formSubtitle}</p>
 
           <form onSubmit={handleSubmit} className="mt-7 flex flex-col gap-4">
             {justRegistered && (
@@ -263,7 +269,7 @@ export default function LoginPage() {
             )}
             {error && (
               <div
-                className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                className="border-destructive/30 bg-destructive/10 text-destructive rounded-lg border px-4 py-3 text-sm"
                 role="alert"
               >
                 {error}
@@ -272,7 +278,10 @@ export default function LoginPage() {
 
             {mode === 'register' && (
               <div>
-                <label htmlFor="auth-name" className="mb-1.5 block text-sm font-medium text-foreground">
+                <label
+                  htmlFor="auth-name"
+                  className="text-foreground mb-1.5 block text-sm font-medium"
+                >
                   {t('auth.nameOptional')}
                 </label>
                 <input
@@ -289,7 +298,10 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="auth-email" className="mb-1.5 block text-sm font-medium text-foreground">
+              <label
+                htmlFor="auth-email"
+                className="text-foreground mb-1.5 block text-sm font-medium"
+              >
                 {t('auth.email')}
               </label>
               <input
@@ -308,7 +320,7 @@ export default function LoginPage() {
                 aria-describedby={fieldErrors.email ? 'auth-email-error' : undefined}
               />
               {fieldErrors.email && (
-                <p id="auth-email-error" className="mt-1 text-xs text-destructive" role="alert">
+                <p id="auth-email-error" className="text-destructive mt-1 text-xs" role="alert">
                   {t(fieldErrors.email)}
                 </p>
               )}
@@ -316,14 +328,14 @@ export default function LoginPage() {
 
             <div>
               <div className="mb-1.5 flex items-center justify-between">
-                <label htmlFor="auth-password" className="text-sm font-medium text-foreground">
+                <label htmlFor="auth-password" className="text-foreground text-sm font-medium">
                   {t('auth.password')}
                 </label>
                 {mode === 'login' && (
                   <Link
                     href="/forgot-password"
                     data-testid="login-forgot-link"
-                    className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                    className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
                   >
                     {t('auth.forgotPassword')}
                   </Link>
@@ -338,16 +350,19 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
-                    if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    if (fieldErrors.password)
+                      setFieldErrors((prev) => ({ ...prev, password: undefined }));
                   }}
                   className={`${inputBase} pr-11 ${fieldErrors.password ? 'border-destructive focus:border-destructive focus:ring-destructive/20' : ''}`}
-                  placeholder={mode === 'login' ? t('auth.enterPassword') : t('auth.createPassword')}
-                aria-invalid={!!fieldErrors.password}
-                aria-describedby={getPasswordDescribedBy()}
+                  placeholder={
+                    mode === 'login' ? t('auth.enterPassword') : t('auth.createPassword')
+                  }
+                  aria-invalid={!!fieldErrors.password}
+                  aria-describedby={getPasswordDescribedBy()}
                 />
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+                  className="text-muted-foreground hover:text-foreground focus:ring-ring focus:ring-offset-background absolute top-1/2 right-3 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded focus:ring-2 focus:ring-offset-2 focus:outline-none"
                   onClick={() => setShowPassword((v) => !v)}
                   aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                   tabIndex={-1}
@@ -356,8 +371,13 @@ export default function LoginPage() {
                 </button>
               </div>
               {fieldErrors.password && (
-                <p id="auth-password-error" className="mt-1 text-xs text-destructive" role="alert">
-                  {t(fieldErrors.password, fieldErrors.password === 'auth.passwordMinLength' ? { count: PASSWORD_RULES.minLength } : undefined)}
+                <p id="auth-password-error" className="text-destructive mt-1 text-xs" role="alert">
+                  {t(
+                    fieldErrors.password,
+                    fieldErrors.password === 'auth.passwordMinLength'
+                      ? { count: PASSWORD_RULES.minLength }
+                      : undefined,
+                  )}
                 </p>
               )}
               {mode === 'register' && (
@@ -370,28 +390,69 @@ export default function LoginPage() {
                       />
                     ))}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    {t('auth.strength')}: <span className="font-medium text-foreground">{t(strengthLabelKey)}</span>
+                  <p className="text-muted-foreground text-xs">
+                    {t('auth.strength')}:{' '}
+                    <span className="text-foreground font-medium">{t(strengthLabelKey)}</span>
                   </p>
-                  <ul className="space-y-1 text-xs text-muted-foreground">
-                    <li className={passwordRequirements.minLength ? 'text-green-600 dark:text-green-400' : ''}>
-                      {passwordRequirements.minLength ? <Check className="mr-1.5 inline h-3.5 w-3.5" /> : <X className="mr-1.5 inline h-3.5 w-3.5 text-muted-foreground" />}
+                  <ul className="text-muted-foreground space-y-1 text-xs">
+                    <li
+                      className={
+                        passwordRequirements.minLength ? 'text-green-600 dark:text-green-400' : ''
+                      }
+                    >
+                      {passwordRequirements.minLength ? (
+                        <Check className="mr-1.5 inline h-3.5 w-3.5" />
+                      ) : (
+                        <X className="text-muted-foreground mr-1.5 inline h-3.5 w-3.5" />
+                      )}
                       {t('auth.charCount', { count: PASSWORD_RULES.minLength })}
                     </li>
-                    <li className={passwordRequirements.uppercase ? 'text-green-600 dark:text-green-400' : ''}>
-                      {passwordRequirements.uppercase ? <Check className="mr-1.5 inline h-3.5 w-3.5" /> : <X className="mr-1.5 inline h-3.5 w-3.5 text-muted-foreground" />}
+                    <li
+                      className={
+                        passwordRequirements.uppercase ? 'text-green-600 dark:text-green-400' : ''
+                      }
+                    >
+                      {passwordRequirements.uppercase ? (
+                        <Check className="mr-1.5 inline h-3.5 w-3.5" />
+                      ) : (
+                        <X className="text-muted-foreground mr-1.5 inline h-3.5 w-3.5" />
+                      )}
                       {t('auth.oneUppercase')}
                     </li>
-                    <li className={passwordRequirements.lowercase ? 'text-green-600 dark:text-green-400' : ''}>
-                      {passwordRequirements.lowercase ? <Check className="mr-1.5 inline h-3.5 w-3.5" /> : <X className="mr-1.5 inline h-3.5 w-3.5 text-muted-foreground" />}
+                    <li
+                      className={
+                        passwordRequirements.lowercase ? 'text-green-600 dark:text-green-400' : ''
+                      }
+                    >
+                      {passwordRequirements.lowercase ? (
+                        <Check className="mr-1.5 inline h-3.5 w-3.5" />
+                      ) : (
+                        <X className="text-muted-foreground mr-1.5 inline h-3.5 w-3.5" />
+                      )}
                       {t('auth.oneLowercase')}
                     </li>
-                    <li className={passwordRequirements.number ? 'text-green-600 dark:text-green-400' : ''}>
-                      {passwordRequirements.number ? <Check className="mr-1.5 inline h-3.5 w-3.5" /> : <X className="mr-1.5 inline h-3.5 w-3.5 text-muted-foreground" />}
+                    <li
+                      className={
+                        passwordRequirements.number ? 'text-green-600 dark:text-green-400' : ''
+                      }
+                    >
+                      {passwordRequirements.number ? (
+                        <Check className="mr-1.5 inline h-3.5 w-3.5" />
+                      ) : (
+                        <X className="text-muted-foreground mr-1.5 inline h-3.5 w-3.5" />
+                      )}
                       {t('auth.oneNumber')}
                     </li>
-                    <li className={passwordRequirements.special ? 'text-green-600 dark:text-green-400' : ''}>
-                      {passwordRequirements.special ? <Check className="mr-1.5 inline h-3.5 w-3.5" /> : <X className="mr-1.5 inline h-3.5 w-3.5 text-muted-foreground" />}
+                    <li
+                      className={
+                        passwordRequirements.special ? 'text-green-600 dark:text-green-400' : ''
+                      }
+                    >
+                      {passwordRequirements.special ? (
+                        <Check className="mr-1.5 inline h-3.5 w-3.5" />
+                      ) : (
+                        <X className="text-muted-foreground mr-1.5 inline h-3.5 w-3.5" />
+                      )}
                       {t('auth.oneSpecial')}
                     </li>
                   </ul>
@@ -399,34 +460,51 @@ export default function LoginPage() {
               )}
             </div>
 
-            <button type="submit" data-testid="auth-submit" disabled={loading} className={`${btnBase} bg-primary text-primary-foreground hover:opacity-90`}>
+            <button
+              type="submit"
+              data-testid="auth-submit"
+              disabled={loading}
+              className={`${btnBase} bg-primary text-primary-foreground hover:opacity-90`}
+            >
               {loading ? primaryLoading : primaryLabel}
             </button>
           </form>
 
           <div className="my-6 flex items-center gap-4">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">{t('auth.orContinueWith')}</span>
-            <div className="h-px flex-1 bg-border" />
+            <div className="bg-border h-px flex-1" />
+            <span className="text-muted-foreground text-xs">{t('auth.orContinueWith')}</span>
+            <div className="bg-border h-px flex-1" />
           </div>
 
           <div className="flex flex-col gap-3">
             <button
               type="button"
-              className={`${btnBase} border border-border bg-background text-foreground hover:bg-accent`}
+              className={`${btnBase} border-border bg-background text-foreground hover:bg-accent border`}
               onClick={() => signIn('google', { callbackUrl })}
             >
               <svg viewBox="0 0 24 24" aria-hidden className="h-5 w-5 shrink-0">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
               </svg>
               {t('auth.continueGoogle')}
             </button>
             <button
               type="button"
-              className={`${btnBase} border border-border bg-background text-foreground hover:bg-accent`}
+              className={`${btnBase} border-border bg-background text-foreground hover:bg-accent border`}
               onClick={() => signIn('github', { callbackUrl })}
             >
               <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className="h-5 w-5 shrink-0">
@@ -436,14 +514,14 @@ export default function LoginPage() {
             </button>
           </div>
 
-          <p className="mt-6 text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground mt-6 text-center text-sm">
             {mode === 'login' ? (
               <>
                 {t('auth.noAccount')}{' '}
                 <button
                   type="button"
                   data-testid="auth-switch-register"
-                  className="font-medium text-foreground underline-offset-2 hover:underline"
+                  className="text-foreground font-medium underline-offset-2 hover:underline"
                   onClick={() => switchMode('register')}
                 >
                   {t('auth.signUp')}
@@ -455,7 +533,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   data-testid="auth-switch-login"
-                  className="font-medium text-foreground underline-offset-2 hover:underline"
+                  className="text-foreground font-medium underline-offset-2 hover:underline"
                   onClick={() => switchMode('login')}
                 >
                   {t('auth.logIn')}

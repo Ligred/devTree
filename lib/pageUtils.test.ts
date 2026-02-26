@@ -10,10 +10,11 @@
  *   don't need any DOM. We test `downloadMarkdown` separately in an integration
  *   test or E2E test. Here we focus on the pure computation functions.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+
+import type { Page } from '@/components/features/MainContent/types';
 
 import { computePageStats, exportPageToMarkdown, extractInlineTagsFromContent } from './pageUtils';
-import type { Page } from '@/components/MainContent/types';
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────
 
@@ -56,7 +57,13 @@ const richPage: Page = {
     {
       id: 'b4',
       type: 'table',
-      content: { headers: ['Name', 'Age'], rows: [['Alice', '30'], ['Bob', '25']] },
+      content: {
+        headers: ['Name', 'Age'],
+        rows: [
+          ['Alice', '30'],
+          ['Bob', '25'],
+        ],
+      },
       colSpan: 2,
       createdAt: '2026-01-03T12:00:00.000Z',
       updatedAt: '2026-01-10T09:00:00.000Z',
@@ -310,9 +317,7 @@ describe('extractInlineTagsFromContent', () => {
   it('returns tags sorted alphabetically', () => {
     const doc = {
       type: 'doc',
-      content: [
-        { type: 'checklistNode', attrs: { tags: ['zebra', 'alpha', 'mango'], items: [] } },
-      ],
+      content: [{ type: 'checklistNode', attrs: { tags: ['zebra', 'alpha', 'mango'], items: [] } }],
     };
     expect(extractInlineTagsFromContent(doc)).toEqual(['alpha', 'mango', 'zebra']);
   });
@@ -320,9 +325,7 @@ describe('extractInlineTagsFromContent', () => {
   it('ignores empty string tags', () => {
     const doc = {
       type: 'doc',
-      content: [
-        { type: 'codeBlockNode', attrs: { tags: ['', 'valid', ''], code: '' } },
-      ],
+      content: [{ type: 'codeBlockNode', attrs: { tags: ['', 'valid', ''], code: '' } }],
     };
     expect(extractInlineTagsFromContent(doc)).toEqual(['valid']);
   });

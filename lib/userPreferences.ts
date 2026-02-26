@@ -40,9 +40,7 @@ export async function loadUserPreferences(): Promise<UserPreferencesPayload | nu
  * Save (merge) preferences to the API. Fire-and-forget; errors are not surfaced.
  * Call after updating theme, locale, or feature toggles in the UI.
  */
-export async function saveUserPreferences(
-  data: UserPreferencesPayload,
-): Promise<void> {
+export async function saveUserPreferences(data: UserPreferencesPayload): Promise<void> {
   try {
     await fetch('/api/user/preferences', {
       method: 'PATCH',

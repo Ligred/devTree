@@ -1,8 +1,9 @@
-import { writeFile, mkdir } from 'node:fs/promises';
-import path from 'node:path';
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
 import { prisma } from '@/lib/prisma';
 
@@ -41,16 +42,10 @@ export async function POST(req: NextRequest) {
 
   const blob = file as Blob;
   if (!ALLOWED_TYPES.has(blob.type)) {
-    return NextResponse.json(
-      { error: 'Allowed types: JPEG, PNG, GIF, WebP' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Allowed types: JPEG, PNG, GIF, WebP' }, { status: 400 });
   }
   if (blob.size > MAX_SIZE) {
-    return NextResponse.json(
-      { error: 'File must be under 2MB' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'File must be under 2MB' }, { status: 400 });
   }
 
   const ext = EXT_MAP[blob.type] ?? '.jpg';
@@ -64,10 +59,7 @@ export async function POST(req: NextRequest) {
     await writeFile(filepath, buffer);
   } catch (err) {
     console.error('Avatar upload write failed:', err);
-    return NextResponse.json(
-      { error: 'Failed to save file' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Failed to save file' }, { status: 500 });
   }
 
   const url = `/uploads/avatars/${filename}`;

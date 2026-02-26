@@ -1,17 +1,23 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
-import { StatsSummaryCards } from '@/components/Statistics/StatsSummaryCards';
-import { StreakCard } from '@/components/Statistics/StreakCard';
-import { DailyActivityChart } from '@/components/Statistics/DailyActivityChart';
-import { TopicsBarChart } from '@/components/Statistics/TopicsBarChart';
-import { ContentTypeDonut } from '@/components/Statistics/ContentTypeDonut';
-import { ActivityHeatmap } from '@/components/Statistics/ActivityHeatmap';
+import { ActivityHeatmap } from '@/components/features/Statistics/ActivityHeatmap';
+import { ContentTypeDonut } from '@/components/features/Statistics/ContentTypeDonut';
+import { DailyActivityChart } from '@/components/features/Statistics/DailyActivityChart';
+import { StatsSummaryCards } from '@/components/features/Statistics/StatsSummaryCards';
+import { StreakCard } from '@/components/features/Statistics/StreakCard';
+import { TopicsBarChart } from '@/components/features/Statistics/TopicsBarChart';
+import type {
+  ActivityDay,
+  ContentData,
+  SummaryData,
+  TopicData,
+} from '@/components/features/Statistics/types';
 import { useStatsStore } from '@/lib/statsStore';
-import type { ActivityDay, ContentData, SummaryData, TopicData } from '@/components/Statistics/types';
 
 /** Safely decode a fetch Response as JSON, throwing if the response is not OK. */
 async function safeJson<T>(res: Response): Promise<T> {
@@ -84,7 +90,7 @@ export default function StatisticsPage() {
   if (status === 'loading' || status === 'unauthenticated') {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-primary" />
+        <div className="border-border border-t-primary h-8 w-8 animate-spin rounded-full border-4" />
       </div>
     );
   }
@@ -92,22 +98,21 @@ export default function StatisticsPage() {
   if (!statisticsEnabled) return null;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-background">
+    <div className="bg-background flex h-full flex-col overflow-hidden">
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl space-y-6 p-6 lg:p-8">
           {/* Page title */}
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Statistics</h1>
-            <p className="text-sm text-muted-foreground">
-              Track your learning progress and habits
-            </p>
+            <p className="text-muted-foreground text-sm">Track your learning progress and habits</p>
           </div>
 
           {/* Error state */}
           {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-              <strong className="font-medium">Failed to load statistics: </strong>{error}
+            <div className="border-destructive/50 bg-destructive/10 text-destructive rounded-lg border p-4 text-sm">
+              <strong className="font-medium">Failed to load statistics: </strong>
+              {error}
             </div>
           )}
 

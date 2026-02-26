@@ -1,7 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
+import type { ContentEventType as PrismaContentEventType } from '@prisma/client';
+
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
-import type { ContentEventType as PrismaContentEventType } from '@prisma/client';
 
 const MAX_EVENTS_PER_REQUEST = 100;
 
@@ -35,79 +38,80 @@ export async function POST(req: NextRequest) {
 
   // Process events in a single transaction
   try {
+    // eslint-disable-next-line sonarjs/cognitive-complexity -- complex switch handles all event kinds
     await prisma.$transaction(async (tx) => {
-    for (const ev of events) {
-      const ts = ev.timestamp ? new Date(ev.timestamp) : new Date();
+      for (const ev of events) {
+        const ts = ev.timestamp ? new Date(ev.timestamp) : new Date();
 
-      switch (ev.kind) {
-        case 'SESSION_START':
-          await tx.userSession.create({
-            data: { userId, startedAt: ts },
-          });
-          break;
-
-        case 'SESSION_END': {
-          // Find the most recent open session and close it
-          const openSession = await tx.userSession.findFirst({
-            where: { userId, endedAt: null },
-            orderBy: { startedAt: 'desc' },
-          });
-          if (openSession) {
-            await tx.userSession.update({
-              where: { id: openSession.id },
-              data: { endedAt: ts, durationMs: ev.durationMs ?? null },
+        switch (ev.kind) {
+          case 'SESSION_START':
+            await tx.userSession.create({
+              data: { userId, startedAt: ts },
             });
-          }
-          break;
-        }
+            break;
 
-        case 'PAGE_VISIT_START':
-          if (ev.pageId) {
-            await tx.pageVisit.create({
-              data: { userId, pageId: ev.pageId, folderId: ev.folderId ?? null, startedAt: ts },
-            });
-          }
-          break;
-
-        case 'PAGE_VISIT_END': {
-          if (ev.pageId) {
-            const openVisit = await tx.pageVisit.findFirst({
-              where: { userId, pageId: ev.pageId, endedAt: null },
+          case 'SESSION_END': {
+            // Find the most recent open session and close it
+            const openSession = await tx.userSession.findFirst({
+              where: { userId, endedAt: null },
               orderBy: { startedAt: 'desc' },
             });
-            if (openVisit) {
-              await tx.pageVisit.update({
-                where: { id: openVisit.id },
+            if (openSession) {
+              await tx.userSession.update({
+                where: { id: openSession.id },
                 data: { endedAt: ts, durationMs: ev.durationMs ?? null },
               });
             }
+            break;
           }
-          break;
+
+          case 'PAGE_VISIT_START':
+            if (ev.pageId) {
+              await tx.pageVisit.create({
+                data: { userId, pageId: ev.pageId, folderId: ev.folderId ?? null, startedAt: ts },
+              });
+            }
+            break;
+
+          case 'PAGE_VISIT_END': {
+            if (ev.pageId) {
+              const openVisit = await tx.pageVisit.findFirst({
+                where: { userId, pageId: ev.pageId, endedAt: null },
+                orderBy: { startedAt: 'desc' },
+              });
+              if (openVisit) {
+                await tx.pageVisit.update({
+                  where: { id: openVisit.id },
+                  data: { endedAt: ts, durationMs: ev.durationMs ?? null },
+                });
+              }
+            }
+            break;
+          }
+
+          case 'CONTENT_EVENT':
+            if (ev.type) {
+              await tx.contentEvent.create({
+                data: {
+                  userId,
+                  type: ev.type as PrismaContentEventType,
+                  pageId: ev.pageId ?? null,
+                  folderId: ev.folderId ?? null,
+                  blockId: ev.blockId ?? null,
+                  timestamp: ts,
+                },
+              });
+            }
+            break;
+
+          default:
+            break;
         }
-
-        case 'CONTENT_EVENT':
-          if (ev.type) {
-            await tx.contentEvent.create({
-              data: {
-                userId,
-                type: ev.type as PrismaContentEventType,
-                pageId: ev.pageId ?? null,
-                folderId: ev.folderId ?? null,
-                blockId: ev.blockId ?? null,
-                timestamp: ts,
-              },
-            });
-          }
-          break;
-
-        default:
-          break;
       }
-    }
 
-    // Update streak
-    await upsertStreak(tx, userId);
-  });
+      // Update streak
+      await upsertStreak(tx, userId);
+    });
   } catch (err) {
     console.error('[stats/events] Error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -138,7 +142,11 @@ async function upsertStreak(
   if (!last) {
     await tx.userStreak.update({
       where: { userId },
-      data: { currentStreak: 1, longestStreak: Math.max(1, streak.longestStreak), lastActiveDate: today },
+      data: {
+        currentStreak: 1,
+        longestStreak: Math.max(1, streak.longestStreak),
+        lastActiveDate: today,
+      },
     });
     return;
   }

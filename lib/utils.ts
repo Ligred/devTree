@@ -6,9 +6,9 @@
  *   live here. Keeping them in one place prevents duplication and makes imports
  *   predictable: any component that needs `cn()` knows to import from `@/lib/utils`.
  */
-
 import { useEffect, useState } from 'react';
-import { clsx, type ClassValue } from 'clsx';
+
+import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
 /**
@@ -61,9 +61,7 @@ export function cn(...inputs: ClassValue[]) {
  *   );
  */
 
-export function useTextTruncation(
-  elementRef: React.RefObject<HTMLElement | null>
-): boolean {
+export function useTextTruncation(elementRef: React.RefObject<HTMLElement | null>): boolean {
   const [isTruncated, setIsTruncated] = useState(false);
 
   useEffect(() => {

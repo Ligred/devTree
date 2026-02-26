@@ -1,6 +1,6 @@
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 
 import { prisma } from '@/lib/prisma';
 
@@ -19,9 +19,7 @@ export type UserPreferences = {
   trackContentEvents?: boolean;
 };
 
-function isPreferencesBody(
-  body: unknown,
-): body is Partial<Record<keyof UserPreferences, unknown>> {
+function isPreferencesBody(body: unknown): body is Partial<Record<keyof UserPreferences, unknown>> {
   return typeof body === 'object' && body !== null;
 }
 
@@ -90,11 +88,13 @@ export async function PATCH(req: NextRequest) {
   if (typeof body.recordingStartSoundEnabled === 'boolean') {
     updates.recordingStartSoundEnabled = body.recordingStartSoundEnabled;
   }
-  if (typeof body.statisticsEnabled === 'boolean') updates.statisticsEnabled = body.statisticsEnabled;
+  if (typeof body.statisticsEnabled === 'boolean')
+    updates.statisticsEnabled = body.statisticsEnabled;
   if (typeof body.trackSessionTime === 'boolean') updates.trackSessionTime = body.trackSessionTime;
   if (typeof body.trackPageTime === 'boolean') updates.trackPageTime = body.trackPageTime;
   if (typeof body.trackFolderTime === 'boolean') updates.trackFolderTime = body.trackFolderTime;
-  if (typeof body.trackContentEvents === 'boolean') updates.trackContentEvents = body.trackContentEvents;
+  if (typeof body.trackContentEvents === 'boolean')
+    updates.trackContentEvents = body.trackContentEvents;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'No valid preference fields' }, { status: 400 });

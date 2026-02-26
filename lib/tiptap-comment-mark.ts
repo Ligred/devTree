@@ -5,7 +5,6 @@
  * are stored in the document HTML and can be shown in a tooltip on hover.
  * Comment text is escaped for safe use in HTML attributes.
  */
-
 import { Mark, mergeAttributes } from '@tiptap/core';
 
 /** Escape comment text for safe use in HTML data attributes (so it can be read back from dataset in the tooltip). */
@@ -19,10 +18,7 @@ function escapeCommentForAttr(text: string): string {
 
 /** Reverse escapeCommentForAttr when parsing from the DOM (e.g. in parseHTML). */
 function unescapeCommentFromAttr(text: string): string {
-  return text
-    .replaceAll('&quot;', '"')
-    .replaceAll('&amp;', '&')
-    .replaceAll('&lt;', '<');
+  return text.replaceAll('&quot;', '"').replaceAll('&amp;', '&').replaceAll('&lt;', '<');
 }
 
 /** Module augmentation so editor.chain().setComment(...) and .unsetComment() are typed in TypeScript. */
@@ -70,9 +66,10 @@ export const CommentMark = Mark.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const commentText = typeof HTMLAttributes['data-comment-text'] === 'string'
-      ? unescapeCommentFromAttr(HTMLAttributes['data-comment-text'])
-      : '';
+    const commentText =
+      typeof HTMLAttributes['data-comment-text'] === 'string'
+        ? unescapeCommentFromAttr(HTMLAttributes['data-comment-text'])
+        : '';
     return [
       'span',
       mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, {

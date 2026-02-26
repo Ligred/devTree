@@ -23,8 +23,8 @@ import {
 
 import { cn } from '@/lib/utils';
 import { useI18n, type Locale } from '@/lib/i18n';
-import { VoiceDictationButton } from '@/components/MainContent/blocks/VoiceDictationButton';
-import { VoiceDictationLanguageButton } from '@/components/MainContent/blocks/VoiceDictationLanguageButton';
+import { VoiceDictationButton } from '@/components/MainContent/voice-dictation/VoiceDictationButton';
+import { VoiceDictationLanguageButton } from '@/components/MainContent/voice-dictation/VoiceDictationLanguageButton';
 import { BookmarksPanel } from './BookmarksPanel';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────

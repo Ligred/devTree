@@ -57,7 +57,6 @@
  *   - Add a third locale (e.g. Polish 'pl') — only requires a new messages file
  *     and adding 'pl' to the Locale union type.
  */
-
 import React, { useCallback, useMemo, useState } from 'react';
 
 // Relative path so Vitest resolves JSON without special config;
@@ -175,10 +174,7 @@ export function I18nProvider({
    *   useMemo ensures referential stability when locale, setLocale, and t are
    *   all unchanged.
    */
-  const value = useMemo(
-    () => ({ locale, setLocale, t }),
-    [locale, setLocale, t],
-  );
+  const value = useMemo(() => ({ locale, setLocale, t }), [locale, setLocale, t]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

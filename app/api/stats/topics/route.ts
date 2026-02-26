@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
@@ -24,10 +26,14 @@ export async function GET(req: NextRequest) {
     ]);
 
     // Aggregate time and page count per folder
-    const byFolder = new Map<string, { timeSpentMs: number; pageCount: number; eventCount: number }>();
+    const byFolder = new Map<
+      string,
+      { timeSpentMs: number; pageCount: number; eventCount: number }
+    >();
 
     const get = (folderId: string) => {
-      if (!byFolder.has(folderId)) byFolder.set(folderId, { timeSpentMs: 0, pageCount: 0, eventCount: 0 });
+      if (!byFolder.has(folderId))
+        byFolder.set(folderId, { timeSpentMs: 0, pageCount: 0, eventCount: 0 });
       return byFolder.get(folderId)!;
     };
 

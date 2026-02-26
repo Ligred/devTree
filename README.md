@@ -244,31 +244,41 @@ devTree/
 │   └── globals.css              # Tailwind + Tiptap styles, @theme, @source
 │
 ├── components/
-│   ├── FileExplorer/            # Sidebar file tree
-│   ├── MainContent/             # Right panel: header, editor, stats
-│   │   └── blocks/              # 10 block type components
-│   ├── SettingsDialog/          # Tabbed settings (Account, Appearance, Features)
-│   ├── UserMenu/                # Avatar dropdown (theme, language, settings, sign out)
-│   ├── Workspace/               # App shell (layout + state)
-│   │   ├── Workspace.tsx        # Root state container
-│   │   ├── buildTreeData.tsx    # Domain model → UI tree adapter
-│   │   ├── treeTypes.ts         # TreeRoot / TreeNode types
-│   │   ├── treeUtils.ts         # Pure tree manipulation functions
-│   │   ├── samplePages.ts       # Demo content
-│   │   └── DeleteConfirmDialog.tsx
-│   └── ui/                      # Radix-based primitives (dialog, tree-view, etc.)
+│   ├── features/                # Domain-specific components
+│   │   ├── editor/              # Tiptap editor + extensions (CodeBlockNode, AudioNode, etc.)
+│   │   ├── FileExplorer/        # Sidebar file tree
+│   │   ├── MainContent/         # Right panel: header, editor, stats
+│   │   │   └── voice-dictation/ # Voice dictation controls
+│   │   ├── SettingsDialog/      # Tabbed settings (Account, Appearance, Features)
+│   │   ├── Statistics/          # Stats charts and cards
+│   │   └── Workspace/           # App shell (layout + state)
+│   │       ├── Workspace.tsx    # Root state container
+│   │       ├── buildTreeData.tsx # Domain model → UI tree adapter
+│   │       ├── treeTypes.ts     # TreeRoot / TreeNode types
+│   │       ├── treeUtils.ts     # Pure tree manipulation functions
+│   │       └── DeleteConfirmDialog.tsx
+│   └── shared/                  # Reusable components
+│       ├── ActivityBar/         # Navigation sidebar
+│       ├── AppShell.tsx         # Top-level app layout
+│       ├── providers.tsx        # ThemeProvider + I18nProvider
+│       ├── RecordingIndicator.tsx
+│       ├── UserMenu/            # Avatar dropdown (theme, language, settings, sign out)
+│       └── ui/                  # Radix-based primitives (dialog, tree-view, etc.)
+│
+│   Stories are co-located in __stories__/ subdirectories alongside their components.
 │
 ├── lib/
 │   ├── auth/password.ts         # Password hashing (scrypt)
+│   ├── hooks/                   # Custom React hooks (usePageTracking, useSessionTracking)
 │   ├── i18n.tsx                 # Internationalisation context
 │   ├── pageUtils.ts             # Stats, Markdown export
 │   ├── prisma.ts                # Prisma client singleton
-│   ├── settingsStore.ts         # Zustand store (tags per page/block)
+│   ├── stores/                  # Zustand stores (settingsStore, recordingStore, statsStore, uiStore)
 │   └── utils.ts                 # cn() Tailwind helper
 │
 ├── messages/                    # en.json, uk.json
 ├── prisma/                      # schema.prisma, seed.ts
-├── stories/                     # Storybook stories (components + blocks)
+├── stories/                     # Storybook template pages (Button, Header, Page demos)
 ├── tests/e2e/                   # C# .NET + Playwright E2E
 │
 ├── docs/                        # Detailed documentation
@@ -289,19 +299,16 @@ devTree/
 
 ## How to Add a New Block Type
 
-Adding a new block type involves 6 steps:
+Adding a new block type involves extending the Tiptap editor with a new node extension.
 
-1. **Add the type name** to `BlockType` in `components/MainContent/types.ts`
-2. **Define the content shape** — add a `XXXBlockContent` type and add it to the `BlockContent` union
-3. **Create the component** — `components/MainContent/blocks/XXXBlock.tsx`
-4. **Register in the factory** — add a `case 'xxx':` in `createBlock()` in `BlockEditor.tsx`
-5. **Register the renderer** — add a `case 'xxx':` in the `BlockContent` `switch` in `BlockEditor.tsx`
-6. **Add to the picker** — add an entry in `BLOCK_DEFS` in `BlockPicker.tsx` with label/description i18n keys
+1. **Add the extension** — create `components/features/editor/extensions/XXXNode.tsx`
+2. **Register in PageEditor** — add the extension to the `extensions` array in `PageEditor.tsx`
+3. **Add i18n keys** to `messages/en.json` and `messages/uk.json`
+4. **Register the slash command** — add an entry in `SlashCommand.tsx`
 
 Don't forget to:
-- Add i18n keys to `messages/en.json` and `messages/uk.json`
-- Write a unit test in `components/MainContent/blocks/XXXBlock.test.tsx`
-- Write a Storybook story in `stories/blocks/XXXBlock.stories.tsx`
+- Write a unit test alongside the extension file
+- Write a Storybook story in `components/features/editor/__stories__/`
 - Handle the type in `blockToMarkdown()` in `lib/pageUtils.ts`
 
 ---

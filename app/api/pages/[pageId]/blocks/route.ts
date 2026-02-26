@@ -47,8 +47,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'content is required' }, { status: 400 });
   }
 
-  const colSpan =
-    body.colSpan === 1 || body.colSpan === 2 ? body.colSpan : 2;
+  const colSpan = body.colSpan === 1 || body.colSpan === 2 ? body.colSpan : 2;
 
   // Place at the end if order not specified
   let order: number;

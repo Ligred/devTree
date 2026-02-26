@@ -55,8 +55,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'name is required' }, { status: 400 });
   }
 
-  const parentId =
-    typeof body.parentId === 'string' && body.parentId ? body.parentId : null;
+  const parentId = typeof body.parentId === 'string' && body.parentId ? body.parentId : null;
 
   // Verify parent belongs to this user
   if (parentId) {
@@ -96,7 +95,9 @@ export async function POST(req: NextRequest) {
   try {
     const folder = await prisma.folder.create({
       data: { name, ownerId: userId, parentId, order },
-      include: { pages: { select: { id: true, title: true, order: true, tags: true, folderId: true } } },
+      include: {
+        pages: { select: { id: true, title: true, order: true, tags: true, folderId: true } },
+      },
     });
     return NextResponse.json(folder, { status: 201 });
   } catch (err) {

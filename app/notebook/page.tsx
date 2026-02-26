@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useMemo } from 'react';
+
 import { useSearchParams } from 'next/navigation';
-import { Workspace } from '@/components/Workspace';
+
+import { Workspace } from '@/components/features/Workspace';
 
 /**
  * Notebook page — the main workspace for notes, code, diagrams, and more.

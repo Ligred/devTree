@@ -8,9 +8,13 @@
  *   - Unauthenticated requests receive 401.
  *   - Invalid POST bodies receive 400.
  */
-
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// ─── Route handlers under test ────────────────────────────────────────────────
+
+import { GET, PATCH, POST } from './route';
 
 // ─── Mock next-auth/jwt ───────────────────────────────────────────────────────
 
@@ -34,10 +38,6 @@ const mockPrisma = vi.hoisted(() => ({
   },
 }));
 vi.mock('@/lib/prisma', () => ({ prisma: mockPrisma }));
-
-// ─── Route handlers under test ────────────────────────────────────────────────
-
-import { GET, POST, PATCH } from './route';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -85,7 +85,9 @@ describe('GET /api/user/libraries', () => {
         },
       },
     ]);
-    mockPrisma.user.findUnique.mockResolvedValue({ localLibraryItems: [{ id: 'local1', elements: [] }] });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      localLibraryItems: [{ id: 'local1', elements: [] }],
+    });
 
     const res = await GET(makeRequest('GET'));
     expect(res.status).toBe(200);
@@ -133,6 +135,7 @@ describe('POST /api/user/libraries', () => {
   it('returns 400 when sourceUrl is not a valid http(s) URL', async () => {
     mockGetToken.mockResolvedValue({ sub: 'user1' });
     const res = await POST(
+      // eslint-disable-next-line sonarjs/code-eval -- intentional test input to verify javascript: URLs are rejected
       makeRequest('POST', { sourceUrl: 'javascript:alert(1)', items: [] }),
     );
     expect(res.status).toBe(400);

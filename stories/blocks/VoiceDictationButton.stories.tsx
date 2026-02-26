@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
-import { VoiceDictationButton } from '@/components/MainContent/blocks/VoiceDictationButton';
+import { VoiceDictationButton } from '@/components/MainContent/voice-dictation/VoiceDictationButton';
 import { ConfirmationProvider } from '@/lib/confirmationContext';
 import { I18nProvider } from '@/lib/i18n';
 

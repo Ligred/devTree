@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 /** Register is handled on the login page (mode=register). Redirect so /register still works. */
 export default function RegisterPage() {
@@ -12,8 +13,8 @@ export default function RegisterPage() {
   }, [router]);
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background">
-      <p className="text-sm text-muted-foreground">Redirecting to sign up…</p>
+    <div className="bg-background flex min-h-dvh items-center justify-center">
+      <p className="text-muted-foreground text-sm">Redirecting to sign up…</p>
     </div>
   );
 }

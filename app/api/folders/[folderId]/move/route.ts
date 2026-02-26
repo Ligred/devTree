@@ -5,10 +5,7 @@ import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
 type Params = { params: Promise<{ folderId: string }> };
-type ParentResult =
-  | { value: string | null }
-  | { skip: true }
-  | { errorResponse: NextResponse };
+type ParentResult = { value: string | null } | { skip: true } | { errorResponse: NextResponse };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,10 +35,7 @@ async function resolveParentId(
   const parent = await prisma.folder.findUnique({ where: { id: raw } });
   if (parent?.ownerId !== userId) {
     return {
-      errorResponse: NextResponse.json(
-        { error: 'Parent folder not found' },
-        { status: 404 },
-      ),
+      errorResponse: NextResponse.json({ error: 'Parent folder not found' }, { status: 404 }),
     };
   }
   return { value: raw };

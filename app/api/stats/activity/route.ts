@@ -1,4 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
@@ -31,10 +33,14 @@ export async function GET(req: NextRequest) {
     ]);
 
     /** Aggregate into a map keyed by YYYY-MM-DD. */
-    const byDate = new Map<string, { sessionMs: number; pagesVisited: Set<string>; contentEvents: number }>();
+    const byDate = new Map<
+      string,
+      { sessionMs: number; pagesVisited: Set<string>; contentEvents: number }
+    >();
 
     const get = (d: string) => {
-      if (!byDate.has(d)) byDate.set(d, { sessionMs: 0, pagesVisited: new Set(), contentEvents: 0 });
+      if (!byDate.has(d))
+        byDate.set(d, { sessionMs: 0, pagesVisited: new Set(), contentEvents: 0 });
       return byDate.get(d)!;
     };
 

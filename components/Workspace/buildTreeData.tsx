@@ -113,7 +113,7 @@ function createNodeToTreeDataItem(
   const isFolder = isFolderNode(node);
 
   const children = isFolder
-    ? [...node.children!].map((n) =>
+    ? [...node.children!].sort(compareTreeNodes).map((n) =>
         nodeToTreeDataItem(n),
       )
     : undefined;
@@ -375,7 +375,7 @@ export function buildTreeDataWithActions({
     t,
     { folderId: editingFolderId, setFolderId: setEditingFolderId },
   );
-  return [...root.children].map((node) =>
+  return [...root.children].sort(compareTreeNodes).map((node) =>
     nodeToTreeDataItem(node),
   );
 }

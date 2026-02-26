@@ -4,7 +4,7 @@
  * Covers `formatRelativeTime` edge cases — all other helpers are thin wrappers
  * around `toLocaleDateString` and are tested implicitly through usage.
  */
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { formatRelativeTime } from './dateUtils';
 

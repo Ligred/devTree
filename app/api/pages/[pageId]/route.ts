@@ -43,6 +43,7 @@ export async function GET(req: NextRequest, { params }: Params) {
 // ─── PUT /api/pages/[pageId] ──────────────────────────────────────────────────
 // Body: { title?: string; order?: number; tags?: string[] }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity -- handles multiple optional update fields
 export async function PUT(req: NextRequest, { params }: Params) {
   const auth = await requireAuth(req);
   if (auth.error) return auth.error;
@@ -64,7 +65,10 @@ export async function PUT(req: NextRequest, { params }: Params) {
   const updates: { title?: string; order?: number; tags?: string[]; content?: any } = {};
 
   // content is an arbitrary Tiptap JSON object — accept any object or null
-  if ('content' in body && (body.content === null || (typeof body.content === 'object' && !Array.isArray(body.content)))) {
+  if (
+    'content' in body &&
+    (body.content === null || (typeof body.content === 'object' && !Array.isArray(body.content)))
+  ) {
     updates.content = body.content;
   }
 
@@ -141,9 +145,17 @@ export async function DELETE(req: NextRequest, { params }: Params) {
 
   try {
     // Emit PAGE_DELETED event before deleting (page still exists at this point)
-    void prisma.contentEvent.create({
-      data: { userId: auth.userId, type: 'PAGE_DELETED', pageId, folderId: page.folderId ?? null },
-    }).catch(() => {});
+    // eslint-disable-next-line sonarjs/void-use -- best-effort fire-and-forget, failure is non-fatal
+    void prisma.contentEvent
+      .create({
+        data: {
+          userId: auth.userId,
+          type: 'PAGE_DELETED',
+          pageId,
+          folderId: page.folderId ?? null,
+        },
+      })
+      .catch(() => {});
 
     // Blocks cascade-delete via the onDelete: Cascade relation
     await prisma.page.delete({ where: { id: pageId } });

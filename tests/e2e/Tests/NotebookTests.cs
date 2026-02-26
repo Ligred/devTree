@@ -133,7 +133,7 @@ public class NotebookTests : E2ETestBase
     {
         await App.Sidebar.CreateFolderAsync("Doomed Folder");
 
-        await App.Sidebar.DeleteLastFolderAsync();
+        await App.Sidebar.DeleteFolderByNameAsync("Doomed Folder");
         await App.Sidebar.ConfirmDeleteDialogAsync();
 
         var removed = Page.Locator("aside").GetByText("Doomed Folder", new() { Exact = true });
@@ -145,7 +145,7 @@ public class NotebookTests : E2ETestBase
     {
         await App.Sidebar.CreateFolderAsync("Surviving Folder");
 
-        await App.Sidebar.DeleteLastFolderAsync();
+        await App.Sidebar.DeleteFolderByNameAsync("Surviving Folder");
         await App.Sidebar.CancelDeleteDialogAsync();
 
         await Expect(Page.Locator("aside").GetByText("Surviving Folder", new() { Exact = true }).First)

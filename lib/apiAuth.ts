@@ -4,10 +4,9 @@
  * Centralises the `getToken()` call so every route uses the same secret lookup
  * and returns a consistent error format.
  */
-
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
 
 export type AuthResult =
   | { userId: string; error?: never }
