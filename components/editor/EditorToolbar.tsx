@@ -116,10 +116,10 @@ export function ToolbarButton({ onClick, active, title, children }: ToolbarButto
 
 // ─── EditorToolbar ────────────────────────────────────────────────────────────
 
-type EditorToolbarProps = {
+type EditorToolbarProps = Readonly<{
   editor: Editor;
   blockId?: string;
-};
+}>;
 
 export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
   const { locale } = useI18n();
@@ -134,6 +134,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
   const [dictationLanguage, setDictationLanguage] = useState<Locale>(locale);
   const [interimText, setInterimText] = useState('');
+  const dictationSelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const closeAll = () => {
     setLinkOpen(false);
@@ -191,10 +192,37 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
 
   // ─── Voice dictation ───────────────────────────────────────────────────────
 
+  const handleVoiceStart = useCallback(() => {
+    const { from, to } = editor.state.selection;
+    dictationSelectionRef.current = { from, to };
+  }, [editor]);
+
   const handleVoiceText = (text: string) => {
     setInterimText('');
-    const cur = editor.getHTML();
-    editor.chain().focus('end').insertContent(cur === '<p></p>' ? text : ` ${text}`).run();
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const { from: currentFrom, to: currentTo } = editor.state.selection;
+    const savedSelection = dictationSelectionRef.current ?? { from: currentFrom, to: currentTo };
+    dictationSelectionRef.current = null;
+
+    const maxPos = editor.state.doc.content.size;
+    const safeFrom = Math.max(1, Math.min(savedSelection.from, maxPos));
+    const safeTo = Math.max(safeFrom, Math.min(savedSelection.to, maxPos));
+
+    const prevChar = safeFrom > 1
+      ? editor.state.doc.textBetween(safeFrom - 1, safeFrom, '\n', '\n')
+      : '';
+
+    const shouldPrefixSpace =
+      safeFrom === safeTo
+      && safeFrom > 1
+      && prevChar.length > 0
+      && !/\s/.test(prevChar)
+      && !/^[,.;:!?)]/.test(trimmed);
+
+    const contentToInsert = shouldPrefixSpace ? ` ${trimmed}` : trimmed;
+    editor.commands.insertContentAt({ from: safeFrom, to: safeTo }, contentToInsert);
   };
 
   const handleInterim = (text: string) => setInterimText(text);
@@ -361,7 +389,14 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                 placeholder="https://"
                 className="w-full rounded border border-border bg-background px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-ring"
                 defaultValue={editor.getAttributes('link').href || ''}
-                onKeyDown={(e) => { if (e.key === 'Enter') setLink(); if (e.key === 'Escape') setLinkOpen(false); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setLink();
+                  }
+                  if (e.key === 'Escape') {
+                    setLinkOpen(false);
+                  }
+                }}
                 onMouseDown={(e) => e.stopPropagation()}
               />
               <div className="mt-2 flex gap-1">
@@ -443,10 +478,10 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
           onClick={() => {
             if (editor.isActive('bookmark')) {
               removeBookmark();
-            } else if (!editor.state.selection.empty) {
-              addBookmark();
-            } else {
+            } else if (editor.state.selection.empty) {
               setBookmarksOpen((v) => !v);
+            } else {
+              addBookmark();
             }
             closeAll();
           }}
@@ -469,6 +504,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
       <VoiceDictationButton
         onTextRecognized={handleVoiceText}
         onInterimText={handleInterim}
+        onRecordingStart={handleVoiceStart}
         language={dictationLanguage}
         blockId={blockId ?? 'page-editor'}
       />

@@ -21,9 +21,18 @@ import { useConfirmation } from '@/lib/confirmationContext';
 import { getSpeechRecognitionApi, isChromeBasedBrowser, DICTATION_LANGUAGE_CODES } from './voiceDictationUtils';
 import { formatInterimDictationTextWithPunctuation } from './dictationTextFormatter';
 
+type SpeechRecognitionResultLike = { transcript: string };
+type SpeechRecognitionResultListLike = ArrayLike<SpeechRecognitionResultLike> & { isFinal?: boolean };
+type SpeechRecognitionEventLike = {
+  resultIndex: number;
+  results: ArrayLike<SpeechRecognitionResultListLike>;
+};
+type SpeechRecognitionErrorEventLike = { error?: string };
+
 type VoiceDictationButtonProps = Readonly<{
   onTextRecognized: (text: string) => void;
   onInterimText?: (text: string) => void;
+  onRecordingStart?: () => void;
   language?: 'en' | 'uk';
   blockId?: string;
 }>;
@@ -31,6 +40,7 @@ type VoiceDictationButtonProps = Readonly<{
 export function VoiceDictationButton({
   onTextRecognized,
   onInterimText,
+  onRecordingStart,
   language = 'en',
   blockId = '',
 }: VoiceDictationButtonProps) {
@@ -39,7 +49,7 @@ export function VoiceDictationButton({
   const { dictationFormattingEnabled } = useSettingsStore();
   const { confirm } = useConfirmation();
   const [listening, setListening] = useState(false);
-  const recognitionRef = useRef<InstanceType<typeof SpeechRecognition> | null>(null);
+  const recognitionRef = useRef<ReturnType<NonNullable<typeof getSpeechRecognitionApi>> | null>(null);
   const transcriptRef = useRef<string>('');
   const languageRef = useRef<'en' | 'uk'>(language);
   const formattingEnabledRef = useRef<boolean>(dictationFormattingEnabled);
@@ -113,13 +123,13 @@ export function VoiceDictationButton({
           }
         };
         
-        recognition.onresult = (event) => {
+        recognition.onresult = (event: SpeechRecognitionEventLike) => {
           let interimTranscript = '';
           let hasFinalResult = false;
           
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
+            if (event.results[i].isFinal === true) {
               transcriptRef.current += (transcriptRef.current ? ' ' : '') + transcript;
               hasFinalResult = true;
             } else {
@@ -141,7 +151,7 @@ export function VoiceDictationButton({
           }
         };
         
-        recognition.onerror = (event) => {
+        recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
           console.error('Speech recognition error:', event.error);
           setListening(false);
           stopRecording(resolvedBlockId);
@@ -204,6 +214,7 @@ export function VoiceDictationButton({
         confirm,
         startFn: () => {
           transcriptRef.current = '';
+          onRecordingStart?.();
           const recognition = recognitionRef.current;
           setTimeout(() => {
             try {
@@ -215,7 +226,7 @@ export function VoiceDictationButton({
         },
       });
     }
-  }, [listening, resolvedBlockId, stopRecording, confirm]);
+  }, [listening, resolvedBlockId, stopRecording, confirm, onRecordingStart]);
 
   return (
     <button
