@@ -69,7 +69,11 @@ function nodeMatchesFilter(node: ProseMirrorNode, activeTags: string[]): boolean
 
 // ── Apply or clear per-block display filtering ────────────────────────────────
 function applyBlockFilter(editor: Editor, activeTags: string[]) {
-  const root = editor.view.dom.querySelector('.ProseMirror');
+  const editorDom = editor.view.dom;
+  const root =
+    editorDom.classList.contains('ProseMirror')
+      ? editorDom
+      : editorDom.querySelector('.ProseMirror');
   if (!root) return;
 
   if (activeTags.length === 0) {

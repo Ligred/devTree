@@ -44,7 +44,11 @@ vi.mock('next/dynamic', () => ({
   },
 }));
 
-async function renderWithSingleNode(node: JSONContent, editable = true) {
+async function renderWithSingleNode(
+  node: JSONContent,
+  editable = true,
+  activeFilterTags: string[] = [],
+) {
   const rendered = render(
     <PageEditor
       editable={editable}
@@ -52,6 +56,7 @@ async function renderWithSingleNode(node: JSONContent, editable = true) {
         type: 'doc',
         content: [node],
       }}
+      activeFilterTags={activeFilterTags}
     />,
   );
   await act(async () => {
@@ -300,5 +305,44 @@ describe('PageEditor unified block nodes', () => {
 
     expect(screen.getByText('urgent')).toBeInTheDocument();
     expect(screen.getByText('review')).toBeInTheDocument();
+  });
+
+  it('hides non-matching blocks when activeFilterTags is set', async () => {
+    render(
+      <PageEditor
+        editable={false}
+        activeFilterTags={['urgent']}
+        content={{
+          type: 'doc',
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'text',
+                  text: 'Visible tagged block',
+                  marks: [{ type: 'inlineTag', attrs: { tag: 'urgent' } }],
+                },
+              ],
+            },
+            {
+              type: 'paragraph',
+              content: [{ type: 'text', text: 'Hidden untagged block' }],
+            },
+          ],
+        }}
+      />,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    const editorRoot = document.querySelector('.ProseMirror');
+    expect(editorRoot).toBeTruthy();
+    const children = Array.from(editorRoot?.children ?? []) as HTMLElement[];
+    expect(children).toHaveLength(2);
+    expect(children[0]?.style.display ?? '').not.toBe('none');
+    expect(children[1]?.style.display).toBe('none');
   });
 });
