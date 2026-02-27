@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { Prisma } from '@prisma/client';
 
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
@@ -62,14 +63,22 @@ export async function PUT(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
 
-  const updates: { title?: string; order?: number; tags?: string[]; content?: unknown } = {};
+  const updates: {
+    title?: string;
+    order?: number;
+    tags?: string[];
+    content?: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput;
+  } = {};
 
   // content is an arbitrary Tiptap JSON object — accept any object or null
   if (
     'content' in body &&
     (body.content === null || (typeof body.content === 'object' && !Array.isArray(body.content)))
   ) {
-    updates.content = body.content;
+    updates.content =
+      body.content === null
+        ? Prisma.DbNull
+        : (body.content as Prisma.InputJsonValue);
   }
 
   if (typeof body.title === 'string') {

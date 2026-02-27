@@ -293,7 +293,7 @@ export function MainContent({
       {/* ───── Top header bar ───── */}
       <motion.header
         key={`main-header-${page?.id ?? 'empty'}`}
-        className="alive-surface border-border bg-card flex h-14 shrink-0 items-center justify-between border-b px-4 shadow-sm md:px-6"
+        className="alive-surface border-border bg-card relative z-30 flex h-14 shrink-0 items-center justify-between border-b px-4 shadow-sm md:px-6"
         initial={reducedMotion ? false : { y: -14, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={
@@ -307,6 +307,7 @@ export function MainContent({
             <button
               type="button"
               aria-label={t('sidebar.show')}
+              data-ui-sound-event="open"
               className="motion-interactive icon-tilt-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground mr-1 rounded p-1.5 transition-colors md:hidden"
               onClick={onMobileSidebarToggle}
             >
@@ -353,7 +354,7 @@ export function MainContent({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: reducedMotion ? 0.01 : 0.18, ease: 'easeOut' }}
-                        className="fixed inset-0 z-10"
+                        className="fixed inset-0 z-40"
                         aria-hidden
                         onClick={() => setBookmarksOpen(false)}
                       />
@@ -367,7 +368,7 @@ export function MainContent({
                         }
                         exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
                         transition={{ duration: reducedMotion ? 0.01 : 0.2, ease: [0.22, 1, 0.36, 1] }}
-                        className="absolute top-full right-0 z-20 mt-1"
+                        className="absolute top-full right-0 z-50 mt-1"
                       >
                         <BookmarksPanel
                           editor={editorInstance}
@@ -531,12 +532,16 @@ function TagBar({ tags, onChange, isEditable = true, suggestions = [] }: TagBarP
       .split(',')
       .map((s) => s.trim().toLowerCase())
       .filter((s) => s.length > 0 && !tags.includes(s));
-    if (candidates.length > 0) onChange([...tags, ...candidates]);
+    if (candidates.length > 0) {
+      onChange([...tags, ...candidates]);
+    }
     setInputValue('');
     setShowSuggestions(false);
   };
 
-  const removeTag = (tag: string) => onChange(tags.filter((t_) => t_ !== tag));
+  const removeTag = (tag: string) => {
+    onChange(tags.filter((t_) => t_ !== tag));
+  };
 
   // Read-only view — just chips, no input
   if (!isEditable) {
@@ -708,8 +713,14 @@ function BlockTagFilter({
     ? allTags.filter((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     : allTags;
 
-  const toggle = (tag: string) =>
-    onChange(activeTags.includes(tag) ? activeTags.filter((t) => t !== tag) : [...activeTags, tag]);
+  const toggle = (tag: string) => {
+    if (activeTags.includes(tag)) {
+      onChange(activeTags.filter((t) => t !== tag));
+      return;
+    }
+
+    onChange([...activeTags, tag]);
+  };
 
   return (
     <div className="border-border bg-muted/30 flex flex-col gap-2 rounded-lg border px-3 py-2">

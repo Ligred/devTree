@@ -12,6 +12,12 @@ export type UserPreferencesPayload = {
   tagsPerPageEnabled?: boolean;
   tagsPerBlockEnabled?: boolean;
   recordingStartSoundEnabled?: boolean;
+  uiSoundsEnabled?: boolean;
+  hoverSoundsEnabled?: boolean;
+  typingSoundsEnabled?: boolean;
+  uiSoundsVolume?: number;
+  hoverSoundsVolume?: number;
+  typingSoundsVolume?: number;
   dictationFormattingEnabled?: boolean;
   // Statistics tracking (default true when absent)
   statisticsEnabled?: boolean;

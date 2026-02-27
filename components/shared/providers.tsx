@@ -24,7 +24,17 @@ function SyncUserPreferences() {
   const { data: session, status } = useSession();
   const { setTheme } = useTheme();
   const { setLocale } = useI18n();
-  const { setTagsPerPage, setTagsPerBlock, setRecordingStartSound } = useSettingsStore();
+  const {
+    setTagsPerPage,
+    setTagsPerBlock,
+    setRecordingStartSound,
+    setUiSoundsEnabled,
+    setHoverSoundsEnabled,
+    setTypingSoundsEnabled,
+    setUiSoundsVolume,
+    setHoverSoundsVolume,
+    setTypingSoundsVolume,
+  } = useSettingsStore();
   const {
     setEnabled: setStatsEnabled,
     setTrackSessionTime,
@@ -46,6 +56,16 @@ function SyncUserPreferences() {
         setTagsPerBlock(prefs.tagsPerBlockEnabled);
       if (typeof prefs.recordingStartSoundEnabled === 'boolean')
         setRecordingStartSound(prefs.recordingStartSoundEnabled);
+      if (typeof prefs.uiSoundsEnabled === 'boolean') setUiSoundsEnabled(prefs.uiSoundsEnabled);
+      if (typeof prefs.hoverSoundsEnabled === 'boolean')
+        setHoverSoundsEnabled(prefs.hoverSoundsEnabled);
+      if (typeof prefs.typingSoundsEnabled === 'boolean')
+        setTypingSoundsEnabled(prefs.typingSoundsEnabled);
+      if (typeof prefs.uiSoundsVolume === 'number') setUiSoundsVolume(prefs.uiSoundsVolume);
+      if (typeof prefs.hoverSoundsVolume === 'number')
+        setHoverSoundsVolume(prefs.hoverSoundsVolume);
+      if (typeof prefs.typingSoundsVolume === 'number')
+        setTypingSoundsVolume(prefs.typingSoundsVolume);
       // Statistics tracking — enabled by default
       setStatsEnabled(prefs.statisticsEnabled ?? true);
       setTrackSessionTime(prefs.trackSessionTime ?? true);
@@ -61,6 +81,12 @@ function SyncUserPreferences() {
     setTagsPerPage,
     setTagsPerBlock,
     setRecordingStartSound,
+    setUiSoundsEnabled,
+    setHoverSoundsEnabled,
+    setTypingSoundsEnabled,
+    setUiSoundsVolume,
+    setHoverSoundsVolume,
+    setTypingSoundsVolume,
     setStatsEnabled,
     setTrackSessionTime,
     setTrackPageTime,

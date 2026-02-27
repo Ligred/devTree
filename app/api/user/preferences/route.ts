@@ -11,6 +11,12 @@ export type UserPreferences = {
   tagsPerPageEnabled?: boolean;
   tagsPerBlockEnabled?: boolean;
   recordingStartSoundEnabled?: boolean;
+  uiSoundsEnabled?: boolean;
+  hoverSoundsEnabled?: boolean;
+  typingSoundsEnabled?: boolean;
+  uiSoundsVolume?: number;
+  hoverSoundsVolume?: number;
+  typingSoundsVolume?: number;
   // Statistics tracking preferences (all default to true when absent)
   statisticsEnabled?: boolean;
   trackSessionTime?: boolean;
@@ -37,6 +43,9 @@ function getUpdates(body: Partial<Record<keyof UserPreferences, unknown>>): User
     'tagsPerPageEnabled',
     'tagsPerBlockEnabled',
     'recordingStartSoundEnabled',
+    'uiSoundsEnabled',
+    'hoverSoundsEnabled',
+    'typingSoundsEnabled',
     'statisticsEnabled',
     'trackSessionTime',
     'trackPageTime',
@@ -48,6 +57,14 @@ function getUpdates(body: Partial<Record<keyof UserPreferences, unknown>>): User
     const value = body[key];
     if (typeof value === 'boolean') {
       updates[key] = value;
+    }
+  }
+
+  const volumeKeys = ['uiSoundsVolume', 'hoverSoundsVolume', 'typingSoundsVolume'] as const;
+  for (const key of volumeKeys) {
+    const value = body[key];
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      updates[key] = Math.min(1, Math.max(0, value));
     }
   }
 

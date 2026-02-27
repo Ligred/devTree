@@ -445,7 +445,9 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                   rows={2}
                   className="border-border bg-background w-full resize-none rounded border px-2 py-1.5 text-xs outline-none"
                   onKeyDown={(e) => {
-                    if (e.key === 'Escape') setCommentOpen(false);
+                    if (e.key === 'Escape') {
+                      setCommentOpen(false);
+                    }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
                 />
@@ -542,8 +544,11 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                   placeholder="e.g. important, review…"
                   className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') applyInlineTag();
-                    else if (e.key === 'Escape') setTagOpen(false);
+                    if (e.key === 'Enter') {
+                      applyInlineTag();
+                    } else if (e.key === 'Escape') {
+                      setTagOpen(false);
+                    }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
                 />

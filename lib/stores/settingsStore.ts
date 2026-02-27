@@ -85,6 +85,41 @@ type SettingsState = {
   recordingStartSoundEnabled: boolean;
 
   /**
+   * Whether non-recording UI interactions can play short feedback sounds.
+   * Disabled by default so sound feedback is fully opt-in.
+   */
+  uiSoundsEnabled: boolean;
+
+  /**
+   * Whether hover interactions can play subtle feedback sounds.
+   */
+  hoverSoundsEnabled: boolean;
+
+  /**
+   * Whether typing interactions can play short feedback sounds.
+   * Disabled by default.
+   */
+  typingSoundsEnabled: boolean;
+
+  /**
+   * Per-channel output volume for click/navigation UI sounds.
+   * Range: 0.0 to 1.0.
+   */
+  uiSoundsVolume: number;
+
+  /**
+   * Per-channel output volume for hover sounds.
+   * Range: 0.0 to 1.0.
+   */
+  hoverSoundsVolume: number;
+
+  /**
+   * Per-channel output volume for typing sounds.
+   * Range: 0.0 to 1.0.
+   */
+  typingSoundsVolume: number;
+
+  /**
    * Whether to apply local punctuation and sentence casing to dictated text.
    * When true, recognized speech is normalized before insertion into text blocks.
    * When false, raw transcript is inserted as-is.
@@ -96,6 +131,12 @@ type SettingsState = {
   setTagsPerPage: (enabled: boolean) => void;
   setTagsPerBlock: (enabled: boolean) => void;
   setRecordingStartSound: (enabled: boolean) => void;
+  setUiSoundsEnabled: (enabled: boolean) => void;
+  setHoverSoundsEnabled: (enabled: boolean) => void;
+  setTypingSoundsEnabled: (enabled: boolean) => void;
+  setUiSoundsVolume: (value: number) => void;
+  setHoverSoundsVolume: (value: number) => void;
+  setTypingSoundsVolume: (value: number) => void;
   setDictationFormatting: (enabled: boolean) => void;
 };
 
@@ -107,11 +148,23 @@ export const useSettingsStore = create<SettingsState>()(
       tagsPerPageEnabled: true,
       tagsPerBlockEnabled: true,
       recordingStartSoundEnabled: true,
+      uiSoundsEnabled: false,
+      hoverSoundsEnabled: false,
+      typingSoundsEnabled: false,
+      uiSoundsVolume: 0.22,
+      hoverSoundsVolume: 0.28,
+      typingSoundsVolume: 0.2,
       dictationFormattingEnabled: true,
 
       setTagsPerPage: (tagsPerPageEnabled) => set({ tagsPerPageEnabled }),
       setTagsPerBlock: (tagsPerBlockEnabled) => set({ tagsPerBlockEnabled }),
       setRecordingStartSound: (recordingStartSoundEnabled) => set({ recordingStartSoundEnabled }),
+      setUiSoundsEnabled: (uiSoundsEnabled) => set({ uiSoundsEnabled }),
+      setHoverSoundsEnabled: (hoverSoundsEnabled) => set({ hoverSoundsEnabled }),
+      setTypingSoundsEnabled: (typingSoundsEnabled) => set({ typingSoundsEnabled }),
+      setUiSoundsVolume: (uiSoundsVolume) => set({ uiSoundsVolume }),
+      setHoverSoundsVolume: (hoverSoundsVolume) => set({ hoverSoundsVolume }),
+      setTypingSoundsVolume: (typingSoundsVolume) => set({ typingSoundsVolume }),
       setDictationFormatting: (dictationFormattingEnabled) => set({ dictationFormattingEnabled }),
     }),
     {

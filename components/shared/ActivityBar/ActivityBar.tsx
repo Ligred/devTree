@@ -88,19 +88,22 @@ export function ActivityBar() {
               label={item.label}
               active={activeId === item.id}
               disabled={'disabled' in item ? item.disabled : false}
-              onClick={
-                !('disabled' in item) || !item.disabled
-                  ? () => {
-                      navigateToSection(item);
-                    }
-                  : undefined
-              }
+              onClick={() => {
+                if ('disabled' in item && item.disabled) return;
+                navigateToSection(item);
+              }}
             />
           ))}
         </div>
 
         {/* Pinned bottom: Settings */}
-        <ActivityBarItem icon={<Settings size={20} />} label="Settings" onClick={openSettings} />
+        <ActivityBarItem
+          icon={<Settings size={20} />}
+          label="Settings"
+          onClick={() => {
+            openSettings();
+          }}
+        />
       </motion.nav>
     </TooltipProvider>
   );

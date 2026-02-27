@@ -16,6 +16,7 @@
  *     (e.g. form integration with native form submission).
  */
 import { cn } from '@/lib/utils';
+import { playUiSound } from '@/lib/stores/uiSoundEffects';
 
 type SwitchProps = Readonly<{
   checked: boolean;
@@ -36,7 +37,14 @@ export function Switch({ checked, onChange, label, id, disabled = false }: Switc
       aria-label={label}
       disabled={disabled}
       onClick={() => {
-        if (!disabled) onChange(!checked);
+        if (disabled) {
+          playUiSound('disabled');
+          return;
+        }
+
+        const nextChecked = !checked;
+        playUiSound(nextChecked ? 'toggleOn' : 'toggleOff');
+        onChange(nextChecked);
       }}
       className={cn(
         // Track

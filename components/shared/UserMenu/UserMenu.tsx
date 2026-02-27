@@ -141,7 +141,11 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
   }, [open]);
 
   return (
-    <DropdownMenu.Root open={open} onOpenChange={setOpen} modal={false}>
+    <DropdownMenu.Root
+      open={open}
+      onOpenChange={setOpen}
+      modal={false}
+    >
       {/* Avatar: user image from session (Google), or initials fallback. */}
       <DropdownMenu.Trigger asChild>
         <button

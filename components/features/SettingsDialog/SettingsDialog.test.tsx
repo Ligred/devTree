@@ -52,7 +52,7 @@ describe('SettingsDialog', () => {
     expect(screen.getByText('Ukrainian')).toBeInTheDocument();
   });
 
-  it('shows recording start sound toggle in Features tab', async () => {
+  it('shows recording start and interface sounds toggles in Features tab', async () => {
     const user = userEvent.setup();
     render(
       <Wrapper>
@@ -63,6 +63,7 @@ describe('SettingsDialog', () => {
     await user.click(screen.getByRole('button', { name: /features/i }));
 
     expect(screen.getByText('Recording start sound')).toBeInTheDocument();
+    expect(screen.getByText('Interface sounds')).toBeInTheDocument();
   });
 
   it('shows statistics toggles in Statistics tab', async () => {

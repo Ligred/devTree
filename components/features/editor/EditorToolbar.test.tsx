@@ -141,6 +141,19 @@ describe('EditorToolbar', () => {
     expect(await screen.findByTestId('bookmarks-panel')).toBeInTheDocument();
   });
 
+  it('renders bookmarks popup above controls layer', async () => {
+    const { editor } = createEditorMock({}, true);
+
+    const { container } = render(<EditorToolbar editor={editor as never} blockId="block-3b" />);
+    fireEvent.mouseDown(screen.getByTitle('Bookmarks'));
+
+    const bookmarksPanel = await screen.findByTestId('bookmarks-panel');
+    const popupContainer = bookmarksPanel.parentElement;
+
+    expect(popupContainer).toHaveClass('z-50');
+    expect(container.querySelector('div.fixed.inset-0.z-40')).toBeInTheDocument();
+  });
+
   it('applies comment text from popup', async () => {
     const { editor, chainCalls } = createEditorMock();
 

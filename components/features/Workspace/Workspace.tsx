@@ -30,6 +30,7 @@ import type { TreeDataItem } from '@/components/shared/ui/tree-view';
 import { useI18n } from '@/lib/i18n';
 import { getLastNotebookPageId, setLastNotebookPageId } from '@/lib/notebookPageMemory';
 import { useSettingsStore } from '@/lib/settingsStore';
+import { playUiSound } from '@/lib/stores/uiSoundEffects';
 import { usePageTracking } from '@/lib/usePageTracking';
 import { useWritingTracking } from '@/lib/hooks/useWritingTracking';
 import { cn } from '@/lib/utils';
@@ -257,6 +258,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
         saveLogic.setPendingNavId(pageId);
         return;
       }
+      playUiSound('navigation');
       setTitleHasError(false);
       startPageTransition(pageId);
       setActivePageId(pageId);
@@ -504,6 +506,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
             <button
               type="button"
               aria-label={isDesktop ? t('sidebar.hide') : 'Close sidebar'}
+              data-ui-sound-event="close"
               className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
               onClick={() => {
                 if (isDesktop) setLeftPanelHidden(true);
@@ -684,6 +687,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
           <button
             type="button"
             aria-label={t('sidebar.show')}
+            data-ui-sound-event="open"
             className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
             onClick={() => setLeftPanelHidden(false)}
           >

@@ -13,6 +13,7 @@ import { MotivationBanner } from '@/components/features/Statistics/MotivationBan
 import type { SummaryData } from '@/components/features/Statistics/types';
 import { ActivityBar } from '@/components/shared/ActivityBar/ActivityBar';
 import { UserMenu } from '@/components/shared/UserMenu/UserMenu';
+import { useGlobalUiSoundDelegation } from '@/lib/hooks/useGlobalUiSoundDelegation';
 import { useStatsStore } from '@/lib/statsStore';
 import { useUIStore } from '@/lib/uiStore';
 
@@ -41,6 +42,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
   const { enabled: statisticsEnabled } = useStatsStore();
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const reducedMotion = useReducedMotion();
+  useGlobalUiSoundDelegation();
 
   // Fetch summary once per mount (used for streak pill + motivation banner)
   useEffect(() => {

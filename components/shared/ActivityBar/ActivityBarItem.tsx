@@ -34,7 +34,8 @@ export function ActivityBarItem({
     <Tooltip>
       <TooltipTrigger asChild>
         <motion.button
-          onClick={disabled ? undefined : onClick}
+          onClick={onClick}
+          aria-disabled={disabled}
           aria-label={label}
           aria-current={active ? 'page' : undefined}
           whileHover={
@@ -54,7 +55,7 @@ export function ActivityBarItem({
             'hover:bg-accent hover:text-accent-foreground',
             'focus-visible:ring-ring focus-visible:ring-2',
             active && 'alive-shadow bg-accent text-accent-foreground',
-            disabled && 'pointer-events-none opacity-40',
+            disabled && 'cursor-not-allowed opacity-40',
             className,
           )}
         >

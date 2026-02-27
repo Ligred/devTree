@@ -24,6 +24,7 @@ import type { JSONContent } from '@tiptap/react';
 
 import type { Block, Page } from '@/components/features/MainContent';
 import type { TreeDataItem } from '@/components/shared/ui/tree-view';
+import { playUiSound } from '@/lib/stores/uiSoundEffects';
 
 import type { TreeRoot } from '../treeTypes';
 import { ROOT_DROP_TARGET_ID } from '../treeTypes';
@@ -128,6 +129,7 @@ export function useTreeOperations({
 
   const createFolder = useCallback(
     (parentId: string) => {
+      playUiSound('create');
       const localFolderId = newFolderId();
       const folderName = generateUniqueNameInScope(treeRoot, parentId, t('tree.newFolder'));
 
@@ -176,6 +178,7 @@ export function useTreeOperations({
 
   const createFile = useCallback(
     (parentId: string) => {
+      playUiSound('create');
       const localPageId = newPageId();
       const fileTitle = generateUniqueNameInScope(treeRoot, parentId, 'Untitled');
       const emptyDoc: JSONContent = { type: 'doc', content: [{ type: 'paragraph' }] };
@@ -267,6 +270,7 @@ export function useTreeOperations({
 
     const { root: nextRoot, removed } = removeNode(treeRoot, nodeId);
     if (!removed) return;
+    playUiSound('delete');
     const pageIdsToRemove = collectPageIdsInSubtree(removed);
 
     // Optimistic update
@@ -302,6 +306,7 @@ export function useTreeOperations({
 
   const handleDocumentDrag = useCallback(
     (sourceItem: TreeDataItem, targetItem: TreeDataItem) => {
+      playUiSound('move');
       setTreeRoot((root) => {
         const isTargetRoot = targetItem.id === ROOT_DROP_TARGET_ID;
         let targetId: string;
@@ -351,6 +356,7 @@ export function useTreeOperations({
 
       setTreeRoot((root) => renameNode(root, folderId, name));
       setEditingFolderId(null);
+      playUiSound('rename');
 
       if (!dbFolderIds.current.has(folderId)) return true;
 

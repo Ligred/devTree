@@ -95,4 +95,38 @@ describe('PATCH /api/user/preferences', () => {
       where: { userId: 'user-1' },
     });
   });
+
+  it('accepts and stores uiSoundsEnabled preference', async () => {
+    const res = await PATCH(makePatchRequest({ uiSoundsEnabled: true }));
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { preferences: { uiSoundsEnabled: true } },
+    });
+  });
+
+  it('accepts and stores typing sound preferences', async () => {
+    const res = await PATCH(
+      makePatchRequest({ typingSoundsEnabled: true, typingSoundsVolume: 0.35 }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { preferences: { typingSoundsEnabled: true, typingSoundsVolume: 0.35 } },
+    });
+  });
+
+  it('clamps sound volume values to the 0..1 range', async () => {
+    const res = await PATCH(
+      makePatchRequest({ uiSoundsVolume: 5, hoverSoundsVolume: -1, typingSoundsVolume: 0.4 }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockPrisma.user.update).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { preferences: { uiSoundsVolume: 1, hoverSoundsVolume: 0, typingSoundsVolume: 0.4 } },
+    });
+  });
 });

@@ -705,7 +705,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
-                className="fixed inset-0 z-10"
+                className="fixed inset-0 z-40"
                 aria-hidden
                 onClick={() => setBookmarksOpen(false)}
               />
@@ -714,7 +714,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                 animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
                 exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
                 transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute top-full right-0 z-20 mt-1"
+                className="absolute top-full right-0 z-50 mt-1"
               >
                 <BookmarksPanel editor={editor} onClose={() => setBookmarksOpen(false)} />
               </motion.div>
