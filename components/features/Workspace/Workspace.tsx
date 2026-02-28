@@ -506,7 +506,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
               {/* Sidebar header */}
               <div className="border-border flex items-center justify-between border-b px-4 py-3">
                 <h1 className="text-primary text-xl font-semibold tracking-tight">
-                  {t('app.title')}
+                  {t('sidebar.titleNotes')}
                 </h1>
                 <button
                   type="button"

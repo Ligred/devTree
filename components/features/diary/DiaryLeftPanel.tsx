@@ -12,6 +12,7 @@ interface LeftPanelProps {
   entriesByDate: Record<string, DiaryMeta>;
   handleSelectDate: (dateOnly: string) => void;
   loadingList: boolean;
+  loadingEntry?: boolean;
   entries: DiaryMeta[];
   groupedEntries: Array<{ month: string; items: DiaryMeta[] }>;
   setDeleteTargetDate: React.Dispatch<React.SetStateAction<string | null>>;
@@ -29,6 +30,7 @@ export function DiaryLeftPanel({
   entriesByDate,
   handleSelectDate,
   loadingList,
+  loadingEntry,
   entries,
   groupedEntries,
   setDeleteTargetDate,
@@ -67,8 +69,14 @@ export function DiaryLeftPanel({
     );
   }
 
-  if (loadingList) {
-    return <div className="bg-muted h-28 animate-pulse rounded-xl" />;
+  if (loadingList || loadingEntry) {
+    // show a generic skeleton when either the entry itself or the list is
+    // currently loading so the sidebar doesn't appear stale during fetches
+    return (
+      <div className="p-6">
+        <div className="bg-muted h-40 animate-pulse rounded-xl" />
+      </div>
+    );
   }
 
   if (entries.length === 0) {

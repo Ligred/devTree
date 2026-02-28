@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable sonarjs/no-duplicate-string */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Group, Panel, Separator } from 'react-resizable-panels';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -10,11 +10,13 @@ import type { Editor, JSONContent } from '@tiptap/react';
 import {
   CalendarDays,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Edit3,
   FileText,
   List,
+  Menu,
   PanelLeftClose,
-  PanelLeftOpen,
   Pencil,
   Plus,
   Save,
@@ -84,6 +86,14 @@ export default function DiaryPageClient() {
   const dateLocale = locale === 'uk' ? 'uk-UA' : 'en-US';
 
   const today = useMemo(() => toDateOnly(new Date()), []);
+
+  const reducedMotion = useReducedMotion();
+  const sidebarTransition:
+    | { duration: number }
+    | { duration: number; ease: [number, number, number, number] } =
+    reducedMotion
+      ? { duration: 0.01 }
+      : { duration: 0.34, ease: [0.22, 1, 0.36, 1] };
 
   const [viewMode, setViewMode] = useState<DiaryViewMode>('list');
   const [journals, setJournals] = useState<DiaryJournal[]>([]);
@@ -851,6 +861,7 @@ export default function DiaryPageClient() {
       entriesByDate={entriesByDate}
       handleSelectDate={handleSelectDate}
       loadingList={loadingList}
+      loadingEntry={loadingEntry}
       entries={entries}
       groupedEntries={groupedEntries}
       setDeleteTargetDate={setDeleteTargetDate}
@@ -864,8 +875,36 @@ export default function DiaryPageClient() {
   const headerSubtitle = getHeaderSubtitle(selectedDate, selectedWeatherSummary?.locationShort, t);
 
   const sidebarContent = (
-    <aside className="border-border bg-card/80 flex h-full w-full shrink-0 flex-col border-b md:border-r md:border-b-0">
+    <aside className="border-border bg-card/80 flex h-full shrink-0 flex-col min-w-[256px] w-[256px] border-b md:border-r md:border-b-0">
       <div className="border-border border-b p-3">
+        {/* toggle row (mimics notebook sidebar header) */}
+        <div className="mb-2 flex items-center justify-between">
+          <h1 className="text-primary text-xl font-semibold tracking-tight">{t('sidebar.titleDiary')}</h1>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={sidebarVisible ? t('sidebar.hide') : t('sidebar.show')}
+                data-ui-sound-event={sidebarVisible ? 'close' : 'open'}
+                className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
+                onClick={() => {
+                  if (isMobile) {
+                    setMobileSidebarVisible(false);
+                  } else {
+                    setSidebarVisible((prev) => !prev);
+                  }
+                }}
+              >
+                {sidebarVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">
+                {sidebarVisible ? t('sidebar.hide') : t('sidebar.show')}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div ref={journalMenuRef} className="relative w-full min-w-0 sm:flex-1">
             <button
@@ -917,27 +956,6 @@ export default function DiaryPageClient() {
             </TooltipTrigger>
             <TooltipContent>
               <p className="text-xs">{t('diary.new')}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('diary.toggleSidebar')}
-                className="border-border hover:bg-accent rounded-md border p-2"
-                onClick={() => {
-                  if (isMobile) {
-                    setMobileSidebarVisible(false);
-                  } else {
-                    setSidebarVisible((prev) => !prev);
-                  }
-                }}
-              >
-                {sidebarVisible ? <PanelLeftClose size={14} /> : <PanelLeftOpen size={14} />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{t('diary.toggleSidebar')}</p>
             </TooltipContent>
           </Tooltip>
           <Tooltip>
@@ -1052,30 +1070,47 @@ export default function DiaryPageClient() {
     </aside>
   );
 
-  const mainContent = (
-    <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-      <header className="border-border bg-card flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5 sm:px-4 sm:py-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-semibold">
-            {selectedDate && selectedWeatherSummary ? (
-              <span className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
-                {getWeatherIcon(selectedWeatherSummary.weatherCode)}{' '}
-                {formatTemp(selectedWeatherSummary.tempC, diaryTemperatureUnit)}
-              </span>
-            ) : null}
-            <span>
-              {selectedDate
-                ? formatDateLong(parseLocalDate(selectedDate), dateLocale)
-                : t('nav.diary')}
+  const initialLoading = journals.length === 0 || loadingList || loadingEntry;
+  const headerLoading = initialLoading;
+
+  const headerNode = headerLoading ? (
+    <div className="border-border bg-card flex items-center justify-between border-b px-3 py-2.5 sm:px-4 sm:py-3">
+      <div className="bg-muted h-6 w-48 animate-pulse rounded" />
+    </div>
+  ) : (
+    <header className="border-border bg-card flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5 sm:px-4 sm:py-3">
+      <div>
+        {/* mobile open-sidebar button (similar to notebook) */}
+        {!mobileSidebarVisible && (
+          <button
+            type="button"
+            aria-label={t('sidebar.show')}
+            data-ui-sound-event="open"
+            className="motion-interactive icon-tilt-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground mr-1 rounded p-1.5 transition-colors md:hidden"
+            onClick={() => setMobileSidebarVisible(true)}
+          >
+            <Menu size={20} />
+          </button>
+        )}
+        <h1 className="flex items-center gap-2 text-lg font-semibold">
+          {selectedDate && selectedWeatherSummary ? (
+            <span className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+              {getWeatherIcon(selectedWeatherSummary.weatherCode)}{' '}
+              {formatTemp(selectedWeatherSummary.tempC, diaryTemperatureUnit)}
             </span>
-          </h1>
-          <p className="text-muted-foreground text-sm">{headerSubtitle}</p>
-        </div>
+          ) : null}
+          <span>
+            {selectedDate
+              ? formatDateLong(parseLocalDate(selectedDate), dateLocale)
+              : t('nav.diary')}
+          </span>
+        </h1>
+        <p className="text-muted-foreground text-sm">{headerSubtitle}</p>
+      </div>
+      <div className="flex items-center gap-2">
+        {/* sidebar toggle relocated into the sidebar for clearer UX */}
 
-        <div className="flex items-center gap-2">
-          {/* sidebar toggle relocated into the sidebar for clearer UX */}
-
-          <div ref={templateMenuRef} className="relative">
+        <div ref={templateMenuRef} className="relative">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -1152,12 +1187,11 @@ export default function DiaryPageClient() {
                 onClick={() => {
                   void saveCurrentEntry();
                 }}
-                className={cn(
-                  'inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm',
-                  !isDirty || !selectedDate || loadingEntry || creatingEntry
-                    ? 'bg-muted text-muted-foreground cursor-not-allowed'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600',
-                )}
+                className={
+                  isDirty && selectedDate && !loadingEntry && !creatingEntry
+                    ? 'inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
+                    : 'inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm bg-muted text-muted-foreground cursor-not-allowed'
+                }
               >
                 <Save size={14} />
                 {t('main.save')}
@@ -1169,56 +1203,69 @@ export default function DiaryPageClient() {
           </Tooltip>
         </div>
       </header>
+    );
 
-      {!selectedDate || !selectedEntryExists ? (
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="border-border bg-card w-full max-w-lg rounded-xl border p-6">
-            <h2 className="mb-4 text-lg font-semibold">{t('diary.journal')}</h2>
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => createEntryForDate(today)}
-                className={cn(createPrimaryButtonClass, 'w-full')}
-                disabled={todayEntryExists || creatingEntry}
-              >
-                <Plus size={14} />
-                {t('diary.createToday')}
-              </button>
-              <button
-                type="button"
-                className={createActionButtonClass}
-                onClick={handleOpenCreateDateDialog}
-                disabled={creatingEntry}
-              >
-                <CalendarDays size={14} />
-                {t('diary.chooseDateCreate')}
-              </button>
+  let mainContent: React.ReactNode;
+  if (headerLoading) {
+    mainContent = (
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {headerNode}
+      </section>
+    );
+  } else {
+    mainContent = (
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {headerNode}
+        {!selectedDate || !selectedEntryExists ? (
+          <div className="flex flex-1 items-center justify-center p-6">
+            <div className="border-border bg-card w-full max-w-lg rounded-xl border p-6">
+              <h2 className="mb-4 text-lg font-semibold">{t('diary.journal')}</h2>
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => createEntryForDate(today)}
+                  className={cn(createPrimaryButtonClass, 'w-full')}
+                  disabled={todayEntryExists || creatingEntry}
+                >
+                  <Plus size={14} />
+                  {t('diary.createToday')}
+                </button>
+                <button
+                  type="button"
+                  className={createActionButtonClass}
+                  onClick={handleOpenCreateDateDialog}
+                  disabled={creatingEntry}
+                >
+                  <CalendarDays size={14} />
+                  {t('diary.chooseDateCreate')}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <>
-          {editor && <EditorToolbar editor={editor} blockId={`diary-${selectedDate}`} />}
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {loadingEntry ? (
-              <div className="p-6">
-                <div className="bg-muted h-40 animate-pulse rounded-xl" />
-              </div>
-            ) : (
-              <PageEditor
-                content={content}
-                editable
-                mode="diary"
-                onChange={handleContentChange}
-                pageId={`diary-${selectedDate}`}
-                onEditorReady={setEditor}
-              />
-            )}
-          </div>
-        </>
-      )}
-    </section>
-  );
+        ) : (
+          <>
+            {editor && <EditorToolbar editor={editor} blockId={`diary-${selectedDate}`} />}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {loadingEntry ? (
+                <div className="p-6">
+                  <div className="bg-muted h-40 animate-pulse rounded-xl" />
+                </div>
+              ) : (
+                <PageEditor
+                  content={content}
+                  editable
+                  mode="diary"
+                  onChange={handleContentChange}
+                  pageId={`diary-${selectedDate}`}
+                  onEditorReady={setEditor}
+                />
+              )}
+            </div>
+          </>
+        )}
+      </section>
+    );
+  }
 
   return (
     <>
@@ -1503,17 +1550,50 @@ export default function DiaryPageClient() {
         </DialogContent>
       </Dialog>
 
-      <div className="bg-background h-full overflow-hidden">
-        <Group orientation="horizontal" className="hidden h-full md:flex">
-          <Panel defaultSize="28%" minSize="18%" maxSize="42%">
-            {sidebarContent}
-          </Panel>
-          <Separator className="bg-border/20 hover:bg-border/40 z-10 w-1 cursor-col-resize transition-colors" />
-          <Panel minSize="58%" defaultSize="72%">
-            {mainContent}
-          </Panel>
-        </Group>
+      <div className="bg-background h-full overflow-hidden relative">
+        {/* desktop layout: animate sidebar flex-basis, keep main content fixed */}
+        <div className="hidden h-full md:flex">
+          <motion.aside
+          className="h-full flex flex-col overflow-hidden relative bg-card/80 border-border border-b md:border-r md:border-b-0"
+          initial={{ flexBasis: sidebarVisible ? '256px' : '40px' }}
+          animate={{ flexBasis: sidebarVisible ? '256px' : '40px' }}
+          transition={sidebarTransition}
+        >
+          <div className="grow overflow-auto">{sidebarContent}</div>
 
+          {/* collapsed show button overlay (same as workspace) */}
+          <motion.div
+            className="border-border bg-card absolute inset-y-0 left-0 z-10 hidden w-10 items-start justify-center border-r py-3 md:flex"
+            initial={false}
+            animate={{ opacity: sidebarVisible ? 0 : 1 }}
+            transition={
+              reducedMotion
+                ? { duration: 0.01 }
+                : {
+                    duration: sidebarVisible ? 0.1 : 0.16,
+                    delay: sidebarVisible ? 0 : 0.18,
+                    ease: [0.22, 1, 0.36, 1],
+                  }
+            }
+            style={{ pointerEvents: sidebarVisible ? 'none' : 'auto' }}
+            aria-hidden={sidebarVisible}
+          >
+            <button
+              type="button"
+              aria-label={t('sidebar.show')}
+              data-ui-sound-event="open"
+              className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
+              onClick={() => setSidebarVisible(true)}
+            >
+              <ChevronRight size={20} />
+            </button>
+          </motion.div>
+        </motion.aside>
+
+          <div className="flex-1 h-full">{mainContent}</div>
+        </div>
+
+        {/* mobile stacked layout */}
         <div className="flex h-full flex-col md:hidden">
           {mobileSidebarVisible ? sidebarContent : mainContent}
         </div>

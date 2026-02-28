@@ -299,6 +299,8 @@
   "diary.weather.default": "Погода",
   "editor.placeholderNotebook": "Натисніть +, щоб додати блок…",
   "editor.placeholderDiary": "Напишіть ваш запис щоденника…",
+  "sidebar.titleNotes": "Your Notes",
+  "sidebar.titleDiary": "Your Diary",
 
   "nav.notebook": "Нотатник",
   "nav.statistics": "Статистика",

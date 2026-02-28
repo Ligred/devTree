@@ -299,6 +299,8 @@
   "diary.weather.default": "Weather",
   "editor.placeholderNotebook": "Click + to add a block…",
   "editor.placeholderDiary": "Write your diary entry…",
+  "sidebar.titleNotes": "Your Notes",
+  "sidebar.titleDiary": "Your Diary",
 
   "nav.notebook": "Notebook",
   "nav.statistics": "Statistics",
