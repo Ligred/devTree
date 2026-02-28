@@ -47,6 +47,7 @@ import { LinkCardNode } from './extensions/LinkCardNode';
 import { TableBlockNode } from './extensions/TableBlockNode';
 import { FontFamily, FontSize } from './extensions/Typography';
 import { VideoNode } from './extensions/VideoNode';
+import { SlashCommand } from './extensions/SlashCommand';
 import './PageEditor.css';
 
 // ── Tag-filter helper ─────────────────────────────────────────────────────────
@@ -183,6 +184,7 @@ export function PageEditor({
       CommentMark,
       BookmarkMark,
       InlineTagMark,
+      SlashCommand,
       ...(isNotebookMode
         ? [
             CodeBlockNode,
@@ -217,7 +219,7 @@ export function PageEditor({
       // against the snapshot taken just before entering edit mode.
       if (cleanContentRef.current !== null) {
         if (jsonStr === cleanContentRef.current) return; // no real change yet
-        cleanContentRef.current = null; // first real edit — ungate
+        cleanContentRef.current = null; // first real edit
       }
       onChange?.(json);
     },

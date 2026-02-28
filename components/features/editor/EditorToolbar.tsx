@@ -4,7 +4,7 @@
  * EditorToolbar — top-of-editor formatting controls.
  *
  * Contains: headings, bold/italic/underline/strike/inline-code,
- * text alignment, lists, blockquote, hr, text colour, highlight,
+ * text alignment, lists, blockquote, hr, text color, highlight,
  * link, comment, bookmark panel toggle, voice dictation, undo/redo.
  *
  * Extracted from the old TextBlock so it applies to the unified page editor.
@@ -202,7 +202,9 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
     const url = linkInputRef.current?.value?.trim() ?? '';
     if (url) {
       const savedSelection = linkSelectionRef.current ?? editor.state.selection;
-      if (savedSelection.from !== savedSelection.to) {
+      if (savedSelection.from === savedSelection.to) {
+        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+      } else {
         editor
           .chain()
           .focus()
@@ -210,8 +212,6 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
           .extendMarkRange('link')
           .setLink({ href: url })
           .run();
-      } else {
-        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
       }
     }
     linkSelectionRef.current = null;
@@ -484,10 +484,10 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
 
       <span className="bg-border mx-1 h-5 w-px" />
 
-      {/* Text colour */}
+      {/* Text color */}
       <div className="relative">
         <ToolbarButton
-          title="Text colour"
+          title="Text color"
           onClick={() => {
             setColorOpen((v) => !v);
             setHighlightOpen(false);

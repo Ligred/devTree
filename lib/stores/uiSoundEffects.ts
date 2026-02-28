@@ -37,7 +37,7 @@ const SOUND_KEY_BY_EVENT: Record<UiSoundEvent, string> = {
 
 let sndInstance: Snd | null = null;
 let sndLoadPromise: Promise<void> | null = null;
-let lastUiSoundPlayedAt = 0;
+let _lastUiSoundPlayedAt = 0; // track when a sound was last played for throttling
 let audioUnlocked = false;
 
 function clampVolume(value: number): number {
@@ -90,10 +90,6 @@ export function primeUiSounds(): void {
   ensureSineKitLoaded(instance).catch(() => {});
 }
 
-export function wasUiSoundPlayedRecently(thresholdMs = 80): boolean {
-  return Date.now() - lastUiSoundPlayedAt <= thresholdMs;
-}
-
 export function playUiSound(event: UiSoundEvent): void {
   playSoundByChannel(SOUND_KEY_BY_EVENT[event], 'ui');
 }
@@ -131,7 +127,7 @@ function playSoundByChannel(soundKey: string, channel: SoundChannel): void {
   const volume = getChannelVolume(channel);
   if (volume <= 0) return;
 
-  lastUiSoundPlayedAt = Date.now();
+  _lastUiSoundPlayedAt = Date.now();
   ensureSineKitLoaded(instance)
     .then(() => {
       instance.play(soundKey, { volume });

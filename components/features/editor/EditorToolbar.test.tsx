@@ -108,7 +108,7 @@ describe('EditorToolbar', () => {
 
     render(<EditorToolbar editor={editor as never} blockId="block-1" />);
 
-    fireEvent.mouseDown(screen.getByTitle('Text colour'));
+    fireEvent.mouseDown(screen.getByTitle('Text color'));
     fireEvent.mouseDown(await screen.findByRole('button', { name: 'Red' }));
 
     expect(chainCalls).toContainEqual({ name: 'setColor', args: ['#dc2626'] });
@@ -131,6 +131,26 @@ describe('EditorToolbar', () => {
     expect(chainCalls).toContainEqual({
       name: 'setLink',
       args: [{ href: 'https://example.com' }],
+    });
+  });
+
+  it('restores prior selection when link popup collapses cursor', async () => {
+    const { editor, chainCalls } = createEditorMock();
+
+    render(<EditorToolbar editor={editor as never} blockId="block-4" />);
+
+    // initial mock selection is {from:2,to:6}
+    fireEvent.mouseDown(screen.getByTitle('Add link'));
+    // simulate loss of selection (e.g. toolbar click moved cursor)
+    editor.state.selection = { empty: true, from: 0, to: 0 } as any;
+
+    const urlInput = await screen.findByPlaceholderText('https://');
+    fireEvent.change(urlInput, { target: { value: 'https://restore.com' } });
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Apply' }));
+
+    expect(chainCalls).toContainEqual({
+      name: 'setTextSelection',
+      args: [{ from: 2, to: 6 }],
     });
   });
 
