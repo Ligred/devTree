@@ -29,9 +29,9 @@
  */
 import { useEffect, useRef, useState } from 'react';
 
-import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
+import Image from 'next/image';
 
 import { BarChart2, MapPinned, Palette, SlidersHorizontal, User } from 'lucide-react';
 
@@ -220,18 +220,19 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const initials = user ? getInitials(user) : '?';
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- calling setState in useEffect is valid React
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing displayName when dialog opens
     if (open && user?.name !== undefined) setDisplayName(user.name ?? '');
   }, [open, user?.name]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- state updates reflect browser API results */
     if (!open) return;
     if (!('geolocation' in navigator)) {
       setBrowserLocationBlocked(true);
       setLocationPermissionMessage(t('settings.diaryLocationBlockedUnsupported'));
       if (diaryLocationEnabled) {
         setDiaryLocationEnabled(false);
-        void saveUserPreferences({ diaryLocationEnabled: false });
+        saveUserPreferences({ diaryLocationEnabled: false });
       }
       return;
     }
@@ -256,7 +257,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       }
     };
 
-    void navigator.permissions
+    // query returns a promise, no need for `void`
+    navigator.permissions
+      // eslint-disable-next-line sonarjs/no-intrusive-permissions -- necessary for feature
       .query({ name: 'geolocation' })
       .then((result) => {
         permissionStatus = result;
@@ -272,6 +275,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       disposed = true;
       if (permissionStatus) permissionStatus.onchange = null;
     };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [diaryLocationEnabled, open, setDiaryLocationEnabled, t]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

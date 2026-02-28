@@ -399,11 +399,7 @@ export default function LoginPage() {
                     <span className="text-foreground font-medium">{t(strengthLabelKey)}</span>
                   </p>
                   <ul className="text-muted-foreground space-y-1 text-xs">
-                    <li
-                      className={
-                        passwordRequirements.minLength ? REQUIREMENT_MET_CLASS : ''
-                      }
-                    >
+                    <li className={passwordRequirements.minLength ? REQUIREMENT_MET_CLASS : ''}>
                       {passwordRequirements.minLength ? (
                         <Check className="mr-1.5 inline h-3.5 w-3.5" />
                       ) : (
@@ -411,11 +407,7 @@ export default function LoginPage() {
                       )}
                       {t('auth.charCount', { count: PASSWORD_RULES.minLength })}
                     </li>
-                    <li
-                      className={
-                        passwordRequirements.uppercase ? REQUIREMENT_MET_CLASS : ''
-                      }
-                    >
+                    <li className={passwordRequirements.uppercase ? REQUIREMENT_MET_CLASS : ''}>
                       {passwordRequirements.uppercase ? (
                         <Check className="mr-1.5 inline h-3.5 w-3.5" />
                       ) : (
@@ -423,11 +415,7 @@ export default function LoginPage() {
                       )}
                       {t('auth.oneUppercase')}
                     </li>
-                    <li
-                      className={
-                        passwordRequirements.lowercase ? REQUIREMENT_MET_CLASS : ''
-                      }
-                    >
+                    <li className={passwordRequirements.lowercase ? REQUIREMENT_MET_CLASS : ''}>
                       {passwordRequirements.lowercase ? (
                         <Check className="mr-1.5 inline h-3.5 w-3.5" />
                       ) : (
@@ -435,11 +423,7 @@ export default function LoginPage() {
                       )}
                       {t('auth.oneLowercase')}
                     </li>
-                    <li
-                      className={
-                        passwordRequirements.number ? REQUIREMENT_MET_CLASS : ''
-                      }
-                    >
+                    <li className={passwordRequirements.number ? REQUIREMENT_MET_CLASS : ''}>
                       {passwordRequirements.number ? (
                         <Check className="mr-1.5 inline h-3.5 w-3.5" />
                       ) : (
@@ -447,11 +431,7 @@ export default function LoginPage() {
                       )}
                       {t('auth.oneNumber')}
                     </li>
-                    <li
-                      className={
-                        passwordRequirements.special ? REQUIREMENT_MET_CLASS : ''
-                      }
-                    >
+                    <li className={passwordRequirements.special ? REQUIREMENT_MET_CLASS : ''}>
                       {passwordRequirements.special ? (
                         <Check className="mr-1.5 inline h-3.5 w-3.5" />
                       ) : (

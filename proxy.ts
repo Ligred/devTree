@@ -1,7 +1,6 @@
+import { getToken } from 'next-auth/jwt';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-
-import { getToken } from 'next-auth/jwt';
 
 const LOCALE_COOKIE = 'devtree-locale';
 const LOCALE_HEADER = 'x-devtree-locale';
@@ -27,8 +26,7 @@ function nextWithLocale(req: NextRequest, locale: 'en' | 'uk') {
 
 // Protect app routes; allow login, register, forgot-password, auth API
 const publicPaths = ['/login', '/register', '/forgot-password', '/api/auth'];
-const isPublic = (path: string) =>
-  publicPaths.some((p) => path === p || path.startsWith(`${p}/`));
+const isPublic = (path: string) => publicPaths.some((p) => path === p || path.startsWith(`${p}/`));
 
 export async function proxy(req: NextRequest) {
   const locale = getLocaleFromRequest(req);
@@ -62,4 +60,3 @@ export const config = {
     '/((?!_next|api/auth|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff2?|css|js|map)$).*)',
   ],
 };
-

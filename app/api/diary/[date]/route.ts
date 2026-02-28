@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
 import { Prisma } from '@prisma/client';
 
 import { requireAuth } from '@/lib/apiAuth';
@@ -17,8 +18,7 @@ function handleDiaryApiError(scope: string, error: unknown, fallbackMessage: str
   ) {
     return NextResponse.json(
       {
-        error:
-          'Diary database schema is not up to date. Run Prisma migration and try again.',
+        error: 'Diary database schema is not up to date. Run Prisma migration and try again.',
         code: 'DIARY_SCHEMA_OUTDATED',
       },
       { status: 503 },
@@ -105,7 +105,9 @@ function formatDateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function normalizeContent(value: unknown): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | null {
+function normalizeContent(
+  value: unknown,
+): Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | null {
   if (value === undefined) return null;
   if (value === null) return Prisma.DbNull;
   if (typeof value === 'object' && !Array.isArray(value)) {

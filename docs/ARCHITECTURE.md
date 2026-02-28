@@ -1,6 +1,6 @@
 # DevTree — Architecture Deep Dive
 
-This document explains the design decisions, algorithms, and patterns used throughout the DevTree codebase. It is intended as a learning resource — every section explains not just *what* the code does but *why* it was designed that way, and what you might do differently in production.
+This document explains the design decisions, algorithms, and patterns used throughout the DevTree codebase. It is intended as a learning resource — every section explains not just _what_ the code does but _why_ it was designed that way, and what you might do differently in production.
 
 ---
 
@@ -61,12 +61,13 @@ graph TB
 **Key architecture decision: client-side state**
 
 All page/block state lives in React's `useState` (in `Workspace.tsx`) rather than a database. This means:
+
 - ✅ Zero latency for edits — no server round-trips
 - ✅ Works offline
 - ❌ Data is lost on page refresh (no persistence in demo mode)
 - ❌ No real-time collaboration
 
-*Production improvement:* Add auto-save (debounced API call on every block change) or use a CRDT library like Yjs for real-time collaboration.
+_Production improvement:_ Add auto-save (debounced API call on every block change) or use a CRDT library like Yjs for real-time collaboration.
 
 ---
 
@@ -106,7 +107,7 @@ Stories are co-located next to components in `__stories__/` subdirectories (e.g.
 
 This is the "lifting state up" pattern. The sidebar needs to know which page is active (to highlight it in the tree). `MainContent` needs the active page's blocks. Rather than duplicating state or using global state, both components receive what they need as props from their common ancestor (`Workspace`).
 
-*Alternative:* A global state manager (Zustand, Redux) would make sense once the component tree gets deeper than 3-4 levels or when sibling components at the same level need to share state without a common parent.
+_Alternative:_ A global state manager (Zustand, Redux) would make sense once the component tree gets deeper than 3-4 levels or when sibling components at the same level need to share state without a common parent.
 
 ---
 
@@ -255,17 +256,17 @@ erDiagram
 
 **Design decisions:**
 
-| Decision | Rationale |
-|----------|-----------|
-| `sourceUrl @unique` | Two users importing the same URL share one DB row — content isn't duplicated |
-| `UserLibrary` join table | Tracks per-user access; `onDelete: Cascade` on both FKs keeps DB clean when a user or library is deleted |
-| `items Json` | Excalidraw `ExcalidrawLibraryItem[]` shape changes across versions; `Json` avoids schema migrations for format changes |
+| Decision                     | Rationale                                                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `sourceUrl @unique`          | Two users importing the same URL share one DB row — content isn't duplicated                                                     |
+| `UserLibrary` join table     | Tracks per-user access; `onDelete: Cascade` on both FKs keeps DB clean when a user or library is deleted                         |
+| `items Json`                 | Excalidraw `ExcalidrawLibraryItem[]` shape changes across versions; `Json` avoids schema migrations for format changes           |
 | Personal items not persisted | Items created directly in Excalidraw (no `sourceUrl`) live in `localStorage` only — they have no canonical URL to deduplicate on |
 
 **Library persistence layers** (lowest → highest priority merge order):
 
 1. **Excalidraw's own `excalidraw-library` localStorage key** — all personal library items are persisted automatically by Excalidraw itself. We intentionally do NOT maintain a parallel custom key; doing so creates two copies with identical IDs that Excalidraw merges into one list, causing React duplicate-key warnings.
-2. **Backend (`GET /api/user/libraries`)** — URL-sourced libraries the user has imported across any device, loaded on mount when authenticated and merged via `updateLibrary({ merge: true })`.  Excalidraw deduplicates by item ID so repeat loads are safe.
+2. **Backend (`GET /api/user/libraries`)** — URL-sourced libraries the user has imported across any device, loaded on mount when authenticated and merged via `updateLibrary({ merge: true })`. Excalidraw deduplicates by item ID so repeat loads are safe.
 3. **Hash import (`#addLibrary=URL&token=`)** — on-demand import via `libraries.excalidraw.com` redirect; merged into the live canvas and saved to the backend.
 
 ### Tree Model
@@ -282,12 +283,12 @@ graph TD
 
 **Two separate data structures — why?**
 
-| Structure | Stores | Used for |
-|-----------|--------|----------|
+| Structure  | Stores                        | Used for           |
+| ---------- | ----------------------------- | ------------------ |
 | `TreeRoot` | Hierarchy + pageId references | Sidebar navigation |
-| `Page[]` | Titles + block content | Editor |
+| `Page[]`   | Titles + block content        | Editor             |
 
-The tree stores *where* pages live (folder hierarchy). The pages array stores *what* pages contain (blocks). This separation mirrors a real file system: the directory listing stores paths, not file contents.
+The tree stores _where_ pages live (folder hierarchy). The pages array stores _what_ pages contain (blocks). This separation mirrors a real file system: the directory listing stores paths, not file contents.
 
 ---
 
@@ -325,12 +326,10 @@ Every state update creates a new array/object instead of mutating in place:
 
 ```typescript
 // ✅ Correct — creates a new page array
-setPages(prev => prev.map(p =>
-  p.id === activePageId ? { ...p, blocks } : p
-));
+setPages((prev) => prev.map((p) => (p.id === activePageId ? { ...p, blocks } : p)));
 
 // ❌ Wrong — mutates React state directly
-pages.find(p => p.id === activePageId).blocks = blocks; // never do this
+pages.find((p) => p.id === activePageId).blocks = blocks; // never do this
 ```
 
 Why? React detects changes by comparing references (`Object.is`). If you mutate an object, the reference stays the same, React sees "no change", and the component doesn't re-render.
@@ -346,12 +345,12 @@ DevTree uses **explicit save** rather than auto-save. The user must click the Sa
 
 #### Why explicit save?
 
-| Auto-save | Explicit save |
-|-----------|---------------|
-| Every keystroke → API call | Single API call per save |
-| Hard to batch/reorder blocks | Full diff-sync on save |
-| Hard to detect "no changes" | `isDirty` flag prevents redundant calls |
-| Good for collaborative editors | Good for single-user note editors |
+| Auto-save                      | Explicit save                           |
+| ------------------------------ | --------------------------------------- |
+| Every keystroke → API call     | Single API call per save                |
+| Hard to batch/reorder blocks   | Full diff-sync on save                  |
+| Hard to detect "no changes"    | `isDirty` flag prevents redundant calls |
+| Good for collaborative editors | Good for single-user note editors       |
 
 DevTree is a single-user note-taking tool, so explicit save is the simpler, lower-latency choice.
 
@@ -369,6 +368,7 @@ stateDiagram-v2
 ```
 
 The `isDirty: boolean` state in `Workspace` tracks whether the currently displayed page has local changes not yet persisted to the server. The Save button in `MainContent` is:
+
 - **Disabled** when `isDirty === false` — no redundant API calls.
 - **Enabled** when `isDirty === true` — indicates there is something to save.
 
@@ -393,6 +393,7 @@ flowchart TD
 **Why `serverBlocksRef` instead of state?**
 
 `serverBlocksRef` is a `useRef` (not `useState`) because:
+
 1. It should **not** trigger a re-render when updated — it's only read during `handleSave`.
 2. It persists across renders without being a dependency of `useMemo`/`useCallback`.
 3. Think of it as a "snapshot" of what the server knows — only updated when a save succeeds.
@@ -414,13 +415,14 @@ This reconciliation step is essential: without it, subsequent PUT/DELETE calls w
 
 ```typescript
 if (isDirty) {
-  setPendingNavId(item.id);  // remember where the user wanted to go
-  return;                    // show UnsavedChangesDialog instead of navigating
+  setPendingNavId(item.id); // remember where the user wanted to go
+  return; // show UnsavedChangesDialog instead of navigating
 }
-setActivePageId(item.id);   // normal navigation
+setActivePageId(item.id); // normal navigation
 ```
 
 The `<UnsavedChangesDialog>` presents three choices:
+
 1. **Save and leave** — runs `handleSave()`, then navigates to `pendingNavId`.
 2. **Leave without saving** — discards local changes (restores from `serverBlocksRef`), navigates.
 3. **Cancel / Stay** — closes the dialog, user stays on the current dirty page.
@@ -431,7 +433,7 @@ The `<UnsavedChangesDialog>` presents three choices:
 
 ### Column Layout Algorithm
 
-The block grid uses CSS `grid-cols-2`. Each block can be `colSpan: 1` (half-width) or `colSpan: 2` (full-width). The `computeColumnMap` function determines which visual column (left=0, right=1) each half-width block occupies — this is needed so editing controls appear on the *outer* edge of the block, not between adjacent blocks.
+The block grid uses CSS `grid-cols-2`. Each block can be `colSpan: 1` (half-width) or `colSpan: 2` (full-width). The `computeColumnMap` function determines which visual column (left=0, right=1) each half-width block occupies — this is needed so editing controls appear on the _outer_ edge of the block, not between adjacent blocks.
 
 ```mermaid
 flowchart TD
@@ -452,6 +454,7 @@ flowchart TD
 ```
 
 Example for `[half, half, full, half, half]`:
+
 ```
 Block 0 (half): column 0 (left),  cursor → right
 Block 1 (half): column 1 (right), cursor → left
@@ -461,6 +464,7 @@ Block 4 (half): column 1 (right), cursor → left
 ```
 
 Visual result:
+
 ```
 ┌─────────────┬─────────────┐
 │  Block 0    │  Block 1    │
@@ -481,6 +485,7 @@ if (type === 'code' && isCodeBlockContent(content, type)) {
 ```
 
 The double check (`type === 'code'` AND `isCodeBlockContent`) is intentional:
+
 1. `type` is the canonical discriminant — authoritative, fast.
 2. `isCodeBlockContent` checks the runtime shape — catches corrupted data.
 3. TypeScript uses both to narrow `content` to `CodeBlockContent`.
@@ -494,6 +499,7 @@ The `diagram` block type embeds [Excalidraw](https://github.com/excalidraw/excal
 **Problem**: `MainContent` uses an `overflow-y-auto` scroll container. Excalidraw caches `offsetTop`/`offsetLeft` in its AppState to convert pointer events to canvas coordinates. A `ResizeObserver` updates these on size changes but **not on scroll** — the canvas moves within the viewport without resizing.
 
 **Solution** (two-part, no DOM-walking):
+
 1. Call `excalidrawAPI.refresh()` via `requestAnimationFrame` once on mount so the initial offset is measured **after the browser paints** (avoids the case where Excalidraw measured its position while the block was off-screen during SSR/hydration).
 2. Listen to `scroll` on `window` with `{ capture: true, passive: true }`. Scroll events don't bubble, but they **do** traverse the capture phase — a window capture listener fires for scroll on **any element in the document** without needing to walk the DOM.
 
@@ -517,6 +523,7 @@ Skipped in fullscreen mode (the overlay covers the entire viewport — no outer 
 **Problem**: When a user clicks "Add to Excalidraw" on the public library site, the browser redirects back to the app with a `#addLibrary=URL&token=TOKEN` hash. Excalidraw only processes this hash at its own initial mount — it ignores hash changes after the fact, and if the user isn't on a page that has a Diagram block open, the hash is dropped entirely.
 
 **Solution**: A `useEffect` that runs whenever `excalidrawAPI` becomes available:
+
 1. Dynamically imports `parseLibraryTokensFromUrl` from `@excalidraw/excalidraw`
 2. Calls it — returns `{ libraryUrl }` if the current URL contains `#addLibrary=…`
 3. Fetches the `.excalidrawlib` JSON file from `libraryUrl`
@@ -533,11 +540,11 @@ See [Excalidraw Library Model](#excalidraw-library-model) in the Data Model sect
 
 **API surface:**
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `GET` | `/api/user/libraries` | Returns all library entries for the current user (merged `items` array) |
-| `POST` | `/api/user/libraries` | Upsert a library by `sourceUrl`; links it to the current user |
-| `DELETE` | `/api/user/libraries/:id` | Unlinks a library from the current user (idempotent) |
+| Method   | Path                      | Purpose                                                                 |
+| -------- | ------------------------- | ----------------------------------------------------------------------- |
+| `GET`    | `/api/user/libraries`     | Returns all library entries for the current user (merged `items` array) |
+| `POST`   | `/api/user/libraries`     | Upsert a library by `sourceUrl`; links it to the current user           |
+| `DELETE` | `/api/user/libraries/:id` | Unlinks a library from the current user (idempotent)                    |
 
 **Sequence — loading libraries on mount:**
 
@@ -581,7 +588,7 @@ sequenceDiagram
 
 ### Immutable Updates (Path Copying)
 
-When a node deep in the tree is modified, we create new objects only along the *path* from the root to that node. Other branches keep their original references (structural sharing).
+When a node deep in the tree is modified, we create new objects only along the _path_ from the root to that node. Other branches keep their original references (structural sharing).
 
 ```mermaid
 graph LR
@@ -660,12 +667,13 @@ sequenceDiagram
 ```
 
 **How it works:**
+
 - Each `TreeRow` renders with `draggable` attribute controlled by the `draggable` prop on `<TreeView>`.
 - `dragstart` / `dragend` events on each row call `handleDragStart` / `handleDragEnd` on the shared tree state.
 - `dragover` fires continuously; the component highlights the current drop target with a CSS ring class (`ring-1 ring-primary/60`).
 - On `drop`, `onDocumentDrag(source, target)` fires — `Workspace` handles this by calling `moveNode` (pure tree util) and then persisting the new order to the API.
 
-**Special case — dropping onto a file:** Dropping a node onto a *page* node redirects the move to the page's *parent* folder. Pages cannot contain other nodes.
+**Special case — dropping onto a file:** Dropping a node onto a _page_ node redirects the move to the page's _parent_ folder. Pages cannot contain other nodes.
 
 **Root drop zone:** A dedicated "Drop here to move to root" area at the bottom of the tree handles moves to the tree's top level.
 
@@ -736,7 +744,9 @@ flowchart TD
 Tailwind's `dark:` utility classes (e.g. `dark:bg-zinc-900`) are compiled to:
 
 ```css
-.dark .bg-zinc-900 { /* applied */ }
+.dark .bg-zinc-900 {
+  /* applied */
+}
 ```
 
 When `next-themes` adds `class="dark"` to `<html>`, all `dark:` classes activate instantly — no JavaScript needed at runtime.
@@ -752,7 +762,7 @@ Monaco has its own internal theme (`vs` / `vs-dark`). We use `useTheme().resolve
 ```mermaid
 graph TD
     subgraph Unit["Unit Tests (Vitest + Testing Library)"]
-        UBlock["Editor extensions\n(PageEditor.blocks.test)"] 
+        UBlock["Editor extensions\n(PageEditor.blocks.test)"]
         UTypes["Type guards\n(types.test.ts)"]
         UUtils["Utility functions\n(treeUtils, pageUtils)"]
         UI18n["i18n hook\n(i18n.test.tsx)"]
@@ -760,8 +770,8 @@ graph TD
     end
 
     subgraph Visual["Visual Tests (Storybook)"]
-        SFeature["features/ stories\n(Workspace, Statistics...)"] 
-        SShared["shared/ stories\n(ActivityBar, UserMenu)"] 
+        SFeature["features/ stories\n(Workspace, Statistics...)"]
+        SShared["shared/ stories\n(ActivityBar, UserMenu)"]
         SVoice["voice-dictation/ stories"]
     end
 
@@ -777,11 +787,11 @@ graph TD
 
 ### Testing pyramid rationale
 
-| Layer | Count | Speed | Confidence | Cost |
-|-------|-------|-------|-----------|------|
-| Unit tests | ~260 | ~3s | Component logic + stores | Low |
-| Storybook stories | ~20 | Manual | Visual appearance | Low |
-| E2E tests | ~98 | ~60s | Full user journeys | High |
+| Layer             | Count | Speed  | Confidence               | Cost |
+| ----------------- | ----- | ------ | ------------------------ | ---- |
+| Unit tests        | ~260  | ~3s    | Component logic + stores | Low  |
+| Storybook stories | ~20   | Manual | Visual appearance        | Low  |
+| E2E tests         | ~98   | ~60s   | Full user journeys       | High |
 
 **Unit test philosophy:**
 
@@ -844,14 +854,14 @@ Next.js normally requires the full `node_modules` (~500 MB) at runtime. `standal
 
 ## Further Reading
 
-| Topic | Link |
-|-------|------|
-| Next.js App Router | https://nextjs.org/docs/app |
-| React — thinking in React | https://react.dev/learn/thinking-in-react |
-| ProseMirror (Tiptap's engine) | https://prosemirror.net/docs/guide/ |
-| Tailwind CSS | https://tailwindcss.com/docs |
-| Excalidraw imperative API | https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/excalidraw-api |
-| Excalidraw library format | https://docs.excalidraw.com/docs/codebase/frames#library |
-| Prisma ORM | https://www.prisma.io/docs |
-| Vitest | https://vitest.dev/guide/ |
-| Playwright (.NET) | https://playwright.dev/dotnet/docs/intro |
+| Topic                         | Link                                                                             |
+| ----------------------------- | -------------------------------------------------------------------------------- |
+| Next.js App Router            | https://nextjs.org/docs/app                                                      |
+| React — thinking in React     | https://react.dev/learn/thinking-in-react                                        |
+| ProseMirror (Tiptap's engine) | https://prosemirror.net/docs/guide/                                              |
+| Tailwind CSS                  | https://tailwindcss.com/docs                                                     |
+| Excalidraw imperative API     | https://docs.excalidraw.com/docs/@excalidraw/excalidraw/api/props/excalidraw-api |
+| Excalidraw library format     | https://docs.excalidraw.com/docs/codebase/frames#library                         |
+| Prisma ORM                    | https://www.prisma.io/docs                                                       |
+| Vitest                        | https://vitest.dev/guide/                                                        |
+| Playwright (.NET)             | https://playwright.dev/dotnet/docs/intro                                         |

@@ -94,7 +94,10 @@ function TableBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
           <thead>
             <tr className="border-border bg-muted/20 border-b">
               {safeHeaders.map((h, col) => (
-                <th key={`${h}-${col}`} className="text-foreground relative px-3 py-2 text-left font-medium">
+                <th
+                  key={`${h}-${col}`}
+                  className="text-foreground relative px-3 py-2 text-left font-medium"
+                >
                   {isEditable ? (
                     <div className="flex items-center gap-1">
                       <input
@@ -123,7 +126,10 @@ function TableBlockNodeView({ node, updateAttributes }: ReactNodeViewProps) {
           </thead>
           <tbody>
             {safeRows.map((row, rowIdx) => (
-              <tr key={`row-${rowIdx}-${row.join('|')}`} className="border-border hover:bg-muted/20 border-b last:border-0">
+              <tr
+                key={`row-${rowIdx}-${row.join('|')}`}
+                className="border-border hover:bg-muted/20 border-b last:border-0"
+              >
                 {safeHeaders.map((_, col) => (
                   <td key={`cell-${rowIdx}-${col}`} className="text-muted-foreground px-3 py-2">
                     {isEditable ? (

@@ -10,7 +10,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { Editor } from '@tiptap/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   Bold,
   Bookmark,
@@ -23,6 +22,7 @@ import {
   Tag,
   Underline as UnderlineIcon,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 
@@ -365,31 +365,31 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                   transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                   className="border-border bg-popover absolute bottom-full left-0 z-20 mb-2 w-64 rounded-lg border p-2 shadow-lg"
                 >
-                <input
-                  ref={linkInputRef}
-                  type="url"
-                  placeholder="https://"
-                  className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
-                  defaultValue={editor.getAttributes('link').href || ''}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                  <input
+                    ref={linkInputRef}
+                    type="url"
+                    placeholder="https://"
+                    className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
+                    defaultValue={editor.getAttributes('link').href || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setLink();
+                      } else if (e.key === 'Escape') {
+                        setLinkOpen(false);
+                      }
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    type="button"
+                    className="motion-interactive icon-pop-hover bg-primary text-primary-foreground mt-1.5 rounded px-2 py-1 text-xs hover:opacity-90"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
                       setLink();
-                    } else if (e.key === 'Escape') {
-                      setLinkOpen(false);
-                    }
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                />
-                <button
-                  type="button"
-                  className="motion-interactive icon-pop-hover bg-primary text-primary-foreground mt-1.5 rounded px-2 py-1 text-xs hover:opacity-90"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setLink();
-                  }}
-                >
-                  Apply
-                </button>
+                    }}
+                  >
+                    Apply
+                  </button>
                 </motion.div>
               </>
             )}
@@ -439,42 +439,42 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                   transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                   className="border-border bg-popover absolute bottom-full left-0 z-20 mb-2 w-72 rounded-lg border p-2 shadow-lg"
                 >
-                <textarea
-                  ref={commentInputRef}
-                  placeholder="Add a note…"
-                  rows={2}
-                  className="border-border bg-background w-full resize-none rounded border px-2 py-1.5 text-xs outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setCommentOpen(false);
-                    }
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                />
-                <div className="mt-1.5 flex gap-1">
-                  <button
-                    type="button"
-                    className="motion-interactive icon-pop-hover bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      applyComment();
+                  <textarea
+                    ref={commentInputRef}
+                    placeholder="Add a note…"
+                    rows={2}
+                    className="border-border bg-background w-full resize-none rounded border px-2 py-1.5 text-xs outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setCommentOpen(false);
+                      }
                     }}
-                  >
-                    Apply
-                  </button>
-                  {editor.isActive('comment') && (
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                  <div className="mt-1.5 flex gap-1">
                     <button
                       type="button"
-                      className="motion-interactive icon-spin-hover border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                      className="motion-interactive icon-pop-hover bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        removeComment();
+                        applyComment();
                       }}
                     >
-                      Remove
+                      Apply
                     </button>
-                  )}
-                </div>
+                    {editor.isActive('comment') && (
+                      <button
+                        type="button"
+                        className="motion-interactive icon-spin-hover border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          removeComment();
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
               </>
             )}
@@ -535,47 +535,47 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                   transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                   className="border-border bg-popover absolute bottom-full left-0 z-20 mb-2 w-52 rounded-lg border p-2 shadow-lg"
                 >
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-medium">
-                  Tag selected text
-                </p>
-                <input
-                  ref={tagInputRef}
-                  type="text"
-                  placeholder="e.g. important, review…"
-                  className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      applyInlineTag();
-                    } else if (e.key === 'Escape') {
-                      setTagOpen(false);
-                    }
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                />
-                <div className="mt-1.5 flex gap-1">
-                  <button
-                    type="button"
-                    className="motion-interactive icon-pop-hover bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      applyInlineTag();
+                  <p className="text-muted-foreground mb-1.5 text-[10px] font-medium">
+                    Tag selected text
+                  </p>
+                  <input
+                    ref={tagInputRef}
+                    type="text"
+                    placeholder="e.g. important, review…"
+                    className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        applyInlineTag();
+                      } else if (e.key === 'Escape') {
+                        setTagOpen(false);
+                      }
                     }}
-                  >
-                    Apply
-                  </button>
-                  {editor.isActive('inlineTag') && (
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                  <div className="mt-1.5 flex gap-1">
                     <button
                       type="button"
-                      className="motion-interactive icon-spin-hover border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                      className="motion-interactive icon-pop-hover bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        removeInlineTag();
+                        applyInlineTag();
                       }}
                     >
-                      Remove
+                      Apply
                     </button>
-                  )}
-                </div>
+                    {editor.isActive('inlineTag') && (
+                      <button
+                        type="button"
+                        className="motion-interactive icon-spin-hover border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          removeInlineTag();
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
               </>
             )}

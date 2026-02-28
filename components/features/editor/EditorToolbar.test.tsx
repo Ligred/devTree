@@ -7,9 +7,11 @@ import { EditorToolbar, ToolbarButton } from './EditorToolbar';
 
 vi.mock('motion/react', () => {
   return {
-    AnimatePresence: ({ children }: { children: unknown }) => <>{children}</>,
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     motion: {
-      div: ({ children, ...props }: Record<string, unknown>) => <div {...props}>{children}</div>,
+      div: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => (
+        <div {...props}>{children}</div>
+      ),
     },
     useReducedMotion: () => false,
   };

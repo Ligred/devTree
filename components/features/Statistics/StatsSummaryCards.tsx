@@ -98,7 +98,8 @@ function buildWritingBar(
   if (!writingMilestone) return null;
   const nextMs =
     WRITING_MILESTONES.find((m) => m > (data?.totalWritingTimeMs ?? 0)) ??
-    WRITING_MILESTONES.at(-1) ?? 0;
+    WRITING_MILESTONES.at(-1) ??
+    0;
   return {
     label: `next milestone: ${formatDuration(nextMs)}`,
     pct: writingMilestone.pct,

@@ -134,9 +134,7 @@ describe('POST /api/user/libraries', () => {
 
   it('returns 400 when sourceUrl is not a valid http(s) URL', async () => {
     mockGetToken.mockResolvedValue({ sub: 'user1' });
-    const res = await POST(
-      makeRequest('POST', { sourceUrl: 'javascript:alert(1)', items: [] }),
-    );
+    const res = await POST(makeRequest('POST', { sourceUrl: 'javascript:alert(1)', items: [] }));
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error).toMatch(/valid http/i);

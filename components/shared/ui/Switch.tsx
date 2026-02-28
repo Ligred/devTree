@@ -15,8 +15,8 @@
  *   - Replace with @radix-ui/react-switch if more complex usage is needed
  *     (e.g. form integration with native form submission).
  */
-import { cn } from '@/lib/utils';
 import { playUiSound } from '@/lib/stores/uiSoundEffects';
+import { cn } from '@/lib/utils';
 
 type SwitchProps = Readonly<{
   checked: boolean;

@@ -24,7 +24,10 @@ describe('InlineTagMark', () => {
 
   it('renders merged HTML attributes with inline-tag class', () => {
     const config = (InlineTagMark as unknown as { config: Record<string, unknown> }).config;
-    const renderHTML = config.renderHTML as (this: { options: { HTMLAttributes: Record<string, unknown> } }, args: { HTMLAttributes: Record<string, unknown> }) => unknown[];
+    const renderHTML = config.renderHTML as (
+      this: { options: { HTMLAttributes: Record<string, unknown> } },
+      args: { HTMLAttributes: Record<string, unknown> },
+    ) => unknown[];
 
     const rendered = renderHTML.call(
       { options: { HTMLAttributes: { 'data-test': 'x' } } },
@@ -52,7 +55,9 @@ describe('InlineTagMark', () => {
     const commands = addCommands.call({ name: 'inlineTag' }) as {
       setInlineTag: (attrs: { tag: string }) => (ctx: { commands: typeof commandsApi }) => boolean;
       unsetInlineTag: () => (ctx: { commands: typeof commandsApi }) => boolean;
-      toggleInlineTag: (attrs: { tag: string }) => (ctx: { commands: typeof commandsApi }) => boolean;
+      toggleInlineTag: (attrs: {
+        tag: string;
+      }) => (ctx: { commands: typeof commandsApi }) => boolean;
     };
 
     expect(commands.setInlineTag({ tag: 'important' })({ commands: commandsApi })).toBe(true);

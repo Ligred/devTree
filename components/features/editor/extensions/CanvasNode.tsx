@@ -138,10 +138,7 @@ function CanvasNodeView({ node, updateAttributes }: ReactNodeViewProps) {
           ? (parsed.appState as Record<string, unknown>)
           : undefined;
 
-      if (
-        appState?.collaborators != null &&
-        !(appState.collaborators instanceof Map)
-      ) {
+      if (appState?.collaborators != null && !(appState.collaborators instanceof Map)) {
         appState.collaborators = new Map(
           Object.entries(appState.collaborators as Record<string, unknown>),
         );

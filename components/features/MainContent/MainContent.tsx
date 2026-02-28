@@ -24,7 +24,6 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Editor } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   Bookmark,
   Download,
@@ -37,6 +36,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { BookmarksPanel } from '@/components/features/editor/BookmarksPanel';
 import { EditorToolbar } from '@/components/features/editor/EditorToolbar';
@@ -360,14 +360,13 @@ export function MainContent({
                       />
                       <motion.div
                         key="bookmarks-panel"
-                        initial={
-                          reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }
-                        }
-                        animate={
-                          reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }
-                        }
+                        initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                        animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
                         exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
-                        transition={{ duration: reducedMotion ? 0.01 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{
+                          duration: reducedMotion ? 0.01 : 0.2,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
                         className="absolute top-full right-0 z-50 mt-1"
                       >
                         <BookmarksPanel

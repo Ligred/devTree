@@ -6,13 +6,13 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Block, Page } from '@/components/features/MainContent';
 import type { TreeRoot } from '@/components/features/Workspace/treeTypes';
 
-import { useTreeOperations } from './useTreeOperations';
 import {
   createFolder as apiCreateFolder,
   createPage as apiCreatePage,
   updateFolder as apiUpdateFolder,
   WorkspaceApiError,
 } from '../workspaceApi';
+import { useTreeOperations } from './useTreeOperations';
 
 vi.mock('../workspaceApi', async () => {
   const actual = await vi.importActual<typeof import('../workspaceApi')>('../workspaceApi');
@@ -52,15 +52,15 @@ function createHarness(initialRoot: TreeRoot, initialPages: Page[] = []) {
   const onFileCreated = vi.fn();
   const onPageIdReplaced = vi.fn();
 
-  const setTreeRoot = vi.fn(
-    (value: TreeRoot | ((prev: TreeRoot) => TreeRoot)) => {
-      state.root = typeof value === 'function' ? (value as (prev: TreeRoot) => TreeRoot)(state.root) : value;
-      treeRootRef.current = state.root;
-    },
-  );
+  const setTreeRoot = vi.fn((value: TreeRoot | ((prev: TreeRoot) => TreeRoot)) => {
+    state.root =
+      typeof value === 'function' ? (value as (prev: TreeRoot) => TreeRoot)(state.root) : value;
+    treeRootRef.current = state.root;
+  });
 
   const setPages = vi.fn((value: Page[] | ((prev: Page[]) => Page[])) => {
-    state.pages = typeof value === 'function' ? (value as (prev: Page[]) => Page[])(state.pages) : value;
+    state.pages =
+      typeof value === 'function' ? (value as (prev: Page[]) => Page[])(state.pages) : value;
   });
 
   const setActivePageId = vi.fn(

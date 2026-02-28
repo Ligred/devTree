@@ -1,7 +1,9 @@
-import type { Preview } from '@storybook/nextjs-vite';
 import React from 'react';
+
 import { SessionProvider } from 'next-auth/react';
 import { ThemeProvider } from 'next-themes';
+
+import type { Preview } from '@storybook/nextjs-vite';
 
 import { I18nProvider } from '@/lib/i18n';
 

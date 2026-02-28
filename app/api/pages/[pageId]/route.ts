@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
 import { Prisma } from '@prisma/client';
 
 import { requireAuth } from '@/lib/apiAuth';
@@ -76,9 +77,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     (body.content === null || (typeof body.content === 'object' && !Array.isArray(body.content)))
   ) {
     updates.content =
-      body.content === null
-        ? Prisma.DbNull
-        : (body.content as Prisma.InputJsonValue);
+      body.content === null ? Prisma.DbNull : (body.content as Prisma.InputJsonValue);
   }
 
   if (typeof body.title === 'string') {

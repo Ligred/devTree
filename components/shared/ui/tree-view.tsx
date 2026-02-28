@@ -444,13 +444,13 @@ const TreeNode = ({
             )}
           </AccordionPrimitive.Trigger>
           {item.actions && (
-            <span className="pointer-events-auto absolute top-1/2 right-2 z-10 flex -translate-y-1/2 shrink-0 opacity-0 transition-opacity group-hover/row:opacity-100">
+            <span className="pointer-events-auto absolute top-1/2 right-2 z-10 flex shrink-0 -translate-y-1/2 opacity-0 transition-opacity group-hover/row:opacity-100">
               {item.actions}
             </span>
           )}
         </AccordionPrimitive.Header>
 
-        <AccordionPrimitive.Content className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down motion-reduce:animate-none">
+        <AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden text-sm motion-reduce:animate-none">
           {/**
            * Children container.
            *

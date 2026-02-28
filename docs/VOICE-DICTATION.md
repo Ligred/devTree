@@ -17,6 +17,7 @@ This document describes the voice dictation UX and the implementation details fo
 ## Real-time Interim Text Display
 
 Interim text (live transcription as user speaks) is now displayed directly in the editor's text flow:
+
 - Appears as italic, semi-transparent text at the end of content
 - Updates continuously as speech is recognized
 - Automatically replaced with final formatted text when recording stops
@@ -25,11 +26,13 @@ Interim text (live transcription as user speaks) is now displayed directly in th
 ## Formatting (Local, No Backend)
 
 **Current Implementation:**
+
 - Capitalization: First letter + sentence starts after `.!?…`
 - Whitespace normalization: Collapses multiple spaces
 - Terminal punctuation: Adds `.` if missing at end
 
 **Settings Control:**
+
 - User preference in Settings Dialog: "Auto-format dictation"
 - Stored in `useSettingsStore` with localStorage persistence
 - Synced to server via `/api/user/preferences` when available
@@ -39,10 +42,12 @@ Interim text (live transcription as user speaks) is now displayed directly in th
 **IMPORTANT:** Web Speech API (browser's built-in speech recognition) does **NOT** automatically add punctuation to transcripts. This is true for all languages (English, Ukrainian, etc.).
 
 The API only transcribes spoken audio literally. If you say:
+
 - "hello world" → transcript: `"hello world"` (no comma, no period)
 - Ukrainian speech → transcript has no commas, periods, question marks, etc.
 
 The browser **does not** recognize spoken commands like:
+
 - "hello comma world" → transcript: `"hello comma world"` (literal text "comma", not `,`)
 
 ### Why This Happens
@@ -64,23 +69,25 @@ import { pipeline } from '@xenova/transformers';
 
 // Initialize once (downloads ~50-100MB model on first use)
 const punctuator = await pipeline(
-  'text-classification',
-  'Xenova/wav2vec2-bert-xls-r-punctuation'
+'text-classification',
+'Xenova/wav2vec2-bert-xls-r-punctuation'
 );
 
 async function addPunctuation(text: string): Promise<string> {
-  const result = await punctuator(text);
-  return result;
+const result = await punctuator(text);
+return result;
 }
 \`\`\`
 
 **Pros:**
+
 - Runs locally in browser (no API calls, no privacy concerns)
 - Works offline
 - Free
 - Supports multiple languages
 
 **Cons:**
+
 - ~50-100MB model download on first use
 - Adds ~2-5s latency for processing
 - May impact browser performance on low-end devices
@@ -90,34 +97,37 @@ async function addPunctuation(text: string): Promise<string> {
 **OpenAI Whisper API:**
 \`\`\`typescript
 async function transcribeWithPunctuation(audioBlob: Blob): Promise<string> {
-  const formData = new FormData();
-  formData.append('file', audioBlob, 'audio.webm');
-  formData.append('model', 'whisper-1');
-  formData.append('language', 'uk'); // or 'en'
-  
-  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { 'Authorization': \`Bearer \${process.env.OPENAI_API_KEY}\` },
-    body: formData
-  });
-  
-  const data = await response.json();
-  return data.text; // Includes punctuation
+const formData = new FormData();
+formData.append('file', audioBlob, 'audio.webm');
+formData.append('model', 'whisper-1');
+formData.append('language', 'uk'); // or 'en'
+
+const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+method: 'POST',
+headers: { 'Authorization': \`Bearer \${process.env.OPENAI_API_KEY}\` },
+body: formData
+});
+
+const data = await response.json();
+return data.text; // Includes punctuation
 }
 \`\`\`
 
 **Pros:**
+
 - Excellent punctuation quality
 - Supports 90+ languages
 - No client-side model download
 
 **Cons:**
+
 - Costs ~$0.006 per minute of audio
 - Requires API key
 - Privacy: audio sent to OpenAI servers
 - Network latency
 
 **Alternative APIs:**
+
 - Google Cloud Speech-to-Text ($0.016/min, good punctuation)
 - AssemblyAI ($0.00025/sec, specialized transcription)
 - Custom FastAPI + punctuation model (self-hosted)
@@ -133,32 +143,35 @@ Use Web Speech API for instant interim results + server for final punctuation:
 
 \`\`\`typescript
 async function handleVoiceDictationEnd(rawTranscript: string, audioBlob: Blob) {
-  // Insert raw transcript immediately (instant feedback)
-  editor.insertContent(rawTranscript);
-  
-  // Show "Processing..." indicator
-  setProcessing(true);
-  
-  try {
-    // Get punctuated version from server
-    const punctuated = await transcribeWithPunctuation(audioBlob);
-    
+// Insert raw transcript immediately (instant feedback)
+editor.insertContent(rawTranscript);
+
+// Show "Processing..." indicator
+setProcessing(true);
+
+try {
+// Get punctuated version from server
+const punctuated = await transcribeWithPunctuation(audioBlob);
+
     // Replace raw text with punctuated version
     editor.selectAll().insertContent(punctuated);
-  } catch (err) {
-    console.error('Punctuation failed, keeping raw transcript:', err);
-  } finally {
-    setProcessing(false);
-  }
+
+} catch (err) {
+console.error('Punctuation failed, keeping raw transcript:', err);
+} finally {
+setProcessing(false);
+}
 }
 \`\`\`
 
 **Pros:**
+
 - Best of both worlds: instant feedback + accurate punctuation
 - Graceful degradation if API fails
 - Can enable only for longer recordings (>30 seconds)
 
 **Cons:**
+
 - More complex implementation
 - API costs for final transcription
 
@@ -168,6 +181,7 @@ For your use case (Ukrainian + English, privacy-conscious, free):
 → **Use Transformers.js with `deepmultilingualpunctuation` model**
 
 Implementation estimate: ~4 hours
+
 - 2 hours: integrate Transformers.js, handle model loading
 - 1 hour: update UI (loading states, error handling)
 - 1 hour: testing with Ukrainian/English text

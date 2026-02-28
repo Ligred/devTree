@@ -4,11 +4,11 @@ End-to-end tests for the DevTree application using the **Page Object Model** pat
 
 ## Prerequisites
 
-| Tool | Version |
-|------|---------|
-| [.NET SDK](https://dotnet.microsoft.com/download) | 9.0+ |
+| Tool                                                   | Version                         |
+| ------------------------------------------------------ | ------------------------------- |
+| [.NET SDK](https://dotnet.microsoft.com/download)      | 9.0+                            |
 | [PowerShell](https://github.com/PowerShell/PowerShell) | 7+ (for browser install script) |
-| DevTree running locally | `http://localhost:3000` |
+| DevTree running locally                                | `http://localhost:3000`         |
 
 ## Quick start
 
@@ -79,12 +79,12 @@ tests/e2e/
 
 ## Test categories
 
-| Category | What it covers |
-|----------|----------------|
-| `Login` | Login page: form visibility, register switch, invalid credentials, language toggle (no OAuth) |
-| `Sidebar` | Page/folder creation, navigation, hide/show sidebar |
-| `Editor` | Add/edit/delete blocks (Text, Code, Table, Checklist, Image, Audio, Video) |
-| `Settings` | Open/close dialog, theme switching, language switching |
+| Category   | What it covers                                                                                |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| `Login`    | Login page: form visibility, register switch, invalid credentials, language toggle (no OAuth) |
+| `Sidebar`  | Page/folder creation, navigation, hide/show sidebar                                           |
+| `Editor`   | Add/edit/delete blocks (Text, Code, Table, Checklist, Image, Audio, Video)                    |
+| `Settings` | Open/close dialog, theme switching, language switching                                        |
 
 ## Test report (HTML)
 

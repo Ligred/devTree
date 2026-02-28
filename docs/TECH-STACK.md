@@ -268,31 +268,31 @@ This document describes every major library and technology used in the project: 
 
 ## Version summary
 
-| Package | Purpose | Version (approx) |
-|---------|---------|-------------------|
-| next | Framework | 16.x |
-| react / react-dom | UI | 19.x |
-| typescript | Language | 5.x |
-| tailwindcss | Styling | 4.x |
-| @tailwindcss/postcss | PostCSS plugin | 4.x |
-| next-themes | Theme provider | 0.4.x |
-| next-auth | Auth | 5.x beta |
-| @prisma/client / prisma | ORM | 6.x |
-| @radix-ui/* | UI primitives | varies |
-| lucide-react | Icons | 0.5xx |
-| @tiptap/* | Rich text | 3.x |
-| @monaco-editor/react | Code editor | 4.x |
-| @excalidraw/excalidraw | Diagramming canvas | 0.18.x |
-| recharts | Statistics charts | 3.x |
-| react-activity-calendar | Activity heatmap | 3.x |
-| Native HTML5 drag API | Tree DnD | — |
-| zustand | Global state | 5.x |
-| vitest | Unit tests | 4.x |
-| @testing-library/react | Component tests | 16.x |
-| storybook | Component dev | 10.x |
-| eslint | Linting | 9.x |
-| prettier | Formatting | 3.x |
-| knip | Dead code | 5.x |
-| dotenv-cli | Env for scripts | 7.x |
+| Package                 | Purpose            | Version (approx) |
+| ----------------------- | ------------------ | ---------------- |
+| next                    | Framework          | 16.x             |
+| react / react-dom       | UI                 | 19.x             |
+| typescript              | Language           | 5.x              |
+| tailwindcss             | Styling            | 4.x              |
+| @tailwindcss/postcss    | PostCSS plugin     | 4.x              |
+| next-themes             | Theme provider     | 0.4.x            |
+| next-auth               | Auth               | 5.x beta         |
+| @prisma/client / prisma | ORM                | 6.x              |
+| @radix-ui/\*            | UI primitives      | varies           |
+| lucide-react            | Icons              | 0.5xx            |
+| @tiptap/\*              | Rich text          | 3.x              |
+| @monaco-editor/react    | Code editor        | 4.x              |
+| @excalidraw/excalidraw  | Diagramming canvas | 0.18.x           |
+| recharts                | Statistics charts  | 3.x              |
+| react-activity-calendar | Activity heatmap   | 3.x              |
+| Native HTML5 drag API   | Tree DnD           | —                |
+| zustand                 | Global state       | 5.x              |
+| vitest                  | Unit tests         | 4.x              |
+| @testing-library/react  | Component tests    | 16.x             |
+| storybook               | Component dev      | 10.x             |
+| eslint                  | Linting            | 9.x              |
+| prettier                | Formatting         | 3.x              |
+| knip                    | Dead code          | 5.x              |
+| dotenv-cli              | Env for scripts    | 7.x              |
 
 Exact versions are in `package.json` and lockfile.

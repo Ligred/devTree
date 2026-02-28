@@ -13,7 +13,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { Editor } from '@tiptap/core';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   AlignCenter,
   AlignJustify,
@@ -39,6 +38,7 @@ import {
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { VoiceDictationButton } from '@/components/features/MainContent/voice-dictation/VoiceDictationButton';
 import { VoiceDictationLanguageButton } from '@/components/features/MainContent/voice-dictation/VoiceDictationLanguageButton';
@@ -182,7 +182,10 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
   const [dictationLanguage, setDictationLanguage] = useState<Locale>(locale);
   const [interimText, setInterimText] = useState('');
   const dictationSelectionRef = useRef<{ from: number; to: number } | null>(null);
-  const textStyleAttrs = editor.getAttributes('textStyle') as { fontFamily?: string; fontSize?: string };
+  const textStyleAttrs = editor.getAttributes('textStyle') as {
+    fontFamily?: string;
+    fontSize?: string;
+  };
   const activeFontFamily = textStyleAttrs.fontFamily ?? '';
   const activeFontSize = textStyleAttrs.fontSize ?? '';
 
@@ -515,25 +518,25 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                 transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                 className="border-border bg-popover absolute top-full left-0 z-20 mt-1 w-40 rounded-lg border p-2 shadow-lg"
               >
-              {TEXT_COLORS.map(({ name, value }) => (
-                <button
-                  key={name}
-                  type="button"
-                  className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (value) editor.chain().focus().setColor(value).run();
-                    else editor.chain().focus().unsetColor().run();
-                    setColorOpen(false);
-                  }}
-                >
-                  <span
-                    className="border-border h-4 w-4 rounded border"
-                    style={{ backgroundColor: value || 'transparent' }}
-                  />
-                  {name}
-                </button>
-              ))}
+                {TEXT_COLORS.map(({ name, value }) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (value) editor.chain().focus().setColor(value).run();
+                      else editor.chain().focus().unsetColor().run();
+                      setColorOpen(false);
+                    }}
+                  >
+                    <span
+                      className="border-border h-4 w-4 rounded border"
+                      style={{ backgroundColor: value || 'transparent' }}
+                    />
+                    {name}
+                  </button>
+                ))}
               </motion.div>
             </>
           )}
@@ -572,25 +575,25 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                 transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                 className="border-border bg-popover absolute top-full left-0 z-20 mt-1 w-40 rounded-lg border p-2 shadow-lg"
               >
-              {HIGHLIGHT_COLORS.map(({ name, value }) => (
-                <button
-                  key={name}
-                  type="button"
-                  className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (value) editor.chain().focus().toggleHighlight({ color: value }).run();
-                    else editor.chain().focus().unsetHighlight().run();
-                    setHighlightOpen(false);
-                  }}
-                >
-                  <span
-                    className="border-border h-4 w-4 rounded border"
-                    style={{ backgroundColor: value || 'transparent' }}
-                  />
-                  {name}
-                </button>
-              ))}
+                {HIGHLIGHT_COLORS.map(({ name, value }) => (
+                  <button
+                    key={name}
+                    type="button"
+                    className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (value) editor.chain().focus().toggleHighlight({ color: value }).run();
+                      else editor.chain().focus().unsetHighlight().run();
+                      setHighlightOpen(false);
+                    }}
+                  >
+                    <span
+                      className="border-border h-4 w-4 rounded border"
+                      style={{ backgroundColor: value || 'transparent' }}
+                    />
+                    {name}
+                  </button>
+                ))}
               </motion.div>
             </>
           )}
@@ -631,46 +634,46 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                 transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                 className="border-border bg-popover absolute top-full left-0 z-20 mt-1 w-64 rounded-lg border p-2 shadow-lg"
               >
-              <input
-                ref={linkInputRef}
-                type="url"
-                placeholder="https://"
-                className="border-border bg-background focus:ring-ring w-full rounded border px-2 py-1.5 text-xs outline-none focus:ring-1"
-                defaultValue={editor.getAttributes('link').href || ''}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    setLink();
-                  }
-                  if (e.key === 'Escape') {
-                    setLinkOpen(false);
-                  }
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-              />
-              <div className="mt-2 flex gap-1">
-                <button
-                  type="button"
-                  className="bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setLink();
+                <input
+                  ref={linkInputRef}
+                  type="url"
+                  placeholder="https://"
+                  className="border-border bg-background focus:ring-ring w-full rounded border px-2 py-1.5 text-xs outline-none focus:ring-1"
+                  defaultValue={editor.getAttributes('link').href || ''}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setLink();
+                    }
+                    if (e.key === 'Escape') {
+                      setLinkOpen(false);
+                    }
                   }}
-                >
-                  Apply
-                </button>
-                {editor.isActive('link') && (
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+                <div className="mt-2 flex gap-1">
                   <button
                     type="button"
-                    className="border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                    className="bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      unsetLink();
+                      setLink();
                     }}
                   >
-                    Remove
+                    Apply
                   </button>
-                )}
-              </div>
+                  {editor.isActive('link') && (
+                    <button
+                      type="button"
+                      className="border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        unsetLink();
+                      }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </motion.div>
             </>
           )}
@@ -718,47 +721,47 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                 transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                 className="border-border bg-popover absolute top-full left-0 z-20 mt-1 w-72 rounded-lg border p-2 shadow-lg"
               >
-              <label
-                htmlFor="editor-comment-input"
-                className="text-muted-foreground text-xs font-medium"
-              >
-                Comment text
-              </label>
-              <textarea
-                id="editor-comment-input"
-                ref={commentInputRef}
-                placeholder="Add a note…"
-                rows={3}
-                className="border-border bg-background focus:ring-ring mt-1 w-full resize-y rounded border px-2 py-1.5 text-sm outline-none focus:ring-1"
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') setCommentOpen(false);
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-              />
-              <div className="mt-2 flex gap-1">
-                <button
-                  type="button"
-                  className="bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    applyComment();
-                  }}
+                <label
+                  htmlFor="editor-comment-input"
+                  className="text-muted-foreground text-xs font-medium"
                 >
-                  Apply
-                </button>
-                {editor.isActive('comment') && (
+                  Comment text
+                </label>
+                <textarea
+                  id="editor-comment-input"
+                  ref={commentInputRef}
+                  placeholder="Add a note…"
+                  rows={3}
+                  className="border-border bg-background focus:ring-ring mt-1 w-full resize-y rounded border px-2 py-1.5 text-sm outline-none focus:ring-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') setCommentOpen(false);
+                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+                <div className="mt-2 flex gap-1">
                   <button
                     type="button"
-                    className="border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                    className="bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      removeComment();
+                      applyComment();
                     }}
                   >
-                    Remove
+                    Apply
                   </button>
-                )}
-              </div>
+                  {editor.isActive('comment') && (
+                    <button
+                      type="button"
+                      className="border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        removeComment();
+                      }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
               </motion.div>
             </>
           )}

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
 import { Prisma } from '@prisma/client';
 
 import { requireAuth } from '@/lib/apiAuth';
@@ -14,8 +15,7 @@ function handleDiaryApiError(scope: string, error: unknown, fallbackMessage: str
   ) {
     return NextResponse.json(
       {
-        error:
-          'Diary database schema is not up to date. Run Prisma migration and try again.',
+        error: 'Diary database schema is not up to date. Run Prisma migration and try again.',
         code: 'DIARY_SCHEMA_OUTDATED',
       },
       { status: 503 },
@@ -30,10 +30,12 @@ type DiaryJournalDelegate = {
 };
 
 type DiaryTemplateDelegate = {
-  findMany: (args: unknown) => Promise<
-    Array<{ id: string; name: string; body: string; createdAt: Date; updatedAt: Date }>
-  >;
-  create: (args: unknown) => Promise<{ id: string; name: string; body: string; createdAt: Date; updatedAt: Date }>;
+  findMany: (
+    args: unknown,
+  ) => Promise<Array<{ id: string; name: string; body: string; createdAt: Date; updatedAt: Date }>>;
+  create: (
+    args: unknown,
+  ) => Promise<{ id: string; name: string; body: string; createdAt: Date; updatedAt: Date }>;
 };
 
 const delegates = prisma as unknown as {
@@ -119,7 +121,10 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json(template, { status: 201 });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json({ error: 'A template with this name already exists' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'A template with this name already exists' },
+        { status: 409 },
+      );
     }
 
     return handleDiaryApiError(

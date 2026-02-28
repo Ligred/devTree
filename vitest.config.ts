@@ -5,9 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 const dirname =
-  typeof __dirname === 'undefined'
-    ? path.dirname(fileURLToPath(import.meta.url))
-    : __dirname;
+  typeof __dirname === 'undefined' ? path.dirname(fileURLToPath(import.meta.url)) : __dirname;
 
 export default defineConfig({
   resolve: {
@@ -21,21 +19,14 @@ export default defineConfig({
           name: 'unit',
           environment: 'happy-dom',
           include: ['**/*.test.{ts,tsx}'],
-          exclude: [
-            '**/node_modules/**',
-            '**/.next/**',
-            '**/stories/**',
-            '**/*.stories.*',
-          ],
+          exclude: ['**/node_modules/**', '**/.next/**', '**/stories/**', '**/*.stories.*'],
           setupFiles: ['vitest.setup.ts'],
           globals: true,
         },
       },
       {
         extends: true,
-        plugins: [
-          storybookTest({ configDir: path.join(dirname, '.storybook') }),
-        ],
+        plugins: [storybookTest({ configDir: path.join(dirname, '.storybook') })],
         test: {
           name: 'storybook',
           browser: {

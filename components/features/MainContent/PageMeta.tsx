@@ -1,10 +1,6 @@
 'use client';
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/shared/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shared/ui/tooltip';
 import { formatDateMedium, formatRelativeTime } from '@/lib/dateUtils';
 import { useI18n } from '@/lib/i18n';
 

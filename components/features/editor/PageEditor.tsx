@@ -21,16 +21,16 @@ import { createPortal } from 'react-dom';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, TextStyle } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { type Editor, EditorContent, type JSONContent, useEditor } from '@tiptap/react';
-import { useI18n } from '@/lib/i18n';
 import StarterKit from '@tiptap/starter-kit';
 import { Plus } from 'lucide-react';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 
+import { useI18n } from '@/lib/i18n';
 import { CommentMark } from '@/lib/tiptap-comment-mark';
 
 import { BlockControls, BlockPickerMenu } from './BlockControls';
@@ -72,10 +72,9 @@ function nodeMatchesFilter(node: ProseMirrorNode, activeTags: string[]): boolean
 // ── Apply or clear per-block display filtering ────────────────────────────────
 function applyBlockFilter(editor: Editor, activeTags: string[]) {
   const editorDom = editor.view.dom;
-  const root =
-    editorDom.classList.contains('ProseMirror')
-      ? editorDom
-      : editorDom.querySelector('.ProseMirror');
+  const root = editorDom.classList.contains('ProseMirror')
+    ? editorDom
+    : editorDom.querySelector('.ProseMirror');
   if (!root) return;
 
   if (activeTags.length === 0) {
@@ -159,7 +158,8 @@ export function PageEditor({
       // ── Built-in / community extensions ──────────────────────────────────
       StarterKit.configure({
         // Disable built-in code block only in notebook mode where custom Monaco node is used
-        codeBlock: !isNotebookMode,
+        // StarterKit expects `false | Partial<CodeBlockOptions> | undefined`
+        codeBlock: isNotebookMode ? false : undefined,
         // Disable extensions we configure explicitly below (to avoid Tiptap
         // "duplicate extension names" warning in StarterKit v3 which bundles them).
         link: false,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
 import { Prisma } from '@prisma/client';
 
 import { requireAuth } from '@/lib/apiAuth';
@@ -14,8 +15,7 @@ function handleDiaryApiError(scope: string, error: unknown, fallbackMessage: str
   ) {
     return NextResponse.json(
       {
-        error:
-          'Diary database schema is not up to date. Run Prisma migration and try again.',
+        error: 'Diary database schema is not up to date. Run Prisma migration and try again.',
         code: 'DIARY_SCHEMA_OUTDATED',
       },
       { status: 503 },
@@ -26,12 +26,17 @@ function handleDiaryApiError(scope: string, error: unknown, fallbackMessage: str
 }
 
 type DiaryTemplateDelegate = {
-  findUnique: (args: unknown) => Promise<{ id: string; journalId: string; journal: { ownerId: string } } | null>;
-  update: (args: unknown) => Promise<{ id: string; name: string; body: string; createdAt: Date; updatedAt: Date }>;
+  findUnique: (
+    args: unknown,
+  ) => Promise<{ id: string; journalId: string; journal: { ownerId: string } } | null>;
+  update: (
+    args: unknown,
+  ) => Promise<{ id: string; name: string; body: string; createdAt: Date; updatedAt: Date }>;
   delete: (args: unknown) => Promise<{ id: string }>;
 };
 
-const diaryTemplateDelegate = (prisma as unknown as { diaryTemplate: DiaryTemplateDelegate }).diaryTemplate;
+const diaryTemplateDelegate = (prisma as unknown as { diaryTemplate: DiaryTemplateDelegate })
+  .diaryTemplate;
 
 type Params = { params: Promise<{ journalId: string; templateId: string }> };
 
@@ -89,7 +94,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     return NextResponse.json(updated);
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return NextResponse.json({ error: 'A template with this name already exists' }, { status: 409 });
+      return NextResponse.json(
+        { error: 'A template with this name already exists' },
+        { status: 409 },
+      );
     }
 
     return handleDiaryApiError(

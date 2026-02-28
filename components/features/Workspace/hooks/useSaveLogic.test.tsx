@@ -6,12 +6,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Page } from '@/components/features/MainContent';
 import type { TreeRoot } from '@/components/features/Workspace/treeTypes';
 
-import { useSaveLogic } from './useSaveLogic';
 import {
-  updatePage as apiUpdatePage,
   savePageContent as apiSavePageContent,
+  updatePage as apiUpdatePage,
   WorkspaceApiError,
 } from '../workspaceApi';
+import { useSaveLogic } from './useSaveLogic';
 
 vi.mock('../workspaceApi', async () => {
   const actual = await vi.importActual<typeof import('../workspaceApi')>('../workspaceApi');
@@ -45,7 +45,12 @@ function makePage(overrides: Partial<Page> = {}): Page {
 }
 
 function createHarness(options?: { page?: Page; treeRoot?: TreeRoot }) {
-  const state: { pages: Page[]; treeRoot: TreeRoot; activePageId: string | null; mobileOpen: boolean } = {
+  const state: {
+    pages: Page[];
+    treeRoot: TreeRoot;
+    activePageId: string | null;
+    mobileOpen: boolean;
+  } = {
     pages: [options?.page ?? makePage()],
     treeRoot: options?.treeRoot ?? {
       id: 'root',
@@ -60,7 +65,8 @@ function createHarness(options?: { page?: Page; treeRoot?: TreeRoot }) {
   const serverPagesRef = { current: new Map<string, Page>([['p1', makePage()]]) };
 
   const setPages = vi.fn((value: Page[] | ((prev: Page[]) => Page[])) => {
-    state.pages = typeof value === 'function' ? (value as (prev: Page[]) => Page[])(state.pages) : value;
+    state.pages =
+      typeof value === 'function' ? (value as (prev: Page[]) => Page[])(state.pages) : value;
   });
 
   const setTreeRoot = vi.fn((value: TreeRoot | ((prev: TreeRoot) => TreeRoot)) => {
@@ -68,19 +74,19 @@ function createHarness(options?: { page?: Page; treeRoot?: TreeRoot }) {
       typeof value === 'function' ? (value as (prev: TreeRoot) => TreeRoot)(state.treeRoot) : value;
   });
 
-  const setActivePageId = vi.fn((value: string | null | ((prev: string | null) => string | null)) => {
-    state.activePageId =
-      typeof value === 'function'
-        ? (value as (prev: string | null) => string | null)(state.activePageId)
-        : value;
-  });
-
-  const setMobileSidebarOpen = vi.fn(
-    (value: boolean | ((prev: boolean) => boolean)) => {
-      state.mobileOpen =
-        typeof value === 'function' ? (value as (prev: boolean) => boolean)(state.mobileOpen) : value;
+  const setActivePageId = vi.fn(
+    (value: string | null | ((prev: string | null) => string | null)) => {
+      state.activePageId =
+        typeof value === 'function'
+          ? (value as (prev: string | null) => string | null)(state.activePageId)
+          : value;
     },
   );
+
+  const setMobileSidebarOpen = vi.fn((value: boolean | ((prev: boolean) => boolean)) => {
+    state.mobileOpen =
+      typeof value === 'function' ? (value as (prev: boolean) => boolean)(state.mobileOpen) : value;
+  });
 
   const showErrorToast = vi.fn();
 
@@ -242,7 +248,13 @@ describe('useSaveLogic', () => {
   it('title blur API conflict sets error and toast after debounce', async () => {
     vi.useFakeTimers();
     mockedUpdatePage.mockRejectedValueOnce(new WorkspaceApiError('dup', 409, 'DUPLICATE_NAME'));
-    const h = createHarness({ treeRoot: { id: 'root', name: 'Root', children: [{ id: 'p1', name: 'Page 1', pageId: 'p1' }] } });
+    const h = createHarness({
+      treeRoot: {
+        id: 'root',
+        name: 'Root',
+        children: [{ id: 'p1', name: 'Page 1', pageId: 'p1' }],
+      },
+    });
 
     act(() => {
       h.hook.result.current.setIsDirty(false);

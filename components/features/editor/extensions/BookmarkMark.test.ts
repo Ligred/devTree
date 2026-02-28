@@ -9,8 +9,14 @@ describe('BookmarkMark', () => {
     const parseHTML = config.parseHTML as () => Array<{ tag: string }>;
 
     const attrs = addAttributes();
-    const idAttr = attrs.id as { parseHTML: (el: HTMLElement) => string | null; renderHTML: (attrs: Record<string, unknown>) => Record<string, unknown> };
-    const labelAttr = attrs.label as { parseHTML: (el: HTMLElement) => string; renderHTML: (attrs: Record<string, unknown>) => Record<string, unknown> };
+    const idAttr = attrs.id as {
+      parseHTML: (el: HTMLElement) => string | null;
+      renderHTML: (attrs: Record<string, unknown>) => Record<string, unknown>;
+    };
+    const labelAttr = attrs.label as {
+      parseHTML: (el: HTMLElement) => string;
+      renderHTML: (attrs: Record<string, unknown>) => Record<string, unknown>;
+    };
 
     const el = document.createElement('span');
     el.dataset.bookmarkId = 'bm-1';
@@ -25,7 +31,10 @@ describe('BookmarkMark', () => {
 
   it('renders html with class and title from bookmark label', () => {
     const config = (BookmarkMark as unknown as { config: Record<string, unknown> }).config;
-    const renderHTML = config.renderHTML as (this: { options: { HTMLAttributes: Record<string, unknown> } }, args: { HTMLAttributes: Record<string, unknown> }) => unknown[];
+    const renderHTML = config.renderHTML as (
+      this: { options: { HTMLAttributes: Record<string, unknown> } },
+      args: { HTMLAttributes: Record<string, unknown> },
+    ) => unknown[];
 
     const rendered = renderHTML.call(
       { options: { HTMLAttributes: { 'data-test': 'x' } } },
@@ -50,7 +59,10 @@ describe('BookmarkMark', () => {
     };
 
     const commands = addCommands.call({ name: 'bookmark' }) as {
-      setBookmark: (attrs: { id: string; label: string }) => (ctx: { commands: typeof commandsApi }) => boolean;
+      setBookmark: (attrs: {
+        id: string;
+        label: string;
+      }) => (ctx: { commands: typeof commandsApi }) => boolean;
       unsetBookmark: () => (ctx: { commands: typeof commandsApi }) => boolean;
     };
 

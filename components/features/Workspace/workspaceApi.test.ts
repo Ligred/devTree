@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  WorkspaceApiError,
+  ApiBlock,
   apiBlockToBlock,
   apiPageToPage,
   createBlock,
@@ -41,18 +41,17 @@ describe('workspaceApi', () => {
   });
 
   it('converts API block/page shapes to app models', () => {
-    const apiBlock = {
+    const apiBlock: ApiBlock = {
       id: 'b1',
       type: 'text',
       order: 1,
       colSpan: 3,
-      tags: undefined,
+      tags: [],
       content: { text: 'hello' },
       pageId: 'p1',
       createdAt: '2026-01-01',
       updatedAt: '2026-01-02',
-    } as const;
-
+    };
     const mappedBlock = apiBlockToBlock(apiBlock);
     expect(mappedBlock.colSpan).toBe(2);
     expect(mappedBlock.tags).toEqual([]);
@@ -61,7 +60,7 @@ describe('workspaceApi', () => {
       id: 'p1',
       title: 'Page',
       order: 1,
-      tags: undefined,
+      tags: [],
       folderId: null,
       ownerId: 'u1',
       blocks: [apiBlock],
@@ -88,7 +87,9 @@ describe('workspaceApi', () => {
     await expect(createPage('New', null)).resolves.toEqual({ id: 'p2' });
     await expect(updatePage('p1', { title: 'T' })).resolves.toEqual({ id: 'p3' });
     await expect(deletePage('p1')).resolves.toBeUndefined();
-    await expect(savePageContent('p1', { type: 'doc', content: [] })).resolves.toEqual({ id: 'p4' });
+    await expect(savePageContent('p1', { type: 'doc', content: [] })).resolves.toEqual({
+      id: 'p4',
+    });
     await expect(movePage('p1', { folderId: 'f1', order: 1 })).resolves.toEqual({ id: 'p5' });
 
     expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/pages');
@@ -131,7 +132,8 @@ describe('workspaceApi', () => {
         'p1',
         {
           type: 'text',
-          content: { type: 'doc', content: [] },
+          // `content` type is more specific; use any to satisfy compiler in test
+          content: { type: 'doc', content: [] } as any,
           createdAt: '2026-01-01',
           updatedAt: '2026-01-01',
           colSpan: 1,
@@ -204,11 +206,9 @@ describe('workspaceApi', () => {
   });
 
   it('throws WorkspaceApiError with API payload details', async () => {
-    mockFetch.mockResolvedValueOnce(
-      jsonResponse({ error: 'No access', code: 'FORBIDDEN' }, 403),
-    );
+    mockFetch.mockResolvedValueOnce(jsonResponse({ error: 'No access', code: 'FORBIDDEN' }, 403));
 
-    await expect(fetchPages()).rejects.toMatchObject<Partial<WorkspaceApiError>>({
+    await expect(fetchPages()).rejects.toMatchObject({
       name: 'WorkspaceApiError',
       message: 'No access',
       status: 403,
@@ -224,7 +224,7 @@ describe('workspaceApi', () => {
       }),
     );
 
-    await expect(fetchFolders()).rejects.toMatchObject<Partial<WorkspaceApiError>>({
+    await expect(fetchFolders()).rejects.toMatchObject({
       name: 'WorkspaceApiError',
       message: 'GET /api/folders → 502',
       status: 502,

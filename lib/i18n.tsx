@@ -174,7 +174,10 @@ export function I18nProvider({
    *   useMemo ensures referential stability when locale, setLocale, and t are
    *   all unchanged.
    */
-  const value = useMemo(() => ({ locale, setLocale: persistLocale, t }), [locale, persistLocale, t]);
+  const value = useMemo(
+    () => ({ locale, setLocale: persistLocale, t }),
+    [locale, persistLocale, t],
+  );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

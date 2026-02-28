@@ -4,8 +4,8 @@ import React from 'react';
 
 import { usePathname, useRouter } from 'next/navigation';
 
-import { motion, useReducedMotion } from 'motion/react';
 import { BarChart2, BookHeart, BookOpen, Settings } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { useSettingsDialog } from '@/components/features/SettingsDialog/useSettingsDialog';
 import { TooltipProvider } from '@/components/shared/ui/tooltip';
@@ -85,7 +85,11 @@ export function ActivityBar() {
         style={{ WebkitOverflowScrolling: 'touch' }}
         initial={reducedMotion ? false : { x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        transition={reducedMotion ? { duration: 0.01 } : { type: 'spring', stiffness: 360, damping: 30, mass: 0.9 }}
+        transition={
+          reducedMotion
+            ? { duration: 0.01 }
+            : { type: 'spring', stiffness: 360, damping: 30, mass: 0.9 }
+        }
       >
         {/* Top section items */}
         <div className="flex flex-none flex-row items-center gap-1 md:flex-1 md:flex-col">
@@ -95,7 +99,7 @@ export function ActivityBar() {
               icon={item.icon}
               label={getItemLabel(item.id)}
               active={activeId === item.id}
-              disabled={'disabled' in item ? item.disabled : false}
+              disabled={!!('disabled' in item && item.disabled)}
               onClick={() => {
                 if ('disabled' in item && item.disabled) return;
                 navigateToSection(item);

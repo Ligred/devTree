@@ -18,7 +18,7 @@ const AlertDialogOverlay = React.forwardRef<
       'motion-overlay fixed inset-0 z-50 bg-black/50 transition-opacity',
       'data-[state=open]:animate-in data-[state=closed]:animate-out',
       'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
-      'data-[state=open]:duration-300 data-[state=closed]:duration-180 motion-reduce:animate-none motion-reduce:duration-0',
+      'data-[state=closed]:duration-180 data-[state=open]:duration-300 motion-reduce:animate-none motion-reduce:duration-0',
       className,
     )}
     {...props}
@@ -40,7 +40,7 @@ const AlertDialogContent = React.forwardRef<
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
         'data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
         'data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95',
-        'data-[state=open]:duration-220 data-[state=closed]:duration-140 motion-reduce:animate-none motion-reduce:duration-0',
+        'data-[state=closed]:duration-140 data-[state=open]:duration-220 motion-reduce:animate-none motion-reduce:duration-0',
         className,
       )}
       {...props}

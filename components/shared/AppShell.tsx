@@ -5,8 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 
-import { motion, useReducedMotion } from 'motion/react';
 import { BookOpen, Flame } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { SettingsDialog } from '@/components/features/SettingsDialog/SettingsDialog';
 import { MotivationBanner } from '@/components/features/Statistics/MotivationBanner';
