@@ -283,6 +283,23 @@
     will-change: transform, opacity;
   }
 
+  /* Sidebar subtle expand/collapse transition */
+  .sidebar-animate {
+    transition: transform var(--motion-duration-standard) var(--motion-ease-standard),
+      opacity var(--motion-duration-standard) var(--motion-ease-standard);
+    will-change: transform, opacity;
+  }
+
+  .sidebar-collapsed {
+    transform: translateX(-6px) scale(0.996);
+    opacity: 0.86;
+  }
+
+  .sidebar-expanded {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+
   .icon-spin-hover:hover > :where(svg),
   .icon-spin-hover:focus-visible > :where(svg) {
     transform: rotate(180deg) scale(1.13);

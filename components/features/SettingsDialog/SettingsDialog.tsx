@@ -33,7 +33,7 @@ import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
 
-import { BarChart2, Palette, SlidersHorizontal, User } from 'lucide-react';
+import { BarChart2, MapPinned, Palette, SlidersHorizontal, User } from 'lucide-react';
 
 import {
   Dialog,
@@ -50,7 +50,7 @@ import { playUiSound, primeUiSounds } from '@/lib/stores/uiSoundEffects';
 import { saveUserPreferences, saveUserPreferencesWithOptions } from '@/lib/userPreferences';
 import { cn } from '@/lib/utils';
 
-type SettingsTab = 'account' | 'appearance' | 'features' | 'statistics';
+type SettingsTab = 'account' | 'appearance' | 'features' | 'diary' | 'statistics';
 
 function getInitials(user: { name?: string | null; email?: string | null }) {
   if (user?.name) {
@@ -176,6 +176,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     hoverSoundsVolume,
     typingSoundsVolume,
     dictationFormattingEnabled,
+    diaryLocationEnabled,
+    diaryTemperatureUnit,
     setTagsPerPage,
     setTagsPerBlock,
     setRecordingStartSound,
@@ -186,6 +188,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setHoverSoundsVolume,
     setTypingSoundsVolume,
     setDictationFormatting,
+    setDiaryLocationEnabled,
+    setDiaryTemperatureUnit,
   } = useSettingsStore();
   const {
     enabled: statisticsEnabled,
@@ -209,6 +213,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [browserLocationBlocked, setBrowserLocationBlocked] = useState(false);
+  const [locationPermissionMessage, setLocationPermissionMessage] = useState<string | null>(null);
 
   const user = session?.user;
   const initials = user ? getInitials(user) : '?';
@@ -217,6 +223,56 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- calling setState in useEffect is valid React
     if (open && user?.name !== undefined) setDisplayName(user.name ?? '');
   }, [open, user?.name]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!('geolocation' in navigator)) {
+      setBrowserLocationBlocked(true);
+      setLocationPermissionMessage(t('settings.diaryLocationBlockedUnsupported'));
+      if (diaryLocationEnabled) {
+        setDiaryLocationEnabled(false);
+        void saveUserPreferences({ diaryLocationEnabled: false });
+      }
+      return;
+    }
+
+    if (!('permissions' in navigator) || typeof navigator.permissions.query !== 'function') {
+      setBrowserLocationBlocked(false);
+      setLocationPermissionMessage(null);
+      return;
+    }
+
+    let disposed = false;
+    let permissionStatus: PermissionStatus | null = null;
+
+    const syncState = (state: PermissionState) => {
+      if (disposed) return;
+      const blocked = state === 'denied';
+      setBrowserLocationBlocked(blocked);
+      setLocationPermissionMessage(blocked ? t('settings.diaryLocationBlockedByBrowser') : null);
+      if (blocked && diaryLocationEnabled) {
+        setDiaryLocationEnabled(false);
+        void saveUserPreferences({ diaryLocationEnabled: false });
+      }
+    };
+
+    void navigator.permissions
+      .query({ name: 'geolocation' })
+      .then((result) => {
+        permissionStatus = result;
+        syncState(result.state);
+        result.onchange = () => syncState(result.state);
+      })
+      .catch(() => {
+        setBrowserLocationBlocked(false);
+        setLocationPermissionMessage(null);
+      });
+
+    return () => {
+      disposed = true;
+      if (permissionStatus) permissionStatus.onchange = null;
+    };
+  }, [diaryLocationEnabled, open, setDiaryLocationEnabled, t]);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -323,6 +379,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     { id: 'account', labelKey: 'settings.sectionAccount', icon: <User size={18} /> },
     { id: 'appearance', labelKey: 'settings.sectionAppearance', icon: <Palette size={18} /> },
     { id: 'features', labelKey: 'settings.sectionFeatures', icon: <SlidersHorizontal size={18} /> },
+    { id: 'diary', labelKey: 'settings.sectionDiary', icon: <MapPinned size={18} /> },
     { id: 'statistics', labelKey: 'settings.sectionStatistics', icon: <BarChart2 size={18} /> },
   ];
 
@@ -829,6 +886,58 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       label={t('settings.trackContentEvents')}
                     />
                   </SettingRow>
+                </div>
+              </section>
+            )}
+
+            {activeTab === 'diary' && (
+              <section className="space-y-6 p-4 sm:p-6">
+                <SectionHeader title={t('settings.sectionDiary')} />
+                <div className="space-y-4">
+                  <SettingRow
+                    label={t('settings.diaryLocation')}
+                    description={
+                      locationPermissionMessage ?? t('settings.diaryLocationDescription')
+                    }
+                  >
+                    <Switch
+                      checked={diaryLocationEnabled}
+                      disabled={browserLocationBlocked}
+                      onChange={(v) => {
+                        setDiaryLocationEnabled(v);
+                        void saveUserPreferences({ diaryLocationEnabled: v });
+                      }}
+                      label={t('settings.diaryLocation')}
+                    />
+                  </SettingRow>
+
+                  {diaryLocationEnabled && !browserLocationBlocked && (
+                    <SettingRow
+                      label={t('settings.diaryTemperatureUnit')}
+                      description={t('settings.diaryTemperatureUnitDescription')}
+                    >
+                      <div className="flex gap-1.5">
+                        <SegmentButton
+                          active={diaryTemperatureUnit === 'c'}
+                          onClick={() => {
+                            setDiaryTemperatureUnit('c');
+                            void saveUserPreferences({ diaryTemperatureUnit: 'c' });
+                          }}
+                        >
+                          {t('settings.temperatureCelsius')}
+                        </SegmentButton>
+                        <SegmentButton
+                          active={diaryTemperatureUnit === 'f'}
+                          onClick={() => {
+                            setDiaryTemperatureUnit('f');
+                            void saveUserPreferences({ diaryTemperatureUnit: 'f' });
+                          }}
+                        >
+                          {t('settings.temperatureFahrenheit')}
+                        </SegmentButton>
+                      </div>
+                    </SettingRow>
+                  )}
                 </div>
               </section>
             )}

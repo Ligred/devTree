@@ -26,6 +26,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import { Color, TextStyle } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
 import { type Editor, EditorContent, type JSONContent, useEditor } from '@tiptap/react';
+import { useI18n } from '@/lib/i18n';
 import StarterKit from '@tiptap/starter-kit';
 import { Plus } from 'lucide-react';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
@@ -44,6 +45,7 @@ import { ImageNode } from './extensions/ImageNode';
 import { InlineTagMark } from './extensions/InlineTagMark';
 import { LinkCardNode } from './extensions/LinkCardNode';
 import { TableBlockNode } from './extensions/TableBlockNode';
+import { FontFamily, FontSize } from './extensions/Typography';
 import { VideoNode } from './extensions/VideoNode';
 import './PageEditor.css';
 
@@ -110,6 +112,7 @@ const CUSTOM_NODE_NAMES = [
 type Props = {
   content: JSONContent | null;
   editable: boolean;
+  mode?: 'notebook' | 'diary';
   onChange?: (json: JSONContent) => void;
   pageId?: string;
   /** Called once the Tiptap Editor instance is ready (or null on destroy). */
@@ -124,11 +127,14 @@ type Props = {
 export function PageEditor({
   content,
   editable,
+  mode = 'notebook',
   onChange,
   pageId,
   onEditorReady,
   activeFilterTags = [],
 }: Readonly<Props>) {
+  const isNotebookMode = mode === 'notebook';
+  const { t } = useI18n();
   /**
    * Tracks the last JSON content string that was emitted via onChange.
    * Used to prevent the "sync from outside" useEffect from resetting the editor
@@ -152,42 +158,46 @@ export function PageEditor({
     extensions: [
       // ── Built-in / community extensions ──────────────────────────────────
       StarterKit.configure({
-        // Disable built-in code block so our Monaco CodeBlockNode takes over
-        codeBlock: false,
+        // Disable built-in code block only in notebook mode where custom Monaco node is used
+        codeBlock: !isNotebookMode,
         // Disable extensions we configure explicitly below (to avoid Tiptap
         // "duplicate extension names" warning in StarterKit v3 which bundles them).
         link: false,
         underline: false,
       }),
-      Placeholder.configure({ placeholder: 'Click + to add a block…' }),
+      Placeholder.configure({
+        placeholder: isNotebookMode
+          ? t('editor.placeholderNotebook')
+          : t('editor.placeholderDiary'),
+      }),
       Underline,
       Link.configure({ openOnClick: !editable, autolink: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Highlight.configure({ multicolor: true }),
       TextStyle,
       Color,
+      FontFamily,
+      FontSize,
 
       // ── Custom marks ──────────────────────────────────────────────────────
       CommentMark,
       BookmarkMark,
       InlineTagMark,
-      // ── Custom atom nodes ─────────────────────────────────────────────────
-      CodeBlockNode,
-      ChecklistNode,
-      CanvasNode,
-      AudioNode,
-      VideoNode,
-      ImageNode,
-      LinkCardNode,
-      TableBlockNode,
-
-      // ── Drag handle (shows a handle on hover beside every block) ──────────
-      // We use the default behaviour — the library creates its own .drag-handle
-      // div beside the editor. BlockControls then portals its React buttons
-      // into that element after mount.
-      GlobalDragHandle.configure({
-        customNodes: CUSTOM_NODE_NAMES,
-      }),
+      ...(isNotebookMode
+        ? [
+            CodeBlockNode,
+            ChecklistNode,
+            CanvasNode,
+            AudioNode,
+            VideoNode,
+            ImageNode,
+            LinkCardNode,
+            TableBlockNode,
+            GlobalDragHandle.configure({
+              customNodes: CUSTOM_NODE_NAMES,
+            }),
+          ]
+        : []),
     ],
 
     content: content ?? undefined,
@@ -291,10 +301,10 @@ export function PageEditor({
       <div className="page-editor-root flex flex-col">
         <div className="page-editor-body relative flex-1 px-6 py-4">
           <EditorBubbleMenu editor={editor} />
-          {editable && <BlockControls editor={editor} />}
+          {editable && isNotebookMode && <BlockControls editor={editor} />}
           <EditorContent editor={editor} />
         </div>
-        {editable && <AddBlockButton editor={editor} />}
+        {editable && isNotebookMode && <AddBlockButton editor={editor} />}
       </div>
     </EditableContext.Provider>
   );

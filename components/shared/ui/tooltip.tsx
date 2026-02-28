@@ -7,7 +7,7 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 import { cn } from '@/lib/utils';
 
 const TooltipProvider = ({
-  delayDuration = 120,
+  delayDuration = 0,
   skipDelayDuration = 0,
   disableHoverableContent = true,
   ...props

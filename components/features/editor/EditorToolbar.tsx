@@ -70,6 +70,25 @@ const HIGHLIGHT_COLORS = [
   { name: 'Orange', value: '#fed7aa' },
 ];
 
+const FONT_FAMILIES = [
+  { name: 'Default', value: '' },
+  { name: 'Sans', value: 'var(--font-geist-sans)' },
+  { name: 'Serif', value: 'Georgia, serif' },
+  { name: 'Mono', value: 'var(--font-geist-mono)' },
+];
+
+const FONT_SIZES = [
+  { name: 'Default', value: '' },
+  { name: '12', value: '12px' },
+  { name: '14', value: '14px' },
+  { name: '16', value: '16px' },
+  { name: '18', value: '18px' },
+  { name: '20', value: '20px' },
+  { name: '24', value: '24px' },
+  { name: '28', value: '28px' },
+  { name: '32', value: '32px' },
+];
+
 // ─── DictationOverlay ─────────────────────────────────────────────────────────
 
 /**
@@ -153,6 +172,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
 
   const linkInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  const linkSelectionRef = useRef<{ from: number; to: number } | null>(null);
 
   const [linkOpen, setLinkOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
@@ -162,6 +182,9 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
   const [dictationLanguage, setDictationLanguage] = useState<Locale>(locale);
   const [interimText, setInterimText] = useState('');
   const dictationSelectionRef = useRef<{ from: number; to: number } | null>(null);
+  const textStyleAttrs = editor.getAttributes('textStyle') as { fontFamily?: string; fontSize?: string };
+  const activeFontFamily = textStyleAttrs.fontFamily ?? '';
+  const activeFontSize = textStyleAttrs.fontSize ?? '';
 
   const closeAll = () => {
     setLinkOpen(false);
@@ -174,12 +197,27 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
 
   const setLink = useCallback(() => {
     const url = linkInputRef.current?.value?.trim() ?? '';
-    if (url) editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    if (url) {
+      const savedSelection = linkSelectionRef.current ?? editor.state.selection;
+      if (savedSelection.from !== savedSelection.to) {
+        editor
+          .chain()
+          .focus()
+          .setTextSelection({ from: savedSelection.from, to: savedSelection.to })
+          .extendMarkRange('link')
+          .setLink({ href: url })
+          .run();
+      } else {
+        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+      }
+    }
+    linkSelectionRef.current = null;
     setLinkOpen(false);
   }, [editor]);
 
   const unsetLink = useCallback(() => {
     editor.chain().focus().unsetLink().run();
+    linkSelectionRef.current = null;
     setLinkOpen(false);
   }, [editor]);
 
@@ -285,6 +323,52 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
       >
         <Heading3 size={14} />
       </ToolbarButton>
+
+      <span className="bg-border mx-1 h-5 w-px" />
+
+      <label className="sr-only" htmlFor="toolbar-font-family">
+        Font family
+      </label>
+      <select
+        id="toolbar-font-family"
+        title="Font family"
+        className="border-border bg-background h-7 rounded border px-2 text-xs"
+        value={activeFontFamily}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (value) editor.chain().focus().setFontFamily(value).run();
+          else editor.chain().focus().unsetFontFamily().run();
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {FONT_FAMILIES.map((font) => (
+          <option key={font.name} value={font.value}>
+            {font.name}
+          </option>
+        ))}
+      </select>
+
+      <label className="sr-only" htmlFor="toolbar-font-size">
+        Font size
+      </label>
+      <select
+        id="toolbar-font-size"
+        title="Font size"
+        className="border-border bg-background h-7 rounded border px-2 text-xs"
+        value={activeFontSize}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (value) editor.chain().focus().setFontSize(value).run();
+          else editor.chain().focus().unsetFontSize().run();
+        }}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        {FONT_SIZES.map((size) => (
+          <option key={size.name} value={size.value}>
+            {size.name}
+          </option>
+        ))}
+      </select>
 
       <span className="bg-border mx-1 h-5 w-px" />
 
@@ -519,6 +603,8 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
           title={editor.isActive('link') ? 'Edit link' : 'Add link'}
           active={editor.isActive('link')}
           onClick={() => {
+            const { from, to } = editor.state.selection;
+            linkSelectionRef.current = { from, to };
             setLinkOpen((v) => !v);
             setColorOpen(false);
             setHighlightOpen(false);

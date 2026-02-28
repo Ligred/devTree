@@ -19,6 +19,8 @@ export type UserPreferencesPayload = {
   hoverSoundsVolume?: number;
   typingSoundsVolume?: number;
   dictationFormattingEnabled?: boolean;
+  diaryLocationEnabled?: boolean;
+  diaryTemperatureUnit?: 'c' | 'f';
   // Statistics tracking (default true when absent)
   statisticsEnabled?: boolean;
   trackSessionTime?: boolean;

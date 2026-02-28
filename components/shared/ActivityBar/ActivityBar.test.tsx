@@ -21,6 +21,18 @@ vi.mock('@/lib/statsStore', () => ({
   useStatsStore: () => ({ enabled: true }),
 }));
 
+vi.mock('@/lib/i18n', () => ({
+  useI18n: () => ({
+    t: (key: string) => {
+      if (key === 'nav.notebook') return 'Notebook';
+      if (key === 'nav.statistics') return 'Statistics';
+      if (key === 'nav.diary') return 'Diary';
+      if (key === 'nav.settings') return 'Settings';
+      return key;
+    },
+  }),
+}));
+
 describe('ActivityBar', () => {
   beforeEach(() => {
     pushMock.mockReset();

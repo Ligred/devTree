@@ -9,6 +9,7 @@ import { BarChart2, BookHeart, BookOpen, Settings } from 'lucide-react';
 
 import { useSettingsDialog } from '@/components/features/SettingsDialog/useSettingsDialog';
 import { TooltipProvider } from '@/components/shared/ui/tooltip';
+import { useI18n } from '@/lib/i18n';
 import { getLastNotebookPageId } from '@/lib/notebookPageMemory';
 import { useStatsStore } from '@/lib/statsStore';
 
@@ -22,17 +23,16 @@ const TOP_ITEMS = [
     href: '/notebook',
   },
   {
+    id: 'diary',
+    label: 'Diary',
+    icon: <BookHeart size={20} />,
+    href: '/diary',
+  },
+  {
     id: 'statistics',
     label: 'Statistics',
     icon: <BarChart2 size={20} />,
     href: '/statistics',
-  },
-  {
-    id: 'diary',
-    label: 'Diary (coming soon)',
-    icon: <BookHeart size={20} />,
-    href: null,
-    disabled: true,
   },
 ] as const;
 
@@ -41,18 +41,26 @@ export function ActivityBar() {
   const router = useRouter();
   const reducedMotion = useReducedMotion();
   const { openSettings } = useSettingsDialog();
+  const { t } = useI18n();
   const { enabled: statisticsEnabled } = useStatsStore();
 
   /** Determine active section from current pathname */
   const activeId = (() => {
     if (pathname === '/' || pathname === '' || pathname.startsWith('/notebook')) return 'notebook';
     if (pathname.startsWith('/statistics')) return 'statistics';
+    if (pathname.startsWith('/diary')) return 'diary';
     return 'notebook';
   })();
 
   const visibleItems = TOP_ITEMS.filter(
     (item) => !(item.id === 'statistics' && !statisticsEnabled),
   );
+
+  const getItemLabel = (itemId: (typeof TOP_ITEMS)[number]['id']) => {
+    if (itemId === 'notebook') return t('nav.notebook');
+    if (itemId === 'statistics') return t('nav.statistics');
+    return t('nav.diary');
+  };
 
   const navigateToSection = (item: (typeof TOP_ITEMS)[number]) => {
     if (!item.href) return;
@@ -85,7 +93,7 @@ export function ActivityBar() {
             <ActivityBarItem
               key={item.id}
               icon={item.icon}
-              label={item.label}
+              label={getItemLabel(item.id)}
               active={activeId === item.id}
               disabled={'disabled' in item ? item.disabled : false}
               onClick={() => {
@@ -99,7 +107,7 @@ export function ActivityBar() {
         {/* Pinned bottom: Settings */}
         <ActivityBarItem
           icon={<Settings size={20} />}
-          label="Settings"
+          label={t('nav.settings')}
           onClick={() => {
             openSettings();
           }}
