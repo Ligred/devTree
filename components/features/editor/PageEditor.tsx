@@ -44,10 +44,10 @@ import { CodeBlockNode } from './extensions/CodeBlockNode';
 import { ImageNode } from './extensions/ImageNode';
 import { InlineTagMark } from './extensions/InlineTagMark';
 import { LinkCardNode } from './extensions/LinkCardNode';
+import { SlashCommand } from './extensions/SlashCommand';
 import { TableBlockNode } from './extensions/TableBlockNode';
 import { FontFamily, FontSize } from './extensions/Typography';
 import { VideoNode } from './extensions/VideoNode';
-import { SlashCommand } from './extensions/SlashCommand';
 import './PageEditor.css';
 
 // ── Tag-filter helper ─────────────────────────────────────────────────────────

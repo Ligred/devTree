@@ -21,4 +21,3 @@ export function setLastNotebookPageId(pageId: string): void {
     // Ignore storage failures (private mode, quota, etc.)
   }
 }
-

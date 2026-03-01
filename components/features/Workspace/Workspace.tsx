@@ -21,11 +21,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useRouter } from 'next/navigation';
 
-import { ChevronLeft, ChevronRight, FilePlus, FolderPlus, Search, X } from 'lucide-react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { ChevronLeft, FilePlus, FolderPlus, Search, X } from 'lucide-react';
+import { AnimatePresence, useReducedMotion } from 'motion/react';
 
 import { FileExplorer } from '@/components/features/FileExplorer/FileExplorer';
 import { MainContent } from '@/components/features/MainContent';
+import type { Page } from '@/components/features/MainContent/types';
+import { Sidebar } from '@/components/shared/Sidebar';
 import type { TreeDataItem } from '@/components/shared/ui/tree-view';
 import { useWritingTracking } from '@/lib/hooks/useWritingTracking';
 import { useI18n } from '@/lib/i18n';
@@ -48,17 +50,76 @@ import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 const I18N_CLEAR_TAG_FILTER = 'sidebar.clearTagFilter';
 const MIN_PAGE_TRANSITION_MS = 150;
 
+// Search results list displayed inside the sidebar drawer. This used to be
+// inlined twice (desktop/mobile) but we extract the shared markup here so the
+// logic lives in one place and the parent can simply swap between
+// `<FileExplorer>`/`<SearchResults>` based on `isSearchActive`.
+
+type SearchResultsProps = {
+  searchResults: Page[];
+  query: string;
+  onSelect: (id: string) => void;
+  activePageId: string | null;
+};
+
+function SearchResults({
+  searchResults,
+  query,
+  onSelect,
+  activePageId,
+}: Readonly<SearchResultsProps>) {
+  const { t } = useI18n();
+
+  return (
+    <div className="flex-1 overflow-y-auto px-2 py-2">
+      {searchResults.length === 0 ? (
+        <p className="text-muted-foreground px-2 py-3 text-xs">
+          {t('sidebar.noResults', { query })}
+        </p>
+      ) : (
+        searchResults.map((page) => (
+          <button
+            key={page.id}
+            type="button"
+            className={cn(
+              'motion-interactive flex w-full flex-col items-start rounded-md px-3 py-2 text-left text-sm transition-colors',
+              page.id === activePageId
+                ? 'bg-accent text-accent-foreground'
+                : 'text-foreground hover:bg-accent/50',
+            )}
+            onClick={() => onSelect(page.id)}
+          >
+            <span className="truncate font-medium">{page.title}</span>
+            {(page.tags ?? []).length > 0 && (
+              <span className="mt-0.5 flex flex-wrap gap-1">
+                {(page.tags ?? []).map((tag) => (
+                  <span
+                    key={tag}
+                    className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-xs"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </span>
+            )}
+          </button>
+        ))
+      )}
+    </div>
+  );
+}
+
 type WorkspaceProps = Readonly<{
   initialRoutePageId?: string;
 }>;
 
-// eslint-disable-next-line sonarjs/cognitive-complexity -- top-level workspace container coordinates routing, tree, and save workflows
 export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   // ─── Layout / search / filter state ─────────────────────────────────────
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [leftPanelHidden, setLeftPanelHidden] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [isPageTransitioning, setIsPageTransitioning] = useState(false);
   const [transitionStartedAt, setTransitionStartedAt] = useState<number | null>(null);
   const [errorToast, setErrorToast] = useState<string | null>(null);
@@ -232,6 +293,8 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
       return true;
     });
   }, [pages, searchQuery, activeTags]);
+
+  const isSearchActive = searchResults !== null;
 
   const treeData: TreeDataItem[] = useMemo(
     () =>
@@ -416,7 +479,10 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   useEffect(() => {
     const media = globalThis.matchMedia?.('(min-width: 768px)');
     if (!media) return;
-    const update = () => setIsDesktop(media.matches);
+    const update = () => {
+      setIsDesktop(media.matches);
+      setIsMobile(!media.matches);
+    };
     update();
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
@@ -441,18 +507,20 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   }, [isDesktop, mobileSidebarOpen]);
 
   // ─── Render ──────────────────────────────────────────────────────────────
-  const isCollapsedDesktop = isDesktop && leftPanelHidden;
-  const sidebarWidth = isCollapsedDesktop ? 40 : 256;
-  const showSidebar = isDesktop || mobileSidebarOpen;
+  // sidebarWidth removed (unused)
+  // On desktop we always render the sidebar (no collapse feature currently).
+  // On mobile the sidebar opens via mobileSidebarOpen and uses the
+  // Sidebar.mobileOverlay prop for animation. We avoid conditional
+  // rendering so that AnimatePresence exit animations run when closing.
+  const showSidebar = true;
   let sidebarTransition:
     | { duration: number }
     | { duration: number; ease: [number, number, number, number] };
   if (reducedMotion) {
     sidebarTransition = { duration: 0.01 };
-  } else if (isDesktop) {
-    sidebarTransition = { duration: 0.34, ease: [0.22, 1, 0.36, 1] };
   } else {
-    sidebarTransition = { duration: 0.26, ease: [0.22, 1, 0.36, 1] };
+    // use same timing on desktop and mobile to match diary behavior
+    sidebarTransition = { duration: 0.34, ease: [0.22, 1, 0.36, 1] };
   }
 
   return (
@@ -467,242 +535,148 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
         </div>
       )}
 
-      {/* Mobile backdrop */}
-      <AnimatePresence>
-        {mobileSidebarOpen && (
-          <motion.div
-            key="mobile-sidebar-backdrop"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reducedMotion ? 0.01 : 0.2, ease: 'easeOut' }}
-            className="fixed inset-0 z-40 bg-black/40 md:hidden"
-            aria-hidden="true"
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-
       {/* ─── Sidebar ───────────────────────────────────────────────────────── */}
-      <AnimatePresence initial={false}>
-        {showSidebar && (
-          <motion.aside
-            key={isDesktop ? 'desktop-sidebar' : 'mobile-sidebar'}
-            className={cn(
-              'alive-surface border-border bg-card flex shrink-0 flex-col overflow-hidden border-r shadow-sm',
-              isDesktop ? 'relative z-auto' : 'fixed inset-y-0 left-0 z-50',
-            )}
-            initial={isDesktop ? false : { x: '-100%' }}
-            animate={isDesktop ? { width: sidebarWidth, x: 0 } : { width: '100vw', x: 0 }}
-            exit={isDesktop ? undefined : { x: '-100%' }}
-            transition={sidebarTransition}
-          >
-            <div
-              className={cn(
-                'flex h-full flex-col',
-                isDesktop ? 'w-64 min-w-64' : 'w-screen min-w-screen',
-              )}
+      {/* render sidebar unconditionally so mobile overlay animation can run on hide */}
+      <Sidebar
+        visible={isDesktop && !leftPanelHidden}
+        onShow={() => setLeftPanelHidden(false)}
+        transition={sidebarTransition}
+        mobileOverlay={{ open: mobileSidebarOpen, onClose: () => setMobileSidebarOpen(false) }}
+      >
+        <div
+          className={cn(
+            'flex h-full w-full flex-col',
+            isMobile ? 'max-w-full' : 'max-w-[256px]',
+            'md:w-64 md:min-w-64',
+          )}
+        >
+          {/* Sidebar header */}
+          <div className="border-border flex items-center justify-between border-b px-4 py-3">
+            <h1 className="text-primary text-xl font-semibold tracking-tight">
+              {t('sidebar.titleNotes')}
+            </h1>
+            <button
+              type="button"
+              aria-label={t('sidebar.hide')}
+              data-ui-sound-event="close"
+              className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
+              onClick={() => {
+                if (isDesktop) {
+                  setLeftPanelHidden(true);
+                } else {
+                  setMobileSidebarOpen(false);
+                }
+              }}
             >
-              {/* Sidebar header */}
-              <div className="border-border flex items-center justify-between border-b px-4 py-3">
-                <h1 className="text-primary text-xl font-semibold tracking-tight">
-                  {t('sidebar.titleNotes')}
-                </h1>
-                <button
-                  type="button"
-                  aria-label={isDesktop ? t('sidebar.hide') : 'Close sidebar'}
-                  data-ui-sound-event="close"
-                  className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
-                  onClick={() => {
-                    if (isDesktop) setLeftPanelHidden(true);
-                    else setMobileSidebarOpen(false);
-                  }}
-                >
-                  {isDesktop ? <ChevronLeft size={20} /> : <X size={20} />}
-                </button>
-              </div>
+              <ChevronLeft size={20} />
+            </button>
+          </div>
 
-              {/* New page / folder buttons */}
-              <div className="border-border flex gap-2 border-b px-3 py-2.5">
-                <button
-                  type="button"
-                  aria-label={t('sidebar.newPage')}
-                  data-testid="sidebar-new-page"
-                  className="motion-interactive border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-3 sm:text-sm"
-                  onClick={() => treeOps.createFile(ROOT_ID)}
-                >
-                  <FilePlus size={16} className="shrink-0" />
-                  <span className="truncate">{t('sidebar.newPage')}</span>
-                </button>
-                <button
-                  type="button"
-                  aria-label={t('sidebar.newFolder')}
-                  data-testid="sidebar-new-folder"
-                  className="motion-interactive border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-3 sm:text-sm"
-                  onClick={() => treeOps.createFolder(ROOT_ID)}
-                >
-                  <FolderPlus size={16} className="shrink-0" />
-                  <span className="truncate">{t('sidebar.newFolder')}</span>
-                </button>
-              </div>
+          {/* New page / folder buttons */}
+          <div className="border-border flex gap-2 border-b px-3 py-2.5">
+            <button
+              type="button"
+              aria-label={t('sidebar.newPage')}
+              data-testid="sidebar-new-page"
+              className="motion-interactive border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-3 sm:text-sm"
+              onClick={() => treeOps.createFile(ROOT_ID)}
+            >
+              <FilePlus size={16} className="shrink-0" />
+              <span className="truncate">{t('sidebar.newPage')}</span>
+            </button>
+            <button
+              type="button"
+              aria-label={t('sidebar.newFolder')}
+              data-testid="sidebar-new-folder"
+              className="motion-interactive border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors sm:gap-2 sm:px-3 sm:text-sm"
+              onClick={() => treeOps.createFolder(ROOT_ID)}
+            >
+              <FolderPlus size={16} className="shrink-0" />
+              <span className="truncate">{t('sidebar.newFolder')}</span>
+            </button>
+          </div>
 
-              {/* Search input */}
-              <div className="border-border border-b px-3 py-2">
-                <div className="border-border bg-background flex items-center gap-2 rounded-lg border px-3 py-1.5">
-                  <Search size={14} className="text-muted-foreground shrink-0" />
-                  <input
-                    ref={searchInputRef}
-                    data-testid="sidebar-search-input"
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={t('sidebar.search')}
-                    className="text-foreground placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-none"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery('')}
-                      className="motion-interactive icon-spin-hover text-muted-foreground hover:text-foreground"
-                      aria-label="Clear search"
-                      data-testid="sidebar-clear-search"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
+          <div className="border-border border-b px-3 py-2">
+            <div className="border-border bg-background flex items-center gap-2 rounded-lg border px-3 py-1.5">
+              <Search size={14} className="text-muted-foreground shrink-0" />
+              <input
+                ref={searchInputRef}
+                data-testid="sidebar-search-input"
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('sidebar.search')}
+                className="text-foreground placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-sm outline-none"
+              />
+            </div>
+          </div>
 
-              {/* Tag cloud */}
-              {tagsPerPageEnabled && allTags.length > 0 && (
-                <div className="border-border border-b px-3 py-2">
-                  <div className="flex flex-wrap gap-1">
-                    {activeTags.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setActiveTags([])}
-                        className="motion-interactive flex items-center gap-1 rounded-full border border-indigo-300 px-2 py-0.5 text-xs text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
-                        title={t(I18N_CLEAR_TAG_FILTER)}
-                      >
-                        <X size={9} />
-                        {t(I18N_CLEAR_TAG_FILTER)}
-                      </button>
-                    )}
-                    {allTags.map((tag) => {
-                      const isActive = activeTags.includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => toggleTag(tag)}
-                          className={cn(
-                            'motion-interactive rounded-full border px-2 py-0.5 text-xs font-medium transition-colors',
-                            isActive
-                              ? 'border-indigo-400 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500'
-                              : 'border-border bg-muted/40 text-muted-foreground hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300',
-                          )}
-                          title={isActive ? t(I18N_CLEAR_TAG_FILTER) : t('sidebar.filterByTag')}
-                          aria-pressed={isActive}
-                        >
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Tree / search results */}
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                {searchResults === null ? (
-                  <>
-                    <p className="text-muted-foreground px-3 pt-3 text-xs font-medium tracking-wider uppercase">
-                      {t('sidebar.pages')}
-                    </p>
-                    <FileExplorer
-                      data={treeData}
-                      onSelect={handleTreeSelect}
-                      onDocumentDrag={treeOps.handleDocumentDrag}
-                      renderItem={renderTreeItem}
-                      selectedItemId={activePageId ?? undefined}
-                      expandedItemIds={ancestorPathIds}
-                      rootDropLabel={t('tree.dropToRoot')}
-                    />
-                  </>
-                ) : (
-                  <div className="flex-1 overflow-y-auto px-2 py-2">
-                    {searchResults.length === 0 ? (
-                      <p className="text-muted-foreground px-2 py-3 text-xs">
-                        {t('sidebar.noResults', { query: searchQuery })}
-                      </p>
-                    ) : (
-                      searchResults.map((page) => (
-                        <button
-                          key={page.id}
-                          type="button"
-                          className={cn(
-                            'motion-interactive flex w-full flex-col items-start rounded-md px-3 py-2 text-left text-sm transition-colors',
-                            page.id === activePageId
-                              ? 'bg-accent text-accent-foreground'
-                              : 'text-foreground hover:bg-accent/50',
-                          )}
-                          onClick={() => {
-                            handleSelect(page.id);
-                            setSearchQuery('');
-                            setActiveTags([]);
-                          }}
-                        >
-                          <span className="truncate font-medium">{page.title}</span>
-                          {(page.tags ?? []).length > 0 && (
-                            <span className="mt-0.5 flex flex-wrap gap-1">
-                              {(page.tags ?? []).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-xs"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </span>
-                          )}
-                        </button>
-                      ))
-                    )}
-                  </div>
+          {/* Tag cloud */}
+          {tagsPerPageEnabled && allTags.length > 0 && (
+            <div className="border-border border-b px-3 py-2">
+              <div className="flex flex-wrap gap-1">
+                {activeTags.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTags([])}
+                    className="motion-interactive flex items-center gap-1 rounded-full border border-indigo-300 px-2 py-0.5 text-xs text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/30"
+                    title={t(I18N_CLEAR_TAG_FILTER)}
+                  >
+                    <X size={9} />
+                    {t(I18N_CLEAR_TAG_FILTER)}
+                  </button>
                 )}
+                {allTags.map((tag) => {
+                  const isActive = activeTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => toggleTag(tag)}
+                      className={cn(
+                        'motion-interactive rounded-full border px-2 py-0.5 text-xs font-medium transition-colors',
+                        isActive
+                          ? 'border-indigo-400 bg-indigo-600 text-white dark:border-indigo-500 dark:bg-indigo-500'
+                          : 'border-border bg-muted/40 text-muted-foreground hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 dark:hover:bg-indigo-900/30 dark:hover:text-indigo-300',
+                      )}
+                      title={isActive ? t(I18N_CLEAR_TAG_FILTER) : t('sidebar.filterByTag')}
+                      aria-pressed={isActive}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
               </div>
             </div>
+          )}
 
-            <motion.div
-              className="border-border bg-card absolute inset-y-0 left-0 z-10 hidden w-10 items-start justify-center border-r py-3 md:flex"
-              initial={false}
-              animate={{ opacity: isCollapsedDesktop ? 1 : 0 }}
-              transition={
-                reducedMotion
-                  ? { duration: 0.01 }
-                  : {
-                      duration: isCollapsedDesktop ? 0.16 : 0.1,
-                      delay: isCollapsedDesktop ? 0.18 : 0,
-                      ease: [0.22, 1, 0.36, 1],
-                    }
-              }
-              style={{ pointerEvents: isCollapsedDesktop ? 'auto' : 'none' }}
-              aria-hidden={!isCollapsedDesktop}
-            >
-              <button
-                type="button"
-                aria-label={t('sidebar.show')}
-                data-ui-sound-event="open"
-                className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
-                onClick={() => setLeftPanelHidden(false)}
-              >
-                <ChevronRight size={20} />
-              </button>
-            </motion.div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
+          {/* rest of sidebar content (tree etc) */}
+          <div className="grow overflow-y-auto">
+            {isSearchActive ? (
+              <SearchResults
+                searchResults={searchResults}
+                query={searchQuery}
+                activePageId={activePageId}
+                onSelect={(id: string) => {
+                  handleSelect(id);
+                  setSearchQuery('');
+                  setActiveTags([]);
+                }}
+              />
+            ) : (
+              <FileExplorer
+                data={treeData}
+                onSelect={handleTreeSelect}
+                onDocumentDrag={treeOps.handleDocumentDrag}
+                renderItem={renderTreeItem}
+                selectedItemId={activePageId ?? undefined}
+                expandedItemIds={ancestorPathIds}
+                rootDropLabel={t('sidebar.dropToRoot')}
+              />
+            )}
+          </div>
+        </div>
+      </Sidebar>
       {/* ─── Main content ───────────────────────────────────────────────────── */}
       <MainContent
         page={activePage}
@@ -749,3 +723,8 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     </div>
   );
 }
+
+// Export SearchResults for testing and potential reuse. It's a simple helper
+// component used by Workspace internally but we want to render it directly in
+// unit tests without pulling in the entire workspace shell.
+export { SearchResults };

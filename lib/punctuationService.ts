@@ -336,4 +336,3 @@ function shouldAddPeriodAtBreak(
     SENTENCE_STARTERS[language].includes(nextWordLower)
   );
 }
-

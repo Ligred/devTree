@@ -1,7 +1,6 @@
 'use client';
 /* eslint-disable sonarjs/no-duplicate-string */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'motion/react';
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -22,10 +21,12 @@ import {
   Save,
   Sparkles,
 } from 'lucide-react';
+import { useReducedMotion } from 'motion/react';
 
 import { EditorToolbar } from '@/components/features/editor/EditorToolbar';
 import { PageEditor } from '@/components/features/editor/PageEditor';
 import { UnsavedChangesDialog } from '@/components/features/Workspace/UnsavedChangesDialog';
+import { Sidebar } from '@/components/shared/Sidebar';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,10 +91,9 @@ export default function DiaryPageClient() {
   const reducedMotion = useReducedMotion();
   const sidebarTransition:
     | { duration: number }
-    | { duration: number; ease: [number, number, number, number] } =
-    reducedMotion
-      ? { duration: 0.01 }
-      : { duration: 0.34, ease: [0.22, 1, 0.36, 1] };
+    | { duration: number; ease: [number, number, number, number] } = reducedMotion
+    ? { duration: 0.01 }
+    : { duration: 0.34, ease: [0.22, 1, 0.36, 1] };
 
   const [viewMode, setViewMode] = useState<DiaryViewMode>('list');
   const [journals, setJournals] = useState<DiaryJournal[]>([]);
@@ -135,7 +135,8 @@ export default function DiaryPageClient() {
     Record<string, NonNullable<JSONContent['content']>>
   >({});
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  const [mobileSidebarVisible, setMobileSidebarVisible] = useState(true);
+  // on mobile we start closed; opening is user‑initiated
+  const [mobileSidebarVisible, setMobileSidebarVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const pendingActionRef = useRef<(() => void) | null>(null);
   const originalContentRef = useRef<string>(JSON.stringify(EMPTY_DOC));
@@ -199,6 +200,9 @@ export default function DiaryPageClient() {
     }
     return groups;
   }, [dateLocale, entries]);
+
+  // which visibility flag applies depending on viewport
+  const effectiveVisible = isMobile ? mobileSidebarVisible : sidebarVisible;
 
   const resolveWeatherLabel = useCallback(
     (weatherCode?: number | null, fallback?: string | null) => {
@@ -829,12 +833,12 @@ export default function DiaryPageClient() {
   }, [showTemplateMenu]);
 
   useEffect(() => {
-    const update = () => {
-      setIsMobile(globalThis.innerWidth < 768);
-    };
+    const media = globalThis.matchMedia?.('(min-width: 768px)');
+    if (!media) return;
+    const update = () => setIsMobile(!media.matches);
     update();
-    globalThis.addEventListener('resize', update);
-    return () => globalThis.removeEventListener('resize', update);
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
   }, []);
 
   useEffect(() => {
@@ -875,33 +879,39 @@ export default function DiaryPageClient() {
   const headerSubtitle = getHeaderSubtitle(selectedDate, selectedWeatherSummary?.locationShort, t);
 
   const sidebarContent = (
-    <aside className="border-border bg-card/80 flex h-full shrink-0 flex-col min-w-[256px] w-[256px] border-b md:border-r md:border-b-0">
+    <div
+      className={cn(
+        'border-border bg-card/80 flex h-full w-full shrink-0 flex-col border-b md:border-r md:border-b-0',
+        isMobile ? 'max-w-full' : 'max-w-[256px]',
+        'md:w-64 md:min-w-64',
+      )}
+    >
       <div className="border-border border-b p-3">
         {/* toggle row (mimics notebook sidebar header) */}
         <div className="mb-2 flex items-center justify-between">
-          <h1 className="text-primary text-xl font-semibold tracking-tight">{t('sidebar.titleDiary')}</h1>
+          <h1 className="text-primary text-xl font-semibold tracking-tight">
+            {t('sidebar.titleDiary')}
+          </h1>
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label={sidebarVisible ? t('sidebar.hide') : t('sidebar.show')}
-                data-ui-sound-event={sidebarVisible ? 'close' : 'open'}
+                aria-label={effectiveVisible ? t('sidebar.hide') : t('sidebar.show')}
+                data-ui-sound-event={effectiveVisible ? 'close' : 'open'}
                 className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
                 onClick={() => {
                   if (isMobile) {
-                    setMobileSidebarVisible(false);
+                    setMobileSidebarVisible((prev) => !prev);
                   } else {
                     setSidebarVisible((prev) => !prev);
                   }
                 }}
               >
-                {sidebarVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+                {effectiveVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
               </button>
             </TooltipTrigger>
             <TooltipContent>
-              <p className="text-xs">
-                {sidebarVisible ? t('sidebar.hide') : t('sidebar.show')}
-              </p>
+              <p className="text-xs">{effectiveVisible ? t('sidebar.hide') : t('sidebar.show')}</p>
             </TooltipContent>
           </Tooltip>
         </div>
@@ -1067,7 +1077,7 @@ export default function DiaryPageClient() {
         )}
         {leftPanelContent}
       </div>
-    </aside>
+    </div>
   );
 
   const initialLoading = journals.length === 0 || loadingList || loadingEntry;
@@ -1079,7 +1089,7 @@ export default function DiaryPageClient() {
     </div>
   ) : (
     <header className="border-border bg-card flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5 sm:px-4 sm:py-3">
-      <div>
+      <div className="flex">
         {/* mobile open-sidebar button (similar to notebook) */}
         {!mobileSidebarVisible && (
           <button
@@ -1092,125 +1102,125 @@ export default function DiaryPageClient() {
             <Menu size={20} />
           </button>
         )}
-        <h1 className="flex items-center gap-2 text-lg font-semibold">
-          {selectedDate && selectedWeatherSummary ? (
-            <span className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
-              {getWeatherIcon(selectedWeatherSummary.weatherCode)}{' '}
-              {formatTemp(selectedWeatherSummary.tempC, diaryTemperatureUnit)}
+        <div>
+          <h1 className="flex items-center gap-2 text-lg font-semibold">
+            {selectedDate && selectedWeatherSummary ? (
+              <span className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
+                {getWeatherIcon(selectedWeatherSummary.weatherCode)}{' '}
+                {formatTemp(selectedWeatherSummary.tempC, diaryTemperatureUnit)}
+              </span>
+            ) : null}
+            <span>
+              {selectedDate
+                ? formatDateLong(parseLocalDate(selectedDate), dateLocale)
+                : t('nav.diary')}
             </span>
-          ) : null}
-          <span>
-            {selectedDate
-              ? formatDateLong(parseLocalDate(selectedDate), dateLocale)
-              : t('nav.diary')}
-          </span>
-        </h1>
-        <p className="text-muted-foreground text-sm">{headerSubtitle}</p>
+          </h1>
+          <p className="text-muted-foreground text-sm">{headerSubtitle}</p>
+        </div>
       </div>
       <div className="flex items-center gap-2">
         {/* sidebar toggle relocated into the sidebar for clearer UX */}
 
         <div ref={templateMenuRef} className="relative">
-            <Tooltip>
-              <TooltipTrigger asChild>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={t('diary.applyTemplate')}
+                disabled={!selectedDate || !selectedEntryExists || templates.length === 0}
+                onClick={() => setShowTemplateMenu((prev) => !prev)}
+                className="border-border bg-background hover:bg-accent disabled:text-muted-foreground inline-flex items-center gap-1 rounded-md border p-2 text-xs disabled:opacity-60"
+              >
+                <FileText size={14} />
+                <ChevronDown size={12} />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="text-xs">{t('diary.applyTemplate')}</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {showTemplateMenu && (
+            <div className="border-border bg-popover absolute right-0 z-50 mt-1 max-h-56 w-64 overflow-y-auto rounded-md border p-1 shadow-md">
+              {templates.map((template) => (
                 <button
+                  key={template.id}
                   type="button"
-                  aria-label={t('diary.applyTemplate')}
-                  disabled={!selectedDate || !selectedEntryExists || templates.length === 0}
-                  onClick={() => setShowTemplateMenu((prev) => !prev)}
-                  className="border-border bg-background hover:bg-accent disabled:text-muted-foreground inline-flex items-center gap-1 rounded-md border p-2 text-xs disabled:opacity-60"
+                  className="hover:bg-accent w-full rounded-sm px-2 py-1.5 text-left text-sm"
+                  onClick={() => applyTemplate(template)}
                 >
-                  <FileText size={14} />
-                  <ChevronDown size={12} />
+                  <p className="truncate font-medium">{template.name}</p>
+                  <p className="text-muted-foreground line-clamp-2 text-xs">
+                    {decodeTemplateText(template.body)}
+                  </p>
                 </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">{t('diary.applyTemplate')}</p>
-              </TooltipContent>
-            </Tooltip>
-
-            {showTemplateMenu && (
-              <div className="border-border bg-popover absolute right-0 z-50 mt-1 max-h-56 w-64 overflow-y-auto rounded-md border p-1 shadow-md">
-                {templates.map((template) => (
-                  <button
-                    key={template.id}
-                    type="button"
-                    className="hover:bg-accent w-full rounded-sm px-2 py-1.5 text-left text-sm"
-                    onClick={() => applyTemplate(template)}
-                  >
-                    <p className="truncate font-medium">{template.name}</p>
-                    <p className="text-muted-foreground line-clamp-2 text-xs">
-                      {decodeTemplateText(template.body)}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('diary.templates')}
-                disabled={!activeJournalId}
-                onClick={() => setShowTemplateManagerDialog(true)}
-                className="border-border bg-background hover:bg-accent disabled:text-muted-foreground inline-flex items-center rounded-md border p-2 text-xs disabled:opacity-60"
-              >
-                <Edit3 size={14} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{t('diary.templates')}</p>
-            </TooltipContent>
-          </Tooltip>
-
-          <span
-            className={cn(
-              'hidden text-xs sm:inline',
-              saveState === 'saving' && 'text-muted-foreground',
-              saveState === 'saved' && 'text-green-600 dark:text-green-400',
-              saveState === 'error' && 'text-destructive',
-            )}
-          >
-            {saveState === 'saving' && t('diary.saving')}
-            {saveState === 'saved' && t('main.saved')}
-            {saveState === 'error' && t('diary.saveFailed')}
-            {saveState === 'idle' && (isDirty ? t('diary.unsavedChanges') : t('diary.ready'))}
-          </span>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('main.save')}
-                disabled={!isDirty || !selectedDate || loadingEntry || creatingEntry}
-                onClick={() => {
-                  void saveCurrentEntry();
-                }}
-                className={
-                  isDirty && selectedDate && !loadingEntry && !creatingEntry
-                    ? 'inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
-                    : 'inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm bg-muted text-muted-foreground cursor-not-allowed'
-                }
-              >
-                <Save size={14} />
-                {t('main.save')}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{t('main.save')}</p>
-            </TooltipContent>
-          </Tooltip>
+              ))}
+            </div>
+          )}
         </div>
-      </header>
-    );
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={t('diary.templates')}
+              disabled={!activeJournalId}
+              onClick={() => setShowTemplateManagerDialog(true)}
+              className="border-border bg-background hover:bg-accent disabled:text-muted-foreground inline-flex items-center rounded-md border p-2 text-xs disabled:opacity-60"
+            >
+              <Edit3 size={14} />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">{t('diary.templates')}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <span
+          className={cn(
+            'hidden text-xs sm:inline',
+            saveState === 'saving' && 'text-muted-foreground',
+            saveState === 'saved' && 'text-green-600 dark:text-green-400',
+            saveState === 'error' && 'text-destructive',
+          )}
+        >
+          {saveState === 'saving' && t('diary.saving')}
+          {saveState === 'saved' && t('main.saved')}
+          {saveState === 'error' && t('diary.saveFailed')}
+          {saveState === 'idle' && (isDirty ? t('diary.unsavedChanges') : t('diary.ready'))}
+        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={t('main.save')}
+              disabled={!isDirty || !selectedDate || loadingEntry || creatingEntry}
+              onClick={() => {
+                void saveCurrentEntry();
+              }}
+              className={
+                isDirty && selectedDate && !loadingEntry && !creatingEntry
+                  ? 'inline-flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
+                  : 'bg-muted text-muted-foreground inline-flex cursor-not-allowed items-center gap-1 rounded-md px-3 py-2 text-sm'
+              }
+            >
+              <Save size={14} />
+              {t('main.save')}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p className="text-xs">{t('main.save')}</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </header>
+  );
 
   let mainContent: React.ReactNode;
   if (headerLoading) {
     mainContent = (
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {headerNode}
-      </section>
+      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">{headerNode}</section>
     );
   } else {
     mainContent = (
@@ -1550,53 +1560,19 @@ export default function DiaryPageClient() {
         </DialogContent>
       </Dialog>
 
-      <div className="bg-background h-full overflow-hidden relative">
-        {/* desktop layout: animate sidebar flex-basis, keep main content fixed */}
-        <div className="hidden h-full md:flex">
-          <motion.aside
-          className="h-full flex flex-col overflow-hidden relative bg-card/80 border-border border-b md:border-r md:border-b-0"
-          initial={{ flexBasis: sidebarVisible ? '256px' : '40px' }}
-          animate={{ flexBasis: sidebarVisible ? '256px' : '40px' }}
+      <div className="bg-background relative flex h-full overflow-hidden">
+        <Sidebar
+          visible={sidebarVisible}
+          onShow={() => setSidebarVisible(true)}
           transition={sidebarTransition}
+          mobileOverlay={{
+            open: mobileSidebarVisible,
+            onClose: () => setMobileSidebarVisible(false),
+          }}
         >
-          <div className="grow overflow-auto">{sidebarContent}</div>
-
-          {/* collapsed show button overlay (same as workspace) */}
-          <motion.div
-            className="border-border bg-card absolute inset-y-0 left-0 z-10 hidden w-10 items-start justify-center border-r py-3 md:flex"
-            initial={false}
-            animate={{ opacity: sidebarVisible ? 0 : 1 }}
-            transition={
-              reducedMotion
-                ? { duration: 0.01 }
-                : {
-                    duration: sidebarVisible ? 0.1 : 0.16,
-                    delay: sidebarVisible ? 0 : 0.18,
-                    ease: [0.22, 1, 0.36, 1],
-                  }
-            }
-            style={{ pointerEvents: sidebarVisible ? 'none' : 'auto' }}
-            aria-hidden={sidebarVisible}
-          >
-            <button
-              type="button"
-              aria-label={t('sidebar.show')}
-              data-ui-sound-event="open"
-              className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
-              onClick={() => setSidebarVisible(true)}
-            >
-              <ChevronRight size={20} />
-            </button>
-          </motion.div>
-        </motion.aside>
-
-          <div className="flex-1 h-full">{mainContent}</div>
-        </div>
-
-        {/* mobile stacked layout */}
-        <div className="flex h-full flex-col md:hidden">
-          {mobileSidebarVisible ? sidebarContent : mainContent}
-        </div>
+          {sidebarContent}
+        </Sidebar>
+        <div className="h-full flex-1">{mainContent}</div>
       </div>
     </>
   );
