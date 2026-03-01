@@ -22,7 +22,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation';
 
 import { ChevronLeft, FilePlus, FolderPlus, Search, X } from 'lucide-react';
-import { AnimatePresence, useReducedMotion } from 'motion/react';
+import { useReducedMotion } from 'motion/react';
 
 import { FileExplorer } from '@/components/features/FileExplorer/FileExplorer';
 import { MainContent } from '@/components/features/MainContent';
