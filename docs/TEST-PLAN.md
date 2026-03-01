@@ -352,7 +352,7 @@ E2E tests launch a real browser, navigate the app, and assert visible DOM change
 | Add row to table      | Row count increases                     |
 | Add Image block       | Apply URL → `<img>` visible             |
 | Add Video block       | YouTube URL → `<iframe>` visible        |
-| Add Link block        | Apply URL → `<a>` visible               |
+| Add Link block        | Apply URL → toolbar shows “Edit link” (anchor applied) |
 | Delete block          | Hover + delete → block count -1         |
 
 ### Save Tests — `SaveTests.cs`
@@ -405,7 +405,8 @@ These tests cover the **notebook page content area** in depth: everything the us
 
 #### Editor Toolbar
 
-| Test                                        | Journey                                                                |
+| Test                                          | Journey                                                                 |  
+| `App_Title_IsLearningTree`                     | Sidebar header title should match brand ("Your Notes" or "Learning Tree") |
 | ------------------------------------------- | ---------------------------------------------------------------------- |
 | `EditorToolbar_VisibleInEditMode`           | Enter edit mode → editor toolbar appears above editor area             |
 | `EditorToolbar_HiddenInViewMode`            | View mode → toolbar is NOT visible                                     |

@@ -21,6 +21,11 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light' }),
 }));
 
+// mock i18n for components that call useI18n
+vi.mock('@/lib/i18n', () => ({
+  useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: () => {} }),
+}));
+
 vi.mock('tiptap-extension-global-drag-handle', () => ({
   __esModule: true,
   default: Extension.create({ name: 'mockGlobalDragHandle' }),

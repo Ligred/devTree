@@ -18,8 +18,11 @@ public class AppPage(IPage page)
 
     // ── Navigation ─────────────────────────────────────────────────────────
 
+    // navigation helper used throughout tests.  `NetworkIdle` can be flaky in
+    // CI/environments where assets load slowly, so we fall back to `Load` which
+    // is sufficient for our purposes.
     public Task GotoAsync() =>
-        _page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.NetworkIdle });
+        _page.GotoAsync(BaseUrl, new() { WaitUntil = WaitUntilState.Load });
 
     // ── Header ─────────────────────────────────────────────────────────────
 

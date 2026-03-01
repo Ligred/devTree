@@ -24,6 +24,11 @@ vi.mock('next-themes', () => ({
   useTheme: () => ({ resolvedTheme: 'light' }),
 }));
 
+// make sure any component using useI18n works without provider
+vi.mock('@/lib/i18n', () => ({
+  useI18n: () => ({ t: (key: string) => key, locale: 'en', setLocale: () => {} }),
+}));
+
 vi.mock('@excalidraw/excalidraw', () => ({
   Excalidraw: () => <div data-testid="mock-excalidraw" />,
 }));

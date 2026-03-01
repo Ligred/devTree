@@ -129,20 +129,30 @@ function DictationOverlay({ editor, text }: { editor: Editor; text: string }) {
 
 // ─── ToolbarButton ────────────────────────────────────────────────────────────
 
-type ToolbarButtonProps = Readonly<{
-  onClick: () => void;
-  active?: boolean;
-  title: string;
-  children: React.ReactNode;
-}>;
 
-export function ToolbarButton({ onClick, active, title, children }: ToolbarButtonProps) {
+export interface ToolbarButtonProps {
+  readonly onClick: () => void;
+  readonly active?: boolean;
+  readonly title?: string;
+  /** optional handler executed before onClick when the button is pressed */
+  readonly onMouseDown?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+  readonly children?: React.ReactNode;
+}
+
+export function ToolbarButton({
+  onClick,
+  active,
+  title,
+  onMouseDown: onMouseDownProp,
+  children,
+}: ToolbarButtonProps) {
   return (
     <button
       type="button"
       title={title}
       onMouseDown={(e) => {
         e.preventDefault(); // keep editor focus
+        onMouseDownProp?.(e);
         onClick();
       }}
       className={cn(
@@ -201,7 +211,20 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
   const setLink = useCallback(() => {
     const url = linkInputRef.current?.value?.trim() ?? '';
     if (url) {
-      const savedSelection = linkSelectionRef.current ?? editor.state.selection;
+      // Prefer the selection that was captured when the toolbar button was
+      // clicked, but fall back to the current editor selection.  Occasionally
+      // the captured value is collapsed because the editor state hasn't caught
+      // up with a quick keyboard shortcut (e.g. Cmd+A).  In that case we use
+      // the real selection which still contains the text the user highlighted.
+      let savedSelection = linkSelectionRef.current ?? editor.state.selection;
+      const currentSel = editor.state.selection;
+      if (
+        savedSelection.from === savedSelection.to &&
+        currentSel.from !== currentSel.to
+      ) {
+        savedSelection = currentSel;
+      }
+
       if (savedSelection.from === savedSelection.to) {
         editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
       } else {
@@ -605,9 +628,12 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
         <ToolbarButton
           title={editor.isActive('link') ? 'Edit link' : 'Add link'}
           active={editor.isActive('link')}
-          onClick={() => {
+          // capture selection on mouse down before the toolbar button steals focus
+          onMouseDown={() => {
             const { from, to } = editor.state.selection;
             linkSelectionRef.current = { from, to };
+          }}
+          onClick={() => {
             setLinkOpen((v) => !v);
             setColorOpen(false);
             setHighlightOpen(false);

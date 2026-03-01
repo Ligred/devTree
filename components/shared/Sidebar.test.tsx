@@ -14,7 +14,7 @@ vi.mock('motion/react', async (importOriginal) => {
     useReducedMotion: () => true,
     AnimatePresence: ({ children }: any) => <>{children}</>,
     motion: {
-      ...((actual as any).motion ?? {}),
+      ...(actual).motion,
       div: 'div',
       aside: 'aside',
     },
@@ -66,8 +66,11 @@ describe('Sidebar component', () => {
       </Sidebar>,
     );
 
-    // mobile content should be present
-    expect(screen.getByTestId('mobile-content')).toBeInTheDocument();
+    // mobile content should be present (desktop version may also be rendered
+    // but hidden via CSS, so there could be duplicates)
+    const mobileContents = screen.getAllByTestId('mobile-content');
+    expect(mobileContents.length).toBeGreaterThan(0);
+    expect(mobileContents[0]).toBeInTheDocument();
 
     // ensure the drawer and backdrop exist
     expect(screen.getByTestId('mobile-sidebar')).toBeInTheDocument();

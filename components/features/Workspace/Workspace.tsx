@@ -507,12 +507,10 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   }, [isDesktop, mobileSidebarOpen]);
 
   // ─── Render ──────────────────────────────────────────────────────────────
-  // sidebarWidth removed (unused)
   // On desktop we always render the sidebar (no collapse feature currently).
   // On mobile the sidebar opens via mobileSidebarOpen and uses the
   // Sidebar.mobileOverlay prop for animation. We avoid conditional
   // rendering so that AnimatePresence exit animations run when closing.
-  const showSidebar = true;
   let sidebarTransition:
     | { duration: number }
     | { duration: number; ease: [number, number, number, number] };
