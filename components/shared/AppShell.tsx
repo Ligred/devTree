@@ -67,7 +67,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       <motion.header
         key={`app-shell-header-${pathname}`}
         className="alive-surface border-border bg-card flex h-14 shrink-0 items-center justify-between border-b px-4 shadow-sm md:px-6"
-        initial={reducedMotion ? false : { y: -16, opacity: 0 }}
+        initial={reducedMotion ? undefined : { y: -16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={
           reducedMotion

@@ -9,7 +9,7 @@ vi.mock('motion/react', () => {
   return {
     AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     motion: {
-      div: ({ children, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => (
+      div: ({ children, initial, animate, exit, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => (
         <div {...props}>{children}</div>
       ),
     },
@@ -124,5 +124,36 @@ describe('EditorBubbleMenu', () => {
     await waitFor(() => {
       expect(screen.queryByTitle('Bold')).not.toBeInTheDocument();
     });
+  });
+
+  it('applies a text color from bubble menu including custom', async () => {
+    const { editor, chainCalls } = createEditorMock();
+    render(<EditorBubbleMenu editor={editor as never} />);
+
+    fireEvent.mouseDown(await screen.findByTitle('Text color'));
+    const blueOption = await screen.findByRole('button', { name: 'Blue' });
+    fireEvent.mouseDown(blueOption);
+    expect(chainCalls).toContainEqual({ name: 'setColor', args: ['#2563eb'] });
+
+    // custom color
+    fireEvent.mouseDown(await screen.findByTitle('Text color'));
+    const input = await screen.findByTitle('Custom');
+    fireEvent.change(input, { target: { value: '#112233' } });
+    expect(chainCalls).toContainEqual({ name: 'setColor', args: ['#112233'] });
+  });
+
+  it('applies a highlight color and custom from bubble menu', async () => {
+    const { editor, chainCalls } = createEditorMock();
+    render(<EditorBubbleMenu editor={editor as never} />);
+
+    fireEvent.mouseDown(await screen.findByTitle('Highlight'));
+    const yellowOption = await screen.findByRole('button', { name: 'Yellow' });
+    fireEvent.mouseDown(yellowOption);
+    expect(chainCalls).toContainEqual({ name: 'setHighlight', args: [{ color: '#fef08a' }] });
+
+    fireEvent.mouseDown(await screen.findByTitle('Highlight'));
+    const input = await screen.findByTitle('Custom');
+    fireEvent.change(input, { target: { value: '#445566' } });
+    expect(chainCalls).toContainEqual({ name: 'setHighlight', args: [{ color: '#445566' }] });
   });
 });

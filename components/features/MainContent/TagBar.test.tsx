@@ -28,6 +28,12 @@ vi.mock('next-auth/react', () => ({
   }),
 }));
 
+// PageEditor is heavy and can trigger Tiptap plugin errors during tests; we
+// don't care about rendering it for TagBar-related behaviour, so stub it out.
+vi.mock('@/components/features/editor/PageEditor', () => ({
+  PageEditor: () => <div data-testid="editor" />,
+}));
+
 vi.mock('@/lib/pageUtils', () => ({
   computePageStats: () => ({ wordCount: 0, readingTimeMin: 1, blockCount: 0 }),
   downloadMarkdown: vi.fn(),

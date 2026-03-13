@@ -52,6 +52,7 @@ describe('PageEditor canvas block', () => {
 
     render(
       <PageEditor
+        key="canvas"
         editable
         content={{
           type: 'doc',

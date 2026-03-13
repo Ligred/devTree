@@ -185,6 +185,35 @@
   margin: 0 1px;
 }
 
+/* avoid margin collapse issues around headings and paragraphs
+   when some headings are marked non-editable (contenteditable="false").
+   Tailwind's preflight gives headings a bottom margin which collapses with the
+   following paragraph; clicking that gap actually hits the heading element (a
+   non-editable region) and the browser dutifully moves the caret to the next
+   editable spot, usually the very end of the document.  By zeroing out the
+   heading bottom margin and instead giving the paragraph the equivalent top
+   margin we guarantee the click target is the paragraph itself.
+*/
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin-bottom: 0;
+}
+
+.ProseMirror p {
+  /* 0.5rem matches Tailwind's default heading bottom margin from preflight */
+  margin-top: 0.5rem;
+}
+
+/* make template-provided headings completely non-selectable so users can't
+   accidentally highlight and delete them */
+.ProseMirror [contenteditable='false'] {
+  user-select: none;
+}
+
 /* ── Inline tag filter highlighting ─────────────────────────────────────── */
 
 /*

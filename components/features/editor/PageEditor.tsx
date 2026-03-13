@@ -15,9 +15,11 @@
  *  pageId         – used by voice-dictation and other scoped hooks
  *  onEditorReady  – called with the Editor instance once mounted (null on destroy)
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import Heading from '@tiptap/extension-heading';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -49,6 +51,110 @@ import { TableBlockNode } from './extensions/TableBlockNode';
 import { FontFamily, FontSize } from './extensions/Typography';
 import { VideoNode } from './extensions/VideoNode';
 import './PageEditor.css';
+
+// A small extension derived from the built-in heading which allows us to
+// carry through an arbitrary `contenteditable` attribute.  Tiptap's default
+// heading extension only knows about the `level` attribute, so any extra attr
+// would be discarded when rendering.  We need the DOM property in order to
+// prevent the browser from ever placing the caret inside a template heading.
+const TemplateHeading = Heading.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      contenteditable: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('contenteditable'),
+        renderHTML: (attributes) => {
+          if (attributes.contenteditable == null) {
+            return {};
+          }
+          return { contenteditable: attributes.contenteditable };
+        },
+      },
+    };
+  },
+
+  // prevent any mutation (typing or deletion) when a heading is marked
+  // non-editable by the template helper.  The `contenteditable=false` attr
+  // already stops the browser from putting a caret inside the node, but users
+  // could still select it and hit backspace/delete or navigate through it with
+  // arrow keys.  We intercept the relevant key events and the generic before-
+  // input DOM event to swallow them.
+  addKeyboardShortcuts() {
+    const isProtected = (state: any) => {
+      const { selection } = state;
+      const { $from, $to, node } = selection;
+      if (node?.type.name === 'heading' && node.attrs.contenteditable === 'false') {
+        return true;
+      }
+      if ($from.parent.type.name === 'heading' && $from.parent.attrs.contenteditable === 'false') {
+        return true;
+      }
+      // if selection spans multiple nodes, check each for protected heading
+      let protectedFound = false;
+      state.doc.nodesBetween($from.pos, $to.pos, (n: any) => {
+        if (n.type.name === 'heading' && n.attrs.contenteditable === 'false') {
+          protectedFound = true;
+          return false;
+        }
+      });
+      return protectedFound;
+    };
+
+    return {
+      Backspace: ({ editor }) => {
+        return isProtected(editor.state);
+      },
+      Delete: ({ editor }) => {
+        return isProtected(editor.state);
+      },
+    };
+  },
+
+  addProseMirrorPlugins() {
+    const plugin = new Plugin({
+      key: new PluginKey('templateHeading'),
+      props: {
+        handleDOMEvents: {
+          beforeinput: (view: any, event: any) => {
+            // intercept delete/insertText events that could mutate a protected
+            // heading
+            const { inputType } = event;
+            if (
+              inputType.startsWith('delete') ||
+              inputType === 'insertText' ||
+              inputType === 'insertParagraph'
+            ) {
+              const { selection } = view.state;
+              const { $from, $to, node } = selection;
+              if (
+                (node?.type.name === 'heading' && node.attrs.contenteditable === 'false') ||
+                ($from.parent.type.name === 'heading' &&
+                  $from.parent.attrs.contenteditable === 'false')
+              ) {
+                event.preventDefault();
+                return true;
+              }
+              let blocked = false;
+              view.state.doc.nodesBetween($from.pos, $to.pos, (n: any) => {
+                if (n.type.name === 'heading' && n.attrs.contenteditable === 'false') {
+                  blocked = true;
+                  return false;
+                }
+              });
+              if (blocked) {
+                event.preventDefault();
+                return true;
+              }
+            }
+            return false;
+          },
+        },
+      },
+    });
+    return [plugin];
+  },
+});
 
 // ── Tag-filter helper ─────────────────────────────────────────────────────────
 // Returns true if the given top-level Tiptap node matches at least one of the
@@ -153,9 +259,19 @@ export function PageEditor({
    */
   const cleanContentRef = useRef<string | null>(null);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
+  // compute the placeholder text once; changing the locale should
+  // force a recalculation via the `t` dependency.
+  const placeholderText = useMemo(
+    () => (isNotebookMode ? t('editor.placeholderNotebook') : t('editor.placeholderDiary')),
+    [isNotebookMode, t],
+  );
+
+  // memoize the extensions array so that it remains referentially stable
+  // across renders.  Without this `useEditor` will attempt to reconfigure the
+  // editor when the component rerenders (for example, due to a locale change),
+  // which can trigger "/keyed plugin" errors in our unit tests.
+  const editorExtensions = useMemo(() => {
+    const base: any[] = [
       // ── Built-in / community extensions ──────────────────────────────────
       StarterKit.configure({
         // Disable built-in code block only in notebook mode where custom Monaco node is used
@@ -165,12 +281,11 @@ export function PageEditor({
         // "duplicate extension names" warning in StarterKit v3 which bundles them).
         link: false,
         underline: false,
+        heading: false, // we'll supply a customized heading extension below
       }),
-      Placeholder.configure({
-        placeholder: isNotebookMode
-          ? t('editor.placeholderNotebook')
-          : t('editor.placeholderDiary'),
-      }),
+      // our customized heading that supports `contenteditable` attr
+      TemplateHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
+      Placeholder.configure({ placeholder: placeholderText }),
       Underline,
       Link.configure({ openOnClick: !editable, autolink: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
@@ -185,22 +300,30 @@ export function PageEditor({
       BookmarkMark,
       InlineTagMark,
       SlashCommand,
-      ...(isNotebookMode
-        ? [
-            CodeBlockNode,
-            ChecklistNode,
-            CanvasNode,
-            AudioNode,
-            VideoNode,
-            ImageNode,
-            LinkCardNode,
-            TableBlockNode,
-            GlobalDragHandle.configure({
-              customNodes: CUSTOM_NODE_NAMES,
-            }),
-          ]
-        : []),
-    ],
+    ];
+
+    if (isNotebookMode) {
+      base.push(
+        CodeBlockNode,
+        ChecklistNode,
+        CanvasNode,
+        AudioNode,
+        VideoNode,
+        ImageNode,
+        LinkCardNode,
+        TableBlockNode,
+        GlobalDragHandle.configure({
+          customNodes: CUSTOM_NODE_NAMES,
+        }),
+      );
+    }
+
+    return base;
+  }, [isNotebookMode, placeholderText, editable]);
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: editorExtensions,
 
     content: content ?? undefined,
 

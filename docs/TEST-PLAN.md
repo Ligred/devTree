@@ -340,20 +340,20 @@ E2E tests launch a real browser, navigate the app, and assert visible DOM change
 
 ### Editor Tests — `EditorTests.cs`
 
-| Test                  | Journey                                 |
-| --------------------- | --------------------------------------- |
-| New page has 0 blocks | Count `.group/block` = 0                |
-| Add Text block        | "+" → "Text" → block count +1           |
-| Type in Text block    | Tiptap shows typed text                 |
-| Add Code block        | Monaco editor visible                   |
-| Change code language  | Language button shows selected language |
-| Add Table block       | Default columns visible                 |
-| Fill table cell       | Cell has entered value                  |
-| Add row to table      | Row count increases                     |
-| Add Image block       | Apply URL → `<img>` visible             |
-| Add Video block       | YouTube URL → `<iframe>` visible        |
+| Test                  | Journey                                                |
+| --------------------- | ------------------------------------------------------ |
+| New page has 0 blocks | Count `.group/block` = 0                               |
+| Add Text block        | "+" → "Text" → block count +1                          |
+| Type in Text block    | Tiptap shows typed text                                |
+| Add Code block        | Monaco editor visible                                  |
+| Change code language  | Language button shows selected language                |
+| Add Table block       | Default columns visible                                |
+| Fill table cell       | Cell has entered value                                 |
+| Add row to table      | Row count increases                                    |
+| Add Image block       | Apply URL → `<img>` visible                            |
+| Add Video block       | YouTube URL → `<iframe>` visible                       |
 | Add Link block        | Apply URL → toolbar shows “Edit link” (anchor applied) |
-| Delete block          | Hover + delete → block count -1         |
+| Delete block          | Hover + delete → block count -1                        |
 
 ### Save Tests — `SaveTests.cs`
 
@@ -405,15 +405,15 @@ These tests cover the **notebook page content area** in depth: everything the us
 
 #### Editor Toolbar
 
-| Test                                          | Journey                                                                 |  
-| `App_Title_IsLearningTree`                     | Sidebar header title should match brand ("Your Notes" or "Learning Tree") |
+| Test | Journey |  
+| `App_Title_IsLearningTree` | Sidebar header title should match brand ("Your Notes" or "Learning Tree") |
 | ------------------------------------------- | ---------------------------------------------------------------------- |
-| `EditorToolbar_VisibleInEditMode`           | Enter edit mode → editor toolbar appears above editor area             |
-| `EditorToolbar_HiddenInViewMode`            | View mode → toolbar is NOT visible                                     |
-| `EditorToolbar_Bold_WrapsSelectionInStrong` | Type text → select all → click Bold → text rendered inside `<strong>`  |
-| `EditorToolbar_Italic_WrapsSelectionInEm`   | Type text → select all → click Italic → text rendered inside `<em>`    |
-| `EditorToolbar_Heading_AppliesH2`           | Click H2 in toolbar → active block renders as `<h2>`                   |
-| `EditorToolbar_Code_AppliesCodeMark`        | Select text → click inline-code button → selection wrapped in `<code>` |
+| `EditorToolbar_VisibleInEditMode` | Enter edit mode → editor toolbar appears above editor area |
+| `EditorToolbar_HiddenInViewMode` | View mode → toolbar is NOT visible |
+| `EditorToolbar_Bold_WrapsSelectionInStrong` | Type text → select all → click Bold → text rendered inside `<strong>` |
+| `EditorToolbar_Italic_WrapsSelectionInEm` | Type text → select all → click Italic → text rendered inside `<em>` |
+| `EditorToolbar_Heading_AppliesH2` | Click H2 in toolbar → active block renders as `<h2>` |
+| `EditorToolbar_Code_AppliesCodeMark` | Select text → click inline-code button → selection wrapped in `<code>` |
 
 #### Page Statistics Footer
 

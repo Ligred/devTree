@@ -56,6 +56,7 @@ async function renderWithSingleNode(
 ) {
   const rendered = render(
     <PageEditor
+      key={JSON.stringify(node)}
       editable={editable}
       content={{
         type: 'doc',
@@ -99,6 +100,58 @@ describe('PageEditor unified block nodes', () => {
 
     expect(screen.getByText('python')).toBeInTheDocument();
     expect(screen.queryByDisplayValue('python')).not.toBeInTheDocument();
+  });
+
+  it('prevents deleting or editing non-editable template headings', async () => {
+    const user = userEvent.setup();
+    let editorInstance: any = null;
+
+    render(
+      <PageEditor
+        editable={true}
+        content={{
+          type: 'doc',
+          content: [
+            {
+              type: 'heading',
+              attrs: { level: 1, contenteditable: 'false' },
+              content: [{ type: 'text', text: 'Header' }],
+            },
+            {
+              type: 'paragraph',
+              content: [{ type: 'text', text: 'paragraph' }],
+            },
+          ],
+        }}
+        onEditorReady={(e) => {
+          editorInstance = e;
+        }}
+      />,
+    );
+
+    await act(async () => {
+      // let the editor mount
+      await Promise.resolve();
+    });
+
+    expect(editorInstance).toBeTruthy();
+
+    // put the cursor at the very end of the document (after the paragraph)
+    act(() => {
+      editorInstance
+        .chain()
+        .focus()
+        .setTextSelection(editorInstance.state.doc.content.size - 1)
+        .run();
+    });
+
+    // two backspaces should delete the paragraph text but not the header
+    await user.keyboard('{backspace}');
+    await user.keyboard('{backspace}');
+
+    const json = editorInstance.getJSON();
+    expect(json.content[0].type).toBe('heading');
+    expect(json.content[0].content[0].text).toBe('Header');
   });
 
   it('allows adding checklist item in edit mode', async () => {

@@ -128,12 +128,6 @@ export default function DiaryPageClient() {
   const [templateTitleInput, setTemplateTitleInput] = useState('');
   const [templatePromptsInput, setTemplatePromptsInput] = useState('');
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
-  const [lockedTemplateBlocks, setLockedTemplateBlocks] = useState<NonNullable<
-    JSONContent['content']
-  > | null>(null);
-  const [lockedTemplateByDate, setLockedTemplateByDate] = useState<
-    Record<string, NonNullable<JSONContent['content']>>
-  >({});
   const [sidebarVisible, setSidebarVisible] = useState(true);
   // on mobile we start closed; opening is user‑initiated
   const [mobileSidebarVisible, setMobileSidebarVisible] = useState(false);
@@ -290,7 +284,7 @@ export default function DiaryPageClient() {
         if (!hasEntry) {
           setSelectedDate(dateOnly);
           setContent(EMPTY_DOC);
-          setLockedTemplateBlocks(lockedTemplateByDate[dateOnly] ?? null);
+          // no locked template content any more
           originalContentRef.current = JSON.stringify(EMPTY_DOC);
           setIsDirty(false);
           setSaveState('idle');
@@ -313,7 +307,6 @@ export default function DiaryPageClient() {
 
         setSelectedDate(dateOnly);
         setContent(nextContent);
-        setLockedTemplateBlocks(lockedTemplateByDate[dateOnly] ?? null);
         originalContentRef.current = JSON.stringify(nextContent);
         setIsDirty(false);
         setSaveState('idle');
@@ -324,7 +317,7 @@ export default function DiaryPageClient() {
         setLoadingEntry(false);
       }
     },
-    [diaryQuery, entriesByDate, lockedTemplateByDate],
+    [diaryQuery, entriesByDate],
   );
 
   const saveCurrentEntry = useCallback(async () => {
@@ -471,7 +464,7 @@ export default function DiaryPageClient() {
 
         setSelectedDate(created.entryDate);
         setContent(createdContent);
-        setLockedTemplateBlocks(null);
+        // no locked template blocks to clear
         originalContentRef.current = JSON.stringify(createdContent);
         setIsDirty(false);
         setSaveState('saved');
@@ -678,17 +671,12 @@ export default function DiaryPageClient() {
 
   const applyTemplate = (template: DiaryTemplate) => {
     requestWithUnsavedGuard(() => {
+      // convert body text to JSONContent and apply directly; the helper
+      // ensures there is an editable paragraph after every heading and that
+      // headings themselves are tagged `contenteditable=false` so the cursor
+      // doesn't get stuck at the end of the document.
       const nextContent = templateBodyToContent(template.body);
-      const blocks = (nextContent.content ?? []).slice();
-      const nextLockedBlocks = blocks.filter((block, idx, arr) => {
-        if (idx !== arr.length - 1) return true;
-        return block.type !== 'paragraph' || Boolean(block.content?.length);
-      });
       setContent(nextContent);
-      setLockedTemplateBlocks(nextLockedBlocks);
-      if (selectedDate) {
-        setLockedTemplateByDate((prev) => ({ ...prev, [selectedDate]: nextLockedBlocks }));
-      }
       setIsDirty(true);
       setSaveState('idle');
       setShowTemplateMenu(false);
@@ -719,21 +707,9 @@ export default function DiaryPageClient() {
   };
 
   const handleContentChange = (nextContent: JSONContent) => {
-    let normalized = nextContent;
-
-    if (lockedTemplateBlocks && Array.isArray(nextContent.content)) {
-      const lockLen = lockedTemplateBlocks.length;
-      const currentPrefix = nextContent.content.slice(0, lockLen);
-      if (JSON.stringify(currentPrefix) !== JSON.stringify(lockedTemplateBlocks)) {
-        normalized = {
-          ...nextContent,
-          content: [...lockedTemplateBlocks, ...nextContent.content.slice(lockLen)],
-        };
-      }
-    }
-
-    setContent(normalized);
-    const currentJson = JSON.stringify(normalized);
+    // without any locked blocks we just accept whatever the editor gives us
+    setContent(nextContent);
+    const currentJson = JSON.stringify(nextContent);
     setIsDirty(currentJson !== originalContentRef.current);
     setSaveState('idle');
   };
@@ -750,12 +726,7 @@ export default function DiaryPageClient() {
         if (selectedDate === dateOnly) {
           setSelectedDate(null);
           setContent(EMPTY_DOC);
-          setLockedTemplateBlocks(null);
-          setLockedTemplateByDate((prev) => {
-            const next = { ...prev };
-            delete next[dateOnly];
-            return next;
-          });
+          // nothing to clear anymore
           originalContentRef.current = JSON.stringify(EMPTY_DOC);
           setIsDirty(false);
           setSaveState('idle');
@@ -778,14 +749,20 @@ export default function DiaryPageClient() {
     if (status === 'authenticated') {
       void fetchJournals();
     }
-  }, [fetchJournals, router, status]);
+    // `router` is intentionally omitted from the dependency list.  The
+    // object returned by `useRouter()` is recreated on every render in our
+    // tests (and sometimes in production), which would cause this effect to
+    // rerun endlessly and trigger a "maximum update depth exceeded" warning.
+    // We only care about the `status` / `fetchJournals` changes here, so
+    // disabling the exhaustive-deps rule is safe.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchJournals, status]);
 
   useEffect(() => {
     if (status !== 'authenticated' || !activeJournalId) return;
     setSelectedDate(null);
     setContent(EMPTY_DOC);
-    setLockedTemplateBlocks(null);
-    setLockedTemplateByDate({});
+    // no template locking to reset
     originalContentRef.current = JSON.stringify(EMPTY_DOC);
     setIsDirty(false);
     setSaveState('idle');
@@ -1262,6 +1239,7 @@ export default function DiaryPageClient() {
                 </div>
               ) : (
                 <PageEditor
+                  key={selectedDate || 'empty'}
                   content={content}
                   editable
                   mode="diary"
@@ -1577,331 +1555,3 @@ export default function DiaryPageClient() {
     </>
   );
 }
-
-/* legacy DiaryCalendar moved to separate file
-function DiaryCalendar({
-  monthDate,
-  selectedDate,
-  entriesByDate,
-  onPrevMonth,
-  onNextMonth,
-  onSetMonthDate,
-  onSelectDate,
-  prevMonthLabel,
-  nextMonthLabel,
-  dateLocale,
-  weekDayLabels,
-}: Readonly<{
-  monthDate: Date;
-  selectedDate: string | null;
-  entriesByDate: Record<string, DiaryMeta>;
-  onPrevMonth: () => void;
-  onNextMonth: () => void;
-  onSetMonthDate?: (date: Date) => void;
-  onSelectDate: (dateOnly: string) => void;
-  prevMonthLabel: string;
-  nextMonthLabel: string;
-  dateLocale: string;
-  weekDayLabels: [string, string, string, string, string, string, string];
-}>) {
-  const year = monthDate.getFullYear();
-  const month = monthDate.getMonth();
-  const [showMonthMenu, setShowMonthMenu] = useState(false);
-  const [showYearMenu, setShowYearMenu] = useState(false);
-  const monthMenuRef = useRef<HTMLDivElement | null>(null);
-  const yearMenuRef = useRef<HTMLDivElement | null>(null);
-  const firstDay = new Date(year, month, 1).getDay();
-  const totalDays = new Date(year, month + 1, 0).getDate();
-
-  const cells: Array<{ key: string; dateOnly: string | null }> = [];
-  for (let i = 0; i < firstDay; i += 1) {
-    cells.push({ key: `empty-${year}-${month}-${i + 1}`, dateOnly: null });
-  }
-  for (let day = 1; day <= totalDays; day += 1) {
-    const dateOnly = toDateOnly(new Date(year, month, day));
-    cells.push({ key: dateOnly, dateOnly });
-  }
-
-  const today = toDateOnly(new Date());
-  const years = Array.from({ length: 101 }, (_, index) => year - 80 + index);
-
-  useEffect(() => {
-    if (!showMonthMenu && !showYearMenu) return;
-    const onPointerDown = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (showMonthMenu && monthMenuRef.current?.contains(target)) return;
-      if (showYearMenu && yearMenuRef.current?.contains(target)) return;
-      setShowMonthMenu(false);
-      setShowYearMenu(false);
-    };
-    globalThis.addEventListener('mousedown', onPointerDown);
-    return () => globalThis.removeEventListener('mousedown', onPointerDown);
-  }, [showMonthMenu, showYearMenu]);
-
-  return (
-    <div>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          className="hover:bg-accent rounded p-1"
-          onClick={onPrevMonth}
-          aria-label={prevMonthLabel}
-        >
-          <ChevronLeft size={16} />
-        </button>
-
-        <div className="flex items-center gap-2">
-          <div ref={monthMenuRef} className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setShowMonthMenu((prev) => !prev);
-                setShowYearMenu(false);
-              }}
-              className="border-border bg-background hover:bg-accent inline-flex h-8 items-center gap-1 rounded-md border px-2 text-xs"
-            >
-              {new Date(year, month, 1).toLocaleDateString(dateLocale, { month: 'short' })}
-              <ChevronDown size={12} className="text-muted-foreground" />
-            </button>
-
-            {showMonthMenu && (
-              <div className="border-border bg-popover absolute z-50 mt-1 max-h-50 w-28 overflow-y-auto rounded-md border p-1 shadow-md">
-                {Array.from({ length: 12 }, (_, monthIndex) => {
-                  const isSelected = monthIndex === month;
-                  return (
-                    <button
-                      key={monthIndex}
-                      type="button"
-                      disabled={isSelected}
-                      onClick={() => {
-                        if (onSetMonthDate) onSetMonthDate(new Date(year, monthIndex, 1));
-                        setShowMonthMenu(false);
-                      }}
-                      className={cn(
-                        'hover:bg-accent w-full rounded-sm px-2 py-1.5 text-left text-xs disabled:cursor-default',
-                        isSelected ? 'bg-accent text-accent-foreground' : '',
-                      )}
-                    >
-                      {new Date(year, monthIndex, 1).toLocaleDateString(dateLocale, { month: 'short' })}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div ref={yearMenuRef} className="relative">
-            <button
-              type="button"
-              onClick={() => {
-                setShowYearMenu((prev) => !prev);
-                setShowMonthMenu(false);
-              }}
-              className="border-border bg-background hover:bg-accent inline-flex h-8 items-center gap-1 rounded-md border px-2 text-xs"
-            >
-              {year}
-              <ChevronDown size={12} className="text-muted-foreground" />
-            </button>
-
-            {showYearMenu && (
-              <div className="border-border bg-popover absolute z-50 mt-1 max-h-50 w-24 overflow-y-auto rounded-md border p-1 shadow-md">
-                {years.map((yearOption) => {
-                  const isSelected = yearOption === year;
-                  return (
-                    <button
-                      key={yearOption}
-                      type="button"
-                      disabled={isSelected}
-                      onClick={() => {
-                        if (onSetMonthDate) onSetMonthDate(new Date(yearOption, month, 1));
-                        setShowYearMenu(false);
-                      }}
-                      className={cn(
-                        'hover:bg-accent w-full rounded-sm px-2 py-1.5 text-left text-xs disabled:cursor-default',
-                        isSelected ? 'bg-accent text-accent-foreground' : '',
-                      )}
-                    >
-                      {yearOption}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          className="hover:bg-accent rounded p-1"
-          onClick={onNextMonth}
-          aria-label={nextMonthLabel}
-        >
-          <ChevronRight size={16} />
-        </button>
-      </div>
-
-      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
-        {weekDayLabels.map((day) => (
-          <div key={day}>{day}</div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-7 gap-1">
-        {cells.map(({ key, dateOnly }) => {
-          if (!dateOnly) return <div key={key} className="h-9" />;
-          const selected = selectedDate === dateOnly;
-          const hasEntry = Boolean(entriesByDate[dateOnly]);
-          const isToday = dateOnly === today;
-
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => onSelectDate(dateOnly)}
-              disabled={selected}
-              className={cn(
-                'relative h-9 rounded-md text-sm hover:bg-accent disabled:cursor-default disabled:hover:bg-transparent',
-                selected && 'bg-accent text-accent-foreground font-semibold',
-                !selected && isToday && 'ring-primary ring-1',
-              )}
-              title={formatDateLong(parseLocalDate(dateOnly))}
-            >
-              {Number(dateOnly.slice(-2))}
-              {hasEntry && (
-                <span
-                  className={cn(
-                    'absolute right-1 bottom-1 h-1.5 w-1.5 rounded-full',
-                    selected ? 'bg-accent-foreground' : 'bg-primary',
-                  )}
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-*/
-
-/* legacy DiaryTimelineList moved to separate file
-function DiaryTimelineList({
-  groupedEntries,
-  selectedDate,
-  onSelectDate,
-  onDeleteDate,
-  temperatureUnit,
-  dateLocale,
-  weatherCodeLabel,
-  noTextLabel,
-  hasContentLabel,
-  deleteLabel,
-  resolveWeatherLabel,
-}: Readonly<{
-  groupedEntries: Array<{ month: string; items: DiaryMeta[] }>;
-  selectedDate: string | null;
-  onSelectDate: (dateOnly: string) => void;
-  onDeleteDate: (dateOnly: string) => void;
-  temperatureUnit: 'c' | 'f';
-  dateLocale: string;
-  weatherCodeLabel: string;
-  noTextLabel: string;
-  hasContentLabel: string;
-  deleteLabel: string;
-  resolveWeatherLabel: (weatherCode?: number | null, fallback?: string | null) => string;
-}>) {
-  return (
-    <div className="space-y-4">
-      {groupedEntries.map((group) => (
-        <section key={group.month}>
-          <p className="text-muted-foreground mb-2 px-1 text-xs font-semibold tracking-wide uppercase">
-            {group.month}
-          </p>
-          <ul className="space-y-2">
-            {group.items.map((entry) => {
-              const selected = entry.entryDate === selectedDate;
-              const weatherIcon =
-                typeof entry.weatherCode === 'number' ? getWeatherIcon(entry.weatherCode) : null;
-
-              return (
-                <li key={entry.entryDate}>
-                  <div className="group relative">
-                    <button
-                      type="button"
-                      onClick={() => onSelectDate(entry.entryDate)}
-                      disabled={selected}
-                      className={cn(
-                        'border-border bg-card/70 hover:bg-accent/60 hover:border-primary/30 w-full rounded-xl border px-3 py-2.5 pr-10 text-left shadow-xs transition-colors disabled:cursor-default disabled:hover:bg-card/70 disabled:hover:border-border',
-                        selected
-                          ? 'ring-primary/30 bg-accent border-primary/35 ring-2'
-                          : '',
-                      )}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">
-                            {formatDateLong(parseLocalDate(entry.entryDate), dateLocale)}
-                          </p>
-                          <p className="text-muted-foreground mt-0.5 line-clamp-2 text-xs">
-                            {entry.previewText?.trim() || (entry.hasContent ? hasContentLabel : noTextLabel)}
-                          </p>
-                          {entry.locationShort && (
-                            <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
-                              {entry.locationShort}
-                            </p>
-                          )}
-                        </div>
-                        {entry.previewImage && (
-                          <img
-                            src={entry.previewImage}
-                            alt=""
-                            className="border-border h-10 w-10 shrink-0 rounded-md border object-cover"
-                          />
-                        )}
-                        {weatherIcon && typeof entry.weatherTempC === 'number' && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-sm font-medium whitespace-nowrap">
-                                {weatherIcon} {formatTemp(entry.weatherTempC, temperatureUnit)}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs font-medium">
-                                {resolveWeatherLabel(entry.weatherCode, entry.weatherLabel)}
-                              </p>
-                              <p className="text-xs opacity-90">
-                                {formatTemp(entry.weatherTempC, 'c')} · {formatTemp(entry.weatherTempC, 'f')}
-                              </p>
-                              <p className="text-xs opacity-90">{weatherCodeLabel}: {entry.weatherCode}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </button>
-
-                    <button
-                      type="button"
-                      aria-label={deleteLabel}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDeleteDate(entry.entryDate);
-                      }}
-                      className={cn(
-                        'bg-background/95 text-muted-foreground hover:text-destructive border-border absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center rounded-md border transition-opacity',
-                        'opacity-0 group-hover:opacity-100',
-                      )}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
-    </div>
-  );
-}
-
-*/

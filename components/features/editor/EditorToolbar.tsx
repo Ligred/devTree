@@ -9,7 +9,7 @@
  *
  * Extracted from the old TextBlock so it applies to the unified page editor.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { Editor } from '@tiptap/core';
@@ -22,6 +22,7 @@ import {
   Bookmark,
   Code,
   CodeSquare,
+  Heading,
   Heading1,
   Heading2,
   Heading3,
@@ -35,6 +36,8 @@ import {
   Quote,
   Redo2,
   Strikethrough,
+  Text,
+  Type,
   Underline as UnderlineIcon,
   Undo2,
 } from 'lucide-react';
@@ -51,27 +54,46 @@ import { BookmarksPanel } from './BookmarksPanel';
 
 const TEXT_COLORS = [
   { name: 'Default', value: '' },
+  { name: 'Black', value: '#000000' },
   { name: 'Gray', value: '#6b7280' },
   { name: 'Red', value: '#dc2626' },
   { name: 'Orange', value: '#ea580c' },
   { name: 'Amber', value: '#d97706' },
+  { name: 'Yellow', value: '#fbbf24' },
+  { name: 'Lime', value: '#84cc16' },
   { name: 'Green', value: '#16a34a' },
+  { name: 'Teal', value: '#14b8a6' },
   { name: 'Blue', value: '#2563eb' },
   { name: 'Indigo', value: '#4f46e5' },
   { name: 'Purple', value: '#7c3aed' },
+  { name: 'Pink', value: '#ec4899' },
 ];
 
 const HIGHLIGHT_COLORS = [
   { name: 'None', value: '' },
   { name: 'Yellow', value: '#fef08a' },
+  { name: 'Lime', value: '#d9f99d' },
   { name: 'Green', value: '#bbf7d0' },
+  { name: 'Cyan', value: '#a5f3fc' },
   { name: 'Blue', value: '#bfdbfe' },
+  { name: 'Rose', value: '#fecdd3' },
   { name: 'Pink', value: '#fbcfe8' },
   { name: 'Orange', value: '#fed7aa' },
 ];
 
 const FONT_FAMILIES = [
   { name: 'Default', value: '' },
+  { name: 'Arial', value: 'Arial, sans-serif' },
+  { name: 'Helvetica', value: 'Helvetica, sans-serif' },
+  { name: 'Verdana', value: 'Verdana, Geneva, sans-serif' },
+  { name: 'Tahoma', value: 'Tahoma, Geneva, sans-serif' },
+  { name: 'Trebuchet', value: 'Trebuchet MS, sans-serif' },
+  { name: 'Georgia', value: 'Georgia, serif' },
+  { name: 'Times', value: 'Times New Roman, Times, serif' },
+  { name: 'Courier', value: 'Courier New, Courier, monospace' },
+  { name: 'Lucida Console', value: 'Lucida Console, Monaco, monospace' },
+  { name: 'Comic Sans', value: 'Comic Sans MS, cursive, sans-serif' },
+  { name: 'Impact', value: 'Impact, Charcoal, sans-serif' },
   { name: 'Sans', value: 'var(--font-geist-sans)' },
   { name: 'Serif', value: 'Georgia, serif' },
   { name: 'Mono', value: 'var(--font-geist-mono)' },
@@ -79,6 +101,8 @@ const FONT_FAMILIES = [
 
 const FONT_SIZES = [
   { name: 'Default', value: '' },
+  { name: '8', value: '8px' },
+  { name: '10', value: '10px' },
   { name: '12', value: '12px' },
   { name: '14', value: '14px' },
   { name: '16', value: '16px' },
@@ -87,6 +111,8 @@ const FONT_SIZES = [
   { name: '24', value: '24px' },
   { name: '28', value: '28px' },
   { name: '32', value: '32px' },
+  { name: '36', value: '36px' },
+  { name: '48', value: '48px' },
 ];
 
 // ─── DictationOverlay ─────────────────────────────────────────────────────────
@@ -139,15 +165,16 @@ export interface ToolbarButtonProps {
   readonly children?: React.ReactNode;
 }
 
-export function ToolbarButton({
-  onClick,
-  active,
-  title,
-  onMouseDown: onMouseDownProp,
-  children,
-}: ToolbarButtonProps) {
+export const ToolbarButton = /*#__PURE__*/React.forwardRef<
+  HTMLButtonElement,
+  ToolbarButtonProps
+>(function ToolbarButton(
+  { onClick, active, title, onMouseDown: onMouseDownProp, children },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type="button"
       title={title}
       onMouseDown={(e) => {
@@ -164,6 +191,49 @@ export function ToolbarButton({
     >
       {children}
     </button>
+  );
+});
+
+// ─── PortalDropdown ───────────────────────────────────────────────────────────
+// Renders children in a fixed-position portal anchored below the given element.
+// This avoids clipping by any scrollable ancestor of the toolbar.
+
+function PortalDropdown({
+  anchorRef,
+  open,
+  children,
+}: {
+  anchorRef: React.RefObject<HTMLElement | null>;
+  open: boolean;
+  children: React.ReactNode;
+}) {
+  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  const update = useCallback(() => {
+    const a = anchorRef.current;
+    if (!a) return;
+    const r = a.getBoundingClientRect();
+    const GAP = 4;
+    setPos({ top: r.bottom + GAP, left: r.left });
+  }, [anchorRef]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    update();
+    window.addEventListener('resize', update);
+    window.addEventListener('scroll', update, true);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('scroll', update, true);
+    };
+  }, [open, update]);
+
+  if (!open) return null;
+  return createPortal(
+    <div style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 1000 }}>
+      {children}
+    </div>,
+    document.body,
   );
 }
 
@@ -184,26 +254,39 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const linkSelectionRef = useRef<{ from: number; to: number } | null>(null);
 
+  // anchors for popup dropdowns that render via portal
+  const fontBtnRef = useRef<HTMLButtonElement>(null);
+  const fontSizeBtnRef = useRef<HTMLButtonElement>(null);
+  const headingBtnRef = useRef<HTMLButtonElement>(null);
+  const alignBtnRef = useRef<HTMLButtonElement>(null);
+
   const [linkOpen, setLinkOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
   const [highlightOpen, setHighlightOpen] = useState(false);
   const [commentOpen, setCommentOpen] = useState(false);
   const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  const [headingOpen, setHeadingOpen] = useState(false);
+  const [alignOpen, setAlignOpen] = useState(false);
+  const [fontFamilyOpen, setFontFamilyOpen] = useState(false);
+  const [fontSizeOpen, setFontSizeOpen] = useState(false);
+
+  // for display: determine which font/size is active at the selection (if any)
+  const textStyleAttrs = editor?.getAttributes('textStyle') || {};
+  const currentFontFamily = textStyleAttrs.fontFamily ?? 'Default';
+  const currentFontSize = textStyleAttrs.fontSize ?? 'Default';
   const [dictationLanguage, setDictationLanguage] = useState<Locale>(locale);
   const [interimText, setInterimText] = useState('');
   const dictationSelectionRef = useRef<{ from: number; to: number } | null>(null);
-  const textStyleAttrs = editor.getAttributes('textStyle') as {
-    fontFamily?: string;
-    fontSize?: string;
-  };
-  const activeFontFamily = textStyleAttrs.fontFamily ?? '';
-  const activeFontSize = textStyleAttrs.fontSize ?? '';
 
   const closeAll = () => {
     setLinkOpen(false);
     setColorOpen(false);
     setHighlightOpen(false);
     setCommentOpen(false);
+    setHeadingOpen(false);
+    setAlignOpen(false);
+    setFontFamilyOpen(false);
+    setFontSizeOpen(false);
   };
 
   // ─── Link ──────────────────────────────────────────────────────────────────
@@ -327,74 +410,227 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
 
   return (
     <div className="border-border bg-card flex flex-wrap items-center gap-0.5 border-b px-2 py-1.5">
-      {/* Headings */}
-      <ToolbarButton
-        title="Heading 1"
-        active={editor.isActive('heading', { level: 1 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-      >
-        <Heading1 size={14} />
-      </ToolbarButton>
-      <ToolbarButton
-        title="Heading 2"
-        active={editor.isActive('heading', { level: 2 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-      >
-        <Heading2 size={14} />
-      </ToolbarButton>
-      <ToolbarButton
-        title="Heading 3"
-        active={editor.isActive('heading', { level: 3 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-      >
-        <Heading3 size={14} />
-      </ToolbarButton>
+      {/* Headings dropdown */}
+      <div className="relative">
+        <ToolbarButton
+          ref={headingBtnRef}
+          title="Heading"
+          active={
+            [1, 2, 3, 4, 5, 6].some((l) => editor.isActive('heading', { level: l }))
+          }
+          onClick={() => {
+            const opening = !headingOpen;
+            closeAll();
+            setHeadingOpen(opening);
+          }}
+        >
+          {/* show current level or generic icon */}
+          {(() => {
+            const level = [1, 2, 3, 4, 5, 6].find((l) =>
+              editor.isActive('heading', { level: l }),
+            );
+            switch (level) {
+              case 1:
+                return <Heading1 size={14} />;
+              case 2:
+                return <Heading2 size={14} />;
+              case 3:
+                return <Heading3 size={14} />;
+              default:
+                return <Heading size={14} />;
+            }
+          })()}
+        </ToolbarButton>
+        <PortalDropdown anchorRef={headingBtnRef} open={headingOpen}>
+          <AnimatePresence>
+            {headingOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="fixed inset-0 z-10"
+                  aria-hidden
+                  onClick={() => setHeadingOpen(false)}
+                />
+                <motion.div
+                  initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                  animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="border-border bg-popover z-50 w-32 rounded-lg border p-2 shadow-lg"
+                >
+                  {[1, 2, 3].map((level) => (
+                    <button
+                      key={level}
+                      type="button"
+                      className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 }).run();
+                        setHeadingOpen(false);
+                      }}
+                    >
+                      {`H${level}`}
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </PortalDropdown>
+      </div>
 
       <span className="bg-border mx-1 h-5 w-px" />
 
-      <label className="sr-only" htmlFor="toolbar-font-family">
-        Font family
-      </label>
-      <select
-        id="toolbar-font-family"
-        title="Font family"
-        className="border-border bg-background h-7 rounded border px-2 text-xs"
-        value={activeFontFamily}
-        onChange={(e) => {
-          const value = e.target.value;
-          if (value) editor.chain().focus().setFontFamily(value).run();
-          else editor.chain().focus().unsetFontFamily().run();
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {FONT_FAMILIES.map((font) => (
-          <option key={font.name} value={font.value}>
-            {font.name}
-          </option>
-        ))}
-      </select>
+      {/* Font family dropdown */}
+      <div className="relative">
+        <ToolbarButton
+          ref={fontBtnRef}
+          title="Font family"
+          onClick={() => {
+            const opening = !fontFamilyOpen;
+            closeAll();
+            setFontFamilyOpen(opening);
+          }}
+        >
+          <Type size={14} />
+          {/* show current selection or default */}
+          {currentFontFamily && currentFontFamily !== 'Default' && (
+            <span className="ml-1 truncate max-w-16 text-xs">
+              {FONT_FAMILIES.find((f) => f.value === currentFontFamily)?.name || 'Custom'}
+            </span>
+          )}
+        </ToolbarButton>
+        <PortalDropdown anchorRef={fontBtnRef} open={fontFamilyOpen}>
+          <AnimatePresence>
+            {fontFamilyOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="fixed inset-0 z-10"
+                  aria-hidden
+                  onClick={() => setFontFamilyOpen(false)}
+                />
+                <motion.div
+                  initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                  animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="border-border bg-popover z-50 max-h-60 w-40 overflow-auto rounded-lg border p-2 shadow-lg"
+                >
+                  {FONT_FAMILIES.map((font) => (
+                    <button
+                      key={font.name}
+                      type="button"
+                      className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (font.value) {
+                          const { empty, from, to } = editor.state.selection;
+                          if (empty) {
+                            // apply to entire document then restore cursor
+                            editor
+                              .chain()
+                              .focus()
+                              .setTextSelection({ from: 1, to: editor.state.doc.content.size })
+                              .setFontFamily(font.value)
+                              .setTextSelection({ from, to })
+                              .run();
+                          } else {
+                            editor.chain().focus().setFontFamily(font.value).run();
+                          }
+                        } else {
+                          editor.chain().focus().unsetFontFamily().run();
+                        }
+                        setFontFamilyOpen(false);
+                      }}
+                  >
+                    <span style={font.value ? { fontFamily: font.value } : undefined}>{font.name}</span>
+                  </button>
+                ))}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+        </PortalDropdown>
+      </div>
 
-      <label className="sr-only" htmlFor="toolbar-font-size">
-        Font size
-      </label>
-      <select
-        id="toolbar-font-size"
-        title="Font size"
-        className="border-border bg-background h-7 rounded border px-2 text-xs"
-        value={activeFontSize}
-        onChange={(e) => {
-          const value = e.target.value;
-          if (value) editor.chain().focus().setFontSize(value).run();
-          else editor.chain().focus().unsetFontSize().run();
-        }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {FONT_SIZES.map((size) => (
-          <option key={size.name} value={size.value}>
-            {size.name}
-          </option>
-        ))}
-      </select>
+      {/* Font size dropdown */}
+      <div className="relative">
+        <ToolbarButton
+          ref={fontSizeBtnRef}
+          title="Font size"
+          onClick={() => {
+            const opening = !fontSizeOpen;
+            closeAll();
+            setFontSizeOpen(opening);
+          }}
+        >
+          <Text size={14} />
+          {currentFontSize && currentFontSize !== 'Default' && (
+            <span className="ml-1 truncate max-w-12 text-xs">{currentFontSize}</span>
+          )}
+        </ToolbarButton>
+        <PortalDropdown anchorRef={fontSizeBtnRef} open={fontSizeOpen}>
+          <AnimatePresence>
+            {fontSizeOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="fixed inset-0 z-10"
+                  aria-hidden
+                  onClick={() => setFontSizeOpen(false)}
+                />
+                <motion.div
+                  initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                  animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="border-border bg-popover z-50 max-h-60 w-32 overflow-auto rounded-lg border p-2 shadow-lg"
+                >
+                {FONT_SIZES.map((size) => (
+                  <button
+                    key={size.name}
+                    type="button"
+                    className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (size.value) {
+                        const { empty, from, to } = editor.state.selection;
+                        if (empty) {
+                          editor
+                            .chain()
+                            .focus()
+                            .setTextSelection({ from: 1, to: editor.state.doc.content.size })
+                            .setFontSize(size.value)
+                            .setTextSelection({ from, to })
+                            .run();
+                        } else {
+                          editor.chain().focus().setFontSize(size.value).run();
+                        }
+                      } else {
+                        editor.chain().focus().unsetFontSize().run();
+                      }
+                      setFontSizeOpen(false);
+                    }}
+                  >
+                    <span style={size.value ? { fontSize: size.value } : undefined} className="truncate max-w-12">{size.name}</span>
+                  </button>
+                ))}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+        </PortalDropdown>
+      </div>
 
       <span className="bg-border mx-1 h-5 w-px" />
 
@@ -437,36 +673,76 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
 
       <span className="bg-border mx-1 h-5 w-px" />
 
-      {/* Alignment */}
-      <ToolbarButton
-        title="Align left"
-        active={editor.isActive({ textAlign: 'left' })}
-        onClick={() => editor.chain().focus().setTextAlign('left').run()}
-      >
-        <AlignLeft size={14} />
-      </ToolbarButton>
-      <ToolbarButton
-        title="Align center"
-        active={editor.isActive({ textAlign: 'center' })}
-        onClick={() => editor.chain().focus().setTextAlign('center').run()}
-      >
-        <AlignCenter size={14} />
-      </ToolbarButton>
-      <ToolbarButton
-        title="Align right"
-        active={editor.isActive({ textAlign: 'right' })}
-        onClick={() => editor.chain().focus().setTextAlign('right').run()}
-      >
-        <AlignRight size={14} />
-      </ToolbarButton>
-      <ToolbarButton
-        title="Justify"
-        active={editor.isActive({ textAlign: 'justify' })}
-        onClick={() => editor.chain().focus().setTextAlign('justify').run()}
-      >
-        <AlignJustify size={14} />
-      </ToolbarButton>
-
+      {/* Alignment dropdown */}
+      <div className="relative">
+        <ToolbarButton
+          ref={alignBtnRef}
+          title="Text alignment"
+          active={
+            ['left', 'center', 'right', 'justify'].some((a) =>
+              editor.isActive({ textAlign: a as any }),
+            )
+          }
+          onClick={() => {
+            const opening = !alignOpen;
+            closeAll();
+            setAlignOpen(opening);
+          }}
+        >
+          {/* show current align or left icon */}
+          {(() => {
+            if (editor.isActive({ textAlign: 'center' })) return <AlignCenter size={14} />;
+            if (editor.isActive({ textAlign: 'right' })) return <AlignRight size={14} />;
+            if (editor.isActive({ textAlign: 'justify' })) return <AlignJustify size={14} />;
+            return <AlignLeft size={14} />;
+          })()}
+        </ToolbarButton>
+        <PortalDropdown anchorRef={alignBtnRef} open={alignOpen}>
+          <AnimatePresence>
+            {alignOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="fixed inset-0 z-10"
+                  aria-hidden
+                  onClick={() => setAlignOpen(false)}
+                />
+                <motion.div
+                  initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                  animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="border-border bg-popover z-50 w-28 rounded-lg border p-2 shadow-lg"
+                >
+                {[
+                  { label: 'Left', icon: <AlignLeft size={14} />, value: 'left' },
+                  { label: 'Center', icon: <AlignCenter size={14} />, value: 'center' },
+                  { label: 'Right', icon: <AlignRight size={14} />, value: 'right' },
+                  { label: 'Justify', icon: <AlignJustify size={14} />, value: 'justify' },
+                ].map(({ label, icon, value }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      editor.chain().focus().setTextAlign(value as any).run();
+                      setAlignOpen(false);
+                    }}
+                  >
+                    {icon}
+                    {label}
+                  </button>
+                ))}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+        </PortalDropdown>
+        </div>
       <span className="bg-border mx-1 h-5 w-px" />
 
       {/* Lists & blockquote */}
@@ -512,7 +788,9 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
         <ToolbarButton
           title="Text color"
           onClick={() => {
-            setColorOpen((v) => !v);
+            const opening = !colorOpen;
+            closeAll();
+            setColorOpen(opening);
             setHighlightOpen(false);
             setLinkOpen(false);
           }}
@@ -560,6 +838,21 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                     {name}
                   </button>
                 ))}
+                <div className="mt-1 border-t border-border pt-1">
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="color"
+                      className="h-6 w-6 p-0 border-none"
+                      onChange={(e) => {
+                        const clr = e.target.value;
+                        editor.chain().focus().setColor(clr).run();
+                        setColorOpen(false);
+                      }}
+                    />
+                    {' '}
+                    Custom
+                  </label>
+                </div>
               </motion.div>
             </>
           )}
@@ -617,6 +910,19 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                     {name}
                   </button>
                 ))}
+                <div className="mt-1 border-t border-border pt-1">
+                  <label className="flex items-center gap-2 text-xs">
+                    <input
+                      type="color"
+                      className="h-6 w-6 p-0 border-none"
+                      onChange={(e) => {
+                        const clr = e.target.value;
+                        editor.chain().focus().toggleHighlight({ color: clr }).run();
+                        setHighlightOpen(false);
+                      }}/>
+                    Custom
+                  </label>
+                </div>
               </motion.div>
             </>
           )}

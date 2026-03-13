@@ -83,7 +83,7 @@ export function ActivityBar() {
         aria-label="Application sections"
         className="alive-surface bg-background flex h-12 w-full shrink-0 flex-row items-center gap-1 overflow-x-auto overflow-y-hidden border-b px-2 [scrollbar-width:none] md:h-full md:w-12 md:flex-col md:overflow-visible md:border-r md:border-b-0 md:px-0 md:py-2"
         style={{ WebkitOverflowScrolling: 'touch' }}
-        initial={reducedMotion ? false : { x: -20, opacity: 0 }}
+        initial={reducedMotion ? undefined : { x: -20, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         transition={
           reducedMotion

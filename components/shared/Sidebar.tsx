@@ -49,7 +49,7 @@ export function Sidebar({
           {/* collapsed show button overlay (same as workspace) */}
           <motion.div
             className="border-border bg-card absolute inset-y-0 left-0 z-10 hidden w-10 items-start justify-center border-r py-3 md:flex"
-            initial={false}
+            initial={reducedMotion ? undefined : { opacity: visible ? 0 : 1 }}
             animate={{ opacity: visible ? 0 : 1 }}
             transition={
               reducedMotion
