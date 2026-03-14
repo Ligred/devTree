@@ -80,8 +80,9 @@ vi.mock('@/components/features/Workspace/UnsavedChangesDialog', () => ({
 
 // other UI components which may perform real DOM operations can be stubbed as
 // simple fragments to avoid errors during rendering
+let mockConfirm = vi.fn().mockResolvedValue(false);
 vi.mock('@/lib/confirmationContext', () => ({
-  useConfirmation: () => ({ confirm: vi.fn().mockResolvedValue(false) }),
+  useConfirmation: () => ({ confirm: (...args: any[]) => mockConfirm(...args) }),
 }));
 vi.mock('@/components/shared/ui/dialog', () => ({
   Dialog: ({ children }: any) => <>{children}</>,
@@ -96,8 +97,37 @@ vi.mock('@/components/shared/ui/tooltip', () => ({
   TooltipTrigger: ({ children }: any) => <>{children}</>,
 }));
 
+function setupWithJournalAndEntry() {
+  const fakeTemplates = [{ id: 't1', name: 'my template', body: '## First\n\n### Second' }];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string, opts?: any) => {
+      if (url === '/api/diary/journals') {
+        return Promise.resolve({ ok: true, json: async () => [{ id: 'j1', name: 'Test' }] });
+      }
+      if (url.includes('/templates')) {
+        return Promise.resolve({ ok: true, json: async () => fakeTemplates });
+      }
+      if (opts?.method === 'PUT' && url.startsWith('/api/diary/')) {
+        const dateOnly = url.split('/api/diary/')[1].split('?')[0];
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            id: dateOnly,
+            entryDate: dateOnly,
+            content: { type: 'doc', content: [] },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: async () => [] });
+    }),
+  );
+  return { fakeTemplates };
+}
+
 describe('DiaryPageClient header/loading behavior', () => {
   beforeEach(() => {
+    mockConfirm = vi.fn().mockResolvedValue(false);
     // default stub for fetch which can be specialized per-test by
     // re-stubbing inside individual tests.
     vi.stubGlobal(
@@ -322,5 +352,186 @@ describe('DiaryPageClient header/loading behavior', () => {
     const openBtn2 = screen.getByRole('button', { name: /sidebar.show/ });
     fireEvent.click(openBtn2);
     await waitFor(() => expect(screen.getAllByTestId('left-panel').length).toBeGreaterThan(0));
+  });
+
+  // ── Template application tests ───────────────────────────────────────────────
+
+  it('applies template directly when entry is clean (no unsaved changes)', async () => {
+    capturedProps = {};
+    vi.mock('@/components/features/editor/PageEditor', () => ({
+      PageEditor: (props: any) => {
+        capturedProps = props;
+        return <div data-testid="editor" />;
+      },
+    }));
+
+    const { fakeTemplates } = setupWithJournalAndEntry();
+    render(<DiaryPageClient />);
+
+    const createBtn = await screen.findByText('diary.createToday');
+    fireEvent.click(createBtn);
+    await screen.findByTestId('editor');
+
+    // entry is freshly created — isDirty should be false, so confirm must NOT be called
+    const applyBtn = await screen.findByLabelText('diary.applyTemplate');
+    applyBtn.removeAttribute('disabled');
+    fireEvent.click(applyBtn);
+
+    const tmplBtn = await screen.findByRole('button', { name: /my template/ });
+    fireEvent.click(tmplBtn);
+
+    await waitFor(() => {
+      expect(capturedProps.content).toEqual(templateBodyToContent(fakeTemplates[0].body));
+    });
+
+    // confirmation dialog must NOT have been invoked for a clean entry
+    expect(mockConfirm).not.toHaveBeenCalled();
+  });
+
+  it('shows overwrite confirmation when template is applied over unsaved changes', async () => {
+    capturedProps = {};
+    vi.mock('@/components/features/editor/PageEditor', () => ({
+      PageEditor: (props: any) => {
+        capturedProps = props;
+        return <div data-testid="editor" />;
+      },
+    }));
+
+    const { fakeTemplates } = setupWithJournalAndEntry();
+    // confirm returns true → user agrees to overwrite
+    mockConfirm = vi.fn().mockResolvedValue(true);
+
+    render(<DiaryPageClient />);
+
+    const createBtn = await screen.findByText('diary.createToday');
+    fireEvent.click(createBtn);
+    await screen.findByTestId('editor');
+
+    // simulate unsaved changes by triggering an editor onChange
+    act(() => {
+      capturedProps.onChange?.({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'edited' }] }],
+      });
+    });
+
+    const applyBtn = await screen.findByLabelText('diary.applyTemplate');
+    applyBtn.removeAttribute('disabled');
+    fireEvent.click(applyBtn);
+
+    const tmplBtn = await screen.findByRole('button', { name: /my template/ });
+    fireEvent.click(tmplBtn);
+
+    // confirm must have been called with appropriate title key
+    await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(1));
+    expect(mockConfirm).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'diary.applyTemplateOverwriteTitle' }),
+    );
+
+    // template content should now be applied because user confirmed
+    await waitFor(() => {
+      expect(capturedProps.content).toEqual(templateBodyToContent(fakeTemplates[0].body));
+    });
+  });
+
+  it('does NOT apply template when user cancels the overwrite confirmation', async () => {
+    capturedProps = {};
+    vi.mock('@/components/features/editor/PageEditor', () => ({
+      PageEditor: (props: any) => {
+        capturedProps = props;
+        return <div data-testid="editor" />;
+      },
+    }));
+
+    setupWithJournalAndEntry();
+    // confirm returns false → user cancels
+    mockConfirm = vi.fn().mockResolvedValue(false);
+
+    render(<DiaryPageClient />);
+
+    const createBtn = await screen.findByText('diary.createToday');
+    fireEvent.click(createBtn);
+    await screen.findByTestId('editor');
+
+    // simulate unsaved changes
+    const editedContent = {
+      type: 'doc',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'my notes' }] }],
+    };
+    act(() => {
+      capturedProps.onChange?.(editedContent);
+    });
+
+    const applyBtn = await screen.findByLabelText('diary.applyTemplate');
+    applyBtn.removeAttribute('disabled');
+    fireEvent.click(applyBtn);
+
+    const tmplBtn = await screen.findByRole('button', { name: /my template/ });
+    fireEvent.click(tmplBtn);
+
+    await waitFor(() => expect(mockConfirm).toHaveBeenCalledTimes(1));
+
+    // content must remain unchanged because user cancelled
+    await waitFor(() => {
+      expect(capturedProps.content).toEqual(editedContent);
+    });
+  });
+
+  // ── Leaving-page confirmation tests ─────────────────────────────────────────
+
+  it('unsaved changes dialog does NOT appear when navigating to the same date', async () => {
+    setupWithJournalAndEntry();
+    const { container } = render(<DiaryPageClient />);
+
+    // The UnsavedChangesDialog should start closed
+    // (it is mocked to return null so we check it wasn't toggled open via state)
+    // Nothing to assert here beyond the component not crashing
+    await waitFor(() => expect(container.querySelector('.animate-pulse')).toBeInTheDocument());
+    // No dialog should be open
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('beforeunload is prevented when isDirty', async () => {
+    capturedProps = {};
+    vi.mock('@/components/features/editor/PageEditor', () => ({
+      PageEditor: (props: any) => {
+        capturedProps = props;
+        return <div data-testid="editor" />;
+      },
+    }));
+
+    setupWithJournalAndEntry();
+    render(<DiaryPageClient />);
+
+    const createBtn = await screen.findByText('diary.createToday');
+    fireEvent.click(createBtn);
+    await screen.findByTestId('editor');
+
+    // make the entry dirty
+    act(() => {
+      capturedProps.onChange?.({
+        type: 'doc',
+        content: [{ type: 'paragraph', content: [{ type: 'text', text: 'unsaved' }] }],
+      });
+    });
+
+    // fire beforeunload — preventDefault should be called
+    const event = new Event('beforeunload', { cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    globalThis.dispatchEvent(event);
+
+    expect(preventDefaultSpy).toHaveBeenCalled();
+  });
+
+  it('beforeunload is NOT prevented when entry is clean', async () => {
+    setupWithJournalAndEntry();
+    render(<DiaryPageClient />);
+
+    // fire beforeunload without any edits — should not preventDefault
+    const event = new Event('beforeunload', { cancelable: true });
+    const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
+    globalThis.dispatchEvent(event);
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
   });
 });

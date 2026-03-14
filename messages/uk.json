@@ -246,6 +246,8 @@
   "diary.create": "Створити",
   "diary.templates": "Шаблони",
   "diary.applyTemplate": "Застосувати шаблон",
+  "diary.applyTemplateOverwriteTitle": "Замінити поточний вміст?",
+  "diary.applyTemplateOverwriteDescription": "Застосування цього шаблону замінить ваш поточний незбережений вміст.",
   "diary.templateManagerTitle": "Шаблони журналу",
   "diary.templateManagerDescription": "Створюйте та керуйте шаблонами для вибраного журналу.",
   "diary.loadingTemplates": "Завантаження шаблонів…",

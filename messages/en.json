@@ -246,6 +246,8 @@
   "diary.create": "Create",
   "diary.templates": "Templates",
   "diary.applyTemplate": "Apply template",
+  "diary.applyTemplateOverwriteTitle": "Replace current content?",
+  "diary.applyTemplateOverwriteDescription": "Applying this template will replace your current unsaved content.",
   "diary.templateManagerTitle": "Journal templates",
   "diary.templateManagerDescription": "Create and manage templates for the selected journal.",
   "diary.loadingTemplates": "Loading templates…",

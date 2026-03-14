@@ -172,14 +172,24 @@ export default function DiaryPageClient() {
     [confirm, t, deleteEntryByDate, selectedDate],
   );
 
-  const applyTemplate = (template: DiaryTemplate) => {
-    requestWithUnsavedGuard(() => {
+  const applyTemplate = useCallback(
+    async (template: DiaryTemplate) => {
+      if (isDirty) {
+        const confirmed = await confirm({
+          title: t('diary.applyTemplateOverwriteTitle'),
+          description: t('diary.applyTemplateOverwriteDescription'),
+          confirmText: t('diary.applyTemplate'),
+          cancelText: t('delete.cancel'),
+        });
+        if (!confirmed) return;
+      }
       const nextContent = templateBodyToContent(template.body);
       setContent(nextContent);
       setIsDirty(true);
       setSaveState('idle');
-    });
-  };
+    },
+    [isDirty, confirm, t, setContent, setIsDirty, setSaveState],
+  );
 
   const handleSaveAndLeave = async () => {
     const ok = await saveCurrentEntry(selectedDate, content);
