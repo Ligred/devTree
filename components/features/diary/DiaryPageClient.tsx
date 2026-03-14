@@ -1,26 +1,11 @@
 'use client';
-/* eslint-disable sonarjs/no-duplicate-string */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 
-import type { Editor, JSONContent } from '@tiptap/react';
-import {
-  CalendarDays,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Edit3,
-  FileText,
-  List,
-  Menu,
-  PanelLeftClose,
-  Pencil,
-  Plus,
-  Save,
-  Sparkles,
-} from 'lucide-react';
+import type { Editor } from '@tiptap/react';
+import { CalendarDays, Plus } from 'lucide-react';
 import { useReducedMotion } from 'motion/react';
 
 import { EditorToolbar } from '@/components/features/editor/EditorToolbar';
@@ -37,132 +22,98 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/shared/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/shared/ui/dialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shared/ui/tooltip';
-import { formatDateLong, parseLocalDate } from '@/lib/dateUtils';
 import { useI18n } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/settingsStore';
 import { cn } from '@/lib/utils';
 
-import { DiaryCalendar } from './DiaryCalendar';
-import { DiaryLeftPanel } from './DiaryLeftPanel';
-// diary-specific helpers & types
-import {
-  buildTemplateBodyFromForm,
-  decodeTemplateText,
-  EMPTY_DOC,
-  extractClientPreview,
-  fetchWeatherSnapshotForDate,
-  formatTemp,
-  getHeaderSubtitle,
-  getWeatherIcon,
-  getWeatherLabel,
-  getWeatherLabelKey,
-  isEmptyDoc,
-  monthTitle,
-  parseTemplateBodyToForm,
-  templateBodyToContent,
-  toDateOnly,
-} from './diaryUtils';
-import type {
-  DiaryEntryResponse,
-  DiaryJournal,
-  DiaryMeta,
-  DiaryTemplate,
-  DiaryViewMode,
-} from './types';
+import { DiaryCreateEntryDialog } from './DiaryCreateEntryDialog';
+import { DiaryHeader } from './DiaryHeader';
+import { DiarySidebarContent } from './DiarySidebarContent';
+import { DiaryTemplateManagerDialog } from './DiaryTemplateManagerDialog';
+import { templateBodyToContent, toDateOnly } from './diaryUtils';
+import { useDiaryEntries } from './hooks/useDiaryEntries';
+import { useDiaryJournals } from './hooks/useDiaryJournals';
+import { useDiaryTemplates } from './hooks/useDiaryTemplates';
+import type { DiaryTemplate } from './types';
 
-// eslint-disable-next-line sonarjs/cognitive-complexity -- DiaryPage intentionally orchestrates page-level state and handlers
 export default function DiaryPageClient() {
   const { status } = useSession();
   const router = useRouter();
   const { t, locale } = useI18n();
-  const { diaryLocationEnabled, diaryTemperatureUnit } = useSettingsStore();
+  const { diaryTemperatureUnit } = useSettingsStore();
   const dateLocale = locale === 'uk' ? 'uk-UA' : 'en-US';
 
   const today = useMemo(() => toDateOnly(new Date()), []);
-
   const reducedMotion = useReducedMotion();
-  const sidebarTransition:
-    | { duration: number }
-    | { duration: number; ease: [number, number, number, number] } = reducedMotion
+  const sidebarTransition = reducedMotion
     ? { duration: 0.01 }
-    : { duration: 0.34, ease: [0.22, 1, 0.36, 1] };
+    : { duration: 0.34, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] };
 
-  const [viewMode, setViewMode] = useState<DiaryViewMode>('list');
-  const [journals, setJournals] = useState<DiaryJournal[]>([]);
-  const [activeJournalId, setActiveJournalId] = useState<string | null>(null);
-  const [entries, setEntries] = useState<DiaryMeta[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
   const [monthCursor, setMonthCursor] = useState<Date>(() => new Date());
-
-  const [content, setContent] = useState<JSONContent>(EMPTY_DOC);
   const [editor, setEditor] = useState<Editor | null>(null);
-  const [isDirty, setIsDirty] = useState(false);
-
-  const [loadingList, setLoadingList] = useState(false);
-  const [loadingEntry, setLoadingEntry] = useState(false);
-  const [creatingEntry, setCreatingEntry] = useState(false);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [errorText, setErrorText] = useState<string | null>(null);
-
-  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [deleteTargetDate, setDeleteTargetDate] = useState<string | null>(null);
-  const [newJournalName, setNewJournalName] = useState('');
-  const [renameJournalName, setRenameJournalName] = useState('');
-  const [showCreateJournalDialog, setShowCreateJournalDialog] = useState(false);
-  const [showRenameJournalDialog, setShowRenameJournalDialog] = useState(false);
-  const [showJournalMenu, setShowJournalMenu] = useState(false);
-  const [showTemplateManagerDialog, setShowTemplateManagerDialog] = useState(false);
-  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
-  const [templates, setTemplates] = useState<DiaryTemplate[]>([]);
-  const [loadingTemplates, setLoadingTemplates] = useState(false);
-  const [templateNameInput, setTemplateNameInput] = useState('');
-  const [templateTitleInput, setTemplateTitleInput] = useState('');
-  const [templatePromptsInput, setTemplatePromptsInput] = useState('');
-  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [sidebarVisible, setSidebarVisible] = useState(true);
-  // on mobile we start closed; opening is user‑initiated
   const [mobileSidebarVisible, setMobileSidebarVisible] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const pendingActionRef = useRef<(() => void) | null>(null);
-  const originalContentRef = useRef<string>(JSON.stringify(EMPTY_DOC));
-  const journalMenuRef = useRef<HTMLDivElement | null>(null);
-  const templateMenuRef = useRef<HTMLDivElement | null>(null);
-
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showTemplateManagerDialog, setShowTemplateManagerDialog] = useState(false);
+  const [deleteTargetDate, setDeleteTargetDate] = useState<string | null>(null);
   const [createDateValue, setCreateDateValue] = useState(today);
-  const toggleActiveClass = 'bg-accent text-accent-foreground';
-  const toggleInactiveClass = 'text-muted-foreground';
-  const createActionButtonClass =
-    'border-border bg-card hover:bg-accent/70 hover:border-primary/35 flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium shadow-xs transition-colors';
-  const createPrimaryButtonClass =
-    'bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-colors disabled:opacity-60';
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
+  const {
+    journals,
+    activeJournalId,
+    setActiveJournalId,
+    activeJournal,
+    fetchJournals,
+    createJournal,
+    renameJournal,
+    error: journalError,
+  } = useDiaryJournals();
 
   const diaryQuery = useMemo(
     () => (activeJournalId ? `?journalId=${encodeURIComponent(activeJournalId)}` : ''),
     [activeJournalId],
   );
 
-  const activeJournal = useMemo(
-    () => journals.find((journal) => journal.id === activeJournalId) ?? null,
-    [activeJournalId, journals],
-  );
+  const {
+    entries,
+    entriesByDate,
+    groupedEntries,
+    selectedDate,
+    content,
+    isDirty,
+    saveState,
+    loadingList,
+    loadingEntry,
+    creatingEntry,
+    error: entryError,
+    resetToEmpty,
+    fetchEntries,
+    loadEntry,
+    saveCurrentEntry,
+    createEntryNow,
+    deleteEntryByDate,
+    handleContentChange,
+    setIsDirty,
+    setSaveState,
+    setContent,
+  } = useDiaryEntries(activeJournalId, diaryQuery, today, dateLocale);
 
-  const entriesByDate = useMemo(() => {
-    const map: Record<string, DiaryMeta> = {};
-    for (const entry of entries) map[entry.entryDate] = entry;
-    return map;
-  }, [entries]);
+  const {
+    templates,
+    loadingTemplates,
+    fetchTemplates,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate,
+  } = useDiaryTemplates(activeJournalId);
 
   const selectedEntryExists = selectedDate ? Boolean(entriesByDate[selectedDate]) : false;
   const todayEntryExists = Boolean(entriesByDate[today]);
+  const effectiveVisible = isMobile ? mobileSidebarVisible : sidebarVisible;
 
   const selectedWeatherSummary = useMemo(() => {
     if (!selectedDate) return null;
@@ -173,7 +124,7 @@ export default function DiaryPageClient() {
     return {
       tempC: entry.weatherTempC,
       weatherCode: entry.weatherCode,
-      weatherLabel: entry.weatherLabel ?? getWeatherLabel(entry.weatherCode),
+      weatherLabel: entry.weatherLabel ?? '',
       locationName: entry.locationName ?? '',
       locationShort: entry.locationShort ?? entry.locationName ?? '',
       locationLat: entry.locationLat,
@@ -181,203 +132,7 @@ export default function DiaryPageClient() {
     };
   }, [entriesByDate, selectedDate]);
 
-  const groupedEntries = useMemo(() => {
-    const groups: Array<{ month: string; items: DiaryMeta[] }> = [];
-    for (const entry of entries) {
-      const month = monthTitle(parseLocalDate(entry.entryDate), dateLocale);
-      const lastGroup = groups.at(-1);
-      if (lastGroup?.month === month) {
-        lastGroup.items.push(entry);
-      } else {
-        groups.push({ month, items: [entry] });
-      }
-    }
-    return groups;
-  }, [dateLocale, entries]);
-
-  // which visibility flag applies depending on viewport
-  const effectiveVisible = isMobile ? mobileSidebarVisible : sidebarVisible;
-
-  const resolveWeatherLabel = useCallback(
-    (weatherCode?: number | null, fallback?: string | null) => {
-      if (typeof weatherCode !== 'number') return fallback ?? t('diary.weather.default');
-      const localized = t(getWeatherLabelKey(weatherCode));
-      return localized || fallback || getWeatherLabel(weatherCode);
-    },
-    [t],
-  );
-
-  const fetchJournals = useCallback(async () => {
-    setErrorText(null);
-    try {
-      const res = await fetch('/api/diary/journals');
-      const body = (await res.json().catch(() => null)) as
-        | { error?: string }
-        | DiaryJournal[]
-        | null;
-
-      if (!res.ok) {
-        throw new Error((body as { error?: string } | null)?.error ?? 'Failed to load journals');
-      }
-
-      const nextJournals = Array.isArray(body) ? body : [];
-      setJournals(nextJournals);
-      setActiveJournalId((prev) => prev ?? nextJournals[0]?.id ?? null);
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to load journals');
-    }
-  }, []);
-
-  const fetchEntries = useCallback(async () => {
-    if (!activeJournalId) return;
-    setLoadingList(true);
-    setErrorText(null);
-    try {
-      const res = await fetch(`/api/diary${diaryQuery}`);
-      const body = (await res.json().catch(() => null)) as { error?: string } | DiaryMeta[] | null;
-      if (!res.ok) {
-        throw new Error(
-          (body as { error?: string } | null)?.error ?? 'Failed to load diary entries',
-        );
-      }
-      setEntries(Array.isArray(body) ? body : []);
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to load diary entries');
-    } finally {
-      setLoadingList(false);
-    }
-  }, [activeJournalId, diaryQuery]);
-
-  const fetchTemplates = useCallback(async () => {
-    if (!activeJournalId) {
-      setTemplates([]);
-      return;
-    }
-
-    setLoadingTemplates(true);
-    try {
-      const res = await fetch(`/api/diary/journals/${activeJournalId}/templates`);
-      const body = (await res.json().catch(() => null)) as
-        | { error?: string }
-        | DiaryTemplate[]
-        | null;
-
-      if (!res.ok) {
-        throw new Error((body as { error?: string } | null)?.error ?? 'Failed to load templates');
-      }
-
-      setTemplates(Array.isArray(body) ? body : []);
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to load templates');
-    } finally {
-      setLoadingTemplates(false);
-    }
-  }, [activeJournalId]);
-
-  const loadEntry = useCallback(
-    async (dateOnly: string) => {
-      setLoadingEntry(true);
-      setErrorText(null);
-
-      try {
-        const hasEntry = Boolean(entriesByDate[dateOnly]);
-        if (!hasEntry) {
-          setSelectedDate(dateOnly);
-          setContent(EMPTY_DOC);
-          // no locked template content any more
-          originalContentRef.current = JSON.stringify(EMPTY_DOC);
-          setIsDirty(false);
-          setSaveState('idle');
-          return;
-        }
-
-        const res = await fetch(`/api/diary/${dateOnly}${diaryQuery}`);
-        const body = (await res.json().catch(() => null)) as
-          | DiaryEntryResponse
-          | { error?: string }
-          | null;
-        if (!res.ok) {
-          throw new Error(
-            (body as { error?: string } | null)?.error ?? 'Failed to load diary entry',
-          );
-        }
-
-        const entry = body as DiaryEntryResponse;
-        const nextContent = entry.content ?? EMPTY_DOC;
-
-        setSelectedDate(dateOnly);
-        setContent(nextContent);
-        originalContentRef.current = JSON.stringify(nextContent);
-        setIsDirty(false);
-        setSaveState('idle');
-      } catch (error) {
-        setErrorText(error instanceof Error ? error.message : 'Failed to load diary entry');
-        setSaveState('error');
-      } finally {
-        setLoadingEntry(false);
-      }
-    },
-    [diaryQuery, entriesByDate],
-  );
-
-  const saveCurrentEntry = useCallback(async () => {
-    if (!selectedDate) return false;
-
-    setSaveState('saving');
-    setErrorText(null);
-
-    try {
-      const res = await fetch(`/api/diary/${selectedDate}${diaryQuery}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
-      });
-      const body = (await res.json().catch(() => null)) as
-        | (Omit<DiaryEntryResponse, 'exists'> & { error?: never })
-        | { error?: string }
-        | null;
-
-      if (!res.ok) {
-        throw new Error((body as { error?: string } | null)?.error ?? 'Failed to save diary entry');
-      }
-
-      const saved = body as Omit<DiaryEntryResponse, 'exists'>;
-      const preview = extractClientPreview(content);
-      const savedMeta: DiaryMeta = {
-        id: saved.id ?? selectedDate,
-        journalId: activeJournalId ?? '',
-        entryDate: saved.entryDate,
-        createdAt: saved.createdAt ?? new Date().toISOString(),
-        updatedAt: saved.updatedAt ?? new Date().toISOString(),
-        hasContent: !isEmptyDoc(content),
-        previewText: preview.previewText,
-        previewImage: preview.previewImage,
-        weatherTempC: saved.weather?.tempC ?? null,
-        weatherCode: saved.weather?.weatherCode ?? null,
-        weatherLabel: saved.weather?.weatherLabel ?? null,
-        locationName: saved.weather?.locationName ?? null,
-        locationShort: saved.weather?.locationShort ?? null,
-        locationLat: saved.weather?.locationLat ?? null,
-        locationLon: saved.weather?.locationLon ?? null,
-      };
-
-      setEntries((prev) => {
-        const withoutCurrent = prev.filter((entry) => entry.entryDate !== savedMeta.entryDate);
-        const next = [...withoutCurrent, savedMeta];
-        return next.sort((a, b) => b.entryDate.localeCompare(a.entryDate));
-      });
-
-      originalContentRef.current = JSON.stringify(content);
-      setIsDirty(false);
-      setSaveState('saved');
-      return true;
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to save diary entry');
-      setSaveState('error');
-      return false;
-    }
-  }, [activeJournalId, content, diaryQuery, selectedDate]);
-
+  // ── Unsaved changes guard ────────────────────────────────────────────────────
   const requestWithUnsavedGuard = useCallback(
     (action: () => void) => {
       if (!isDirty) {
@@ -388,95 +143,6 @@ export default function DiaryPageClient() {
       setShowUnsavedDialog(true);
     },
     [isDirty],
-  );
-
-  const createEntryNow = useCallback(
-    async (dateOnly: string) => {
-      if (entriesByDate[dateOnly]) {
-        await loadEntry(dateOnly);
-        return;
-      }
-
-      setCreatingEntry(true);
-      setLoadingEntry(true);
-      setErrorText(null);
-
-      try {
-        const shouldAttachWeather = dateOnly === today;
-        const snapshot = shouldAttachWeather
-          ? await fetchWeatherSnapshotForDate(dateOnly, diaryLocationEnabled)
-          : null;
-        const weatherPayload = snapshot
-          ? {
-              tempC: snapshot.tempC,
-              weatherCode: snapshot.weatherCode,
-              weatherLabel: snapshot.weatherLabel,
-              locationName: snapshot.locationName,
-              locationShort: snapshot.locationShort,
-              locationLat: snapshot.locationLat,
-              locationLon: snapshot.locationLon,
-            }
-          : undefined;
-
-        const res = await fetch(`/api/diary/${dateOnly}${diaryQuery}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: EMPTY_DOC, weather: weatherPayload }),
-        });
-
-        const body = (await res.json().catch(() => null)) as
-          | (Omit<DiaryEntryResponse, 'exists'> & { error?: never })
-          | { error?: string }
-          | null;
-
-        if (!res.ok) {
-          throw new Error(
-            (body as { error?: string } | null)?.error ?? 'Failed to create diary entry',
-          );
-        }
-
-        const created = body as Omit<DiaryEntryResponse, 'exists'>;
-        const createdContent = created.content ?? EMPTY_DOC;
-        const preview = extractClientPreview(createdContent);
-        const createdMeta: DiaryMeta = {
-          id: created.id ?? dateOnly,
-          journalId: activeJournalId ?? '',
-          entryDate: created.entryDate,
-          createdAt: created.createdAt ?? new Date().toISOString(),
-          updatedAt: created.updatedAt ?? new Date().toISOString(),
-          hasContent: false,
-          previewText: preview.previewText,
-          previewImage: preview.previewImage,
-          weatherTempC: created.weather?.tempC ?? null,
-          weatherCode: created.weather?.weatherCode ?? null,
-          weatherLabel: created.weather?.weatherLabel ?? null,
-          locationName: created.weather?.locationName ?? null,
-          locationShort: created.weather?.locationShort ?? null,
-          locationLat: created.weather?.locationLat ?? null,
-          locationLon: created.weather?.locationLon ?? null,
-        };
-
-        setEntries((prev) => {
-          const withoutCurrent = prev.filter((entry) => entry.entryDate !== createdMeta.entryDate);
-          const next = [...withoutCurrent, createdMeta];
-          return next.sort((a, b) => b.entryDate.localeCompare(a.entryDate));
-        });
-
-        setSelectedDate(created.entryDate);
-        setContent(createdContent);
-        // no locked template blocks to clear
-        originalContentRef.current = JSON.stringify(createdContent);
-        setIsDirty(false);
-        setSaveState('saved');
-      } catch (error) {
-        setErrorText(error instanceof Error ? error.message : 'Failed to create diary entry');
-        setSaveState('error');
-      } finally {
-        setCreatingEntry(false);
-        setLoadingEntry(false);
-      }
-    },
-    [activeJournalId, diaryLocationEnabled, diaryQuery, entriesByDate, loadEntry, today],
   );
 
   const createEntryForDate = useCallback(
@@ -498,286 +164,55 @@ export default function DiaryPageClient() {
     [loadEntry, requestWithUnsavedGuard, selectedDate],
   );
 
-  const handleCreateTodayFromSidebar = () => {
-    if (todayEntryExists) return;
-    createEntryForDate(today);
-  };
-
-  const handleOpenCreateDateDialog = () => {
-    setCreateDateValue(selectedDate ?? today);
-    setShowCreateDialog(true);
-  };
-
-  const handleCreateForPickedDate = () => {
-    if (!createDateValue) return;
-    createEntryForDate(createDateValue);
-    setShowCreateDialog(false);
-  };
-
-  const handleCreateJournal = async () => {
-    const name = newJournalName.trim();
-    if (!name) return;
-
-    setErrorText(null);
-    try {
-      const res = await fetch('/api/diary/journals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-
-      const body = (await res.json().catch(() => null)) as { error?: string } | DiaryJournal | null;
-
-      if (!res.ok) {
-        throw new Error((body as { error?: string } | null)?.error ?? 'Failed to create journal');
-      }
-
-      const created = body as DiaryJournal;
-      setJournals((prev) => [...prev, created]);
-      setActiveJournalId(created.id);
-      setShowCreateJournalDialog(false);
-      setNewJournalName('');
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to create journal');
-    }
-  };
-
-  const handleRenameJournal = async () => {
-    if (!activeJournalId) return;
-    const name = renameJournalName.trim();
-    if (!name) return;
-
-    setErrorText(null);
-    try {
-      const res = await fetch(`/api/diary/journals/${activeJournalId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-
-      const body = (await res.json().catch(() => null)) as { error?: string } | DiaryJournal | null;
-
-      if (!res.ok) {
-        throw new Error((body as { error?: string } | null)?.error ?? 'Failed to rename journal');
-      }
-
-      const updated = body as DiaryJournal;
-      setJournals((prev) =>
-        prev.map((journal) =>
-          journal.id === updated.id ? { ...journal, name: updated.name } : journal,
-        ),
-      );
-      setShowRenameJournalDialog(false);
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to rename journal');
-    }
-  };
-
-  const resetTemplateEditor = () => {
-    setEditingTemplateId(null);
-    setTemplateNameInput('');
-    setTemplateTitleInput('');
-    setTemplatePromptsInput('');
-  };
-
-  const handleCreateTemplate = async () => {
-    if (!activeJournalId) return;
-    const name = templateNameInput.trim();
-    const body = buildTemplateBodyFromForm(templateTitleInput, templatePromptsInput).trim();
-    if (!name || !body) return;
-
-    setErrorText(null);
-    try {
-      const res = await fetch(`/api/diary/journals/${activeJournalId}/templates`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, body }),
-      });
-
-      const payload = (await res.json().catch(() => null)) as
-        | { error?: string }
-        | DiaryTemplate
-        | null;
-
-      if (!res.ok) {
-        throw new Error(
-          (payload as { error?: string } | null)?.error ?? 'Failed to create template',
-        );
-      }
-
-      setTemplates((prev) => [...prev, payload as DiaryTemplate]);
-      resetTemplateEditor();
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to create template');
-    }
-  };
-
-  const handleUpdateTemplate = async () => {
-    if (!activeJournalId || !editingTemplateId) return;
-    const name = templateNameInput.trim();
-    const body = buildTemplateBodyFromForm(templateTitleInput, templatePromptsInput).trim();
-    if (!name || !body) return;
-
-    setErrorText(null);
-    try {
-      const res = await fetch(
-        `/api/diary/journals/${activeJournalId}/templates/${editingTemplateId}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, body }),
-        },
-      );
-
-      const payload = (await res.json().catch(() => null)) as
-        | { error?: string }
-        | DiaryTemplate
-        | null;
-
-      if (!res.ok) {
-        throw new Error(
-          (payload as { error?: string } | null)?.error ?? 'Failed to update template',
-        );
-      }
-
-      const updated = payload as DiaryTemplate;
-      setTemplates((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
-      resetTemplateEditor();
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to update template');
-    }
-  };
-
-  const handleDeleteTemplate = async (templateId: string) => {
-    if (!activeJournalId) return;
-
-    setErrorText(null);
-    try {
-      const res = await fetch(`/api/diary/journals/${activeJournalId}/templates/${templateId}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? 'Failed to delete template');
-      }
-
-      setTemplates((prev) => prev.filter((item) => item.id !== templateId));
-      if (editingTemplateId === templateId) resetTemplateEditor();
-    } catch (error) {
-      setErrorText(error instanceof Error ? error.message : 'Failed to delete template');
-    }
-  };
-
   const applyTemplate = (template: DiaryTemplate) => {
     requestWithUnsavedGuard(() => {
-      // convert body text to JSONContent and apply directly; the helper
-      // ensures there is an editable paragraph after every heading and that
-      // headings themselves are tagged `contenteditable=false` so the cursor
-      // doesn't get stuck at the end of the document.
       const nextContent = templateBodyToContent(template.body);
       setContent(nextContent);
       setIsDirty(true);
       setSaveState('idle');
-      setShowTemplateMenu(false);
     });
   };
 
-  const handleSaveAndLeaveFromDialog = async () => {
-    const ok = await saveCurrentEntry();
+  const handleSaveAndLeave = async () => {
+    const ok = await saveCurrentEntry(selectedDate, content);
     if (!ok) return;
-
     setShowUnsavedDialog(false);
     const pending = pendingActionRef.current;
     pendingActionRef.current = null;
     pending?.();
   };
 
-  const handleDiscardAndLeaveFromDialog = () => {
+  const handleDiscardAndLeave = () => {
     setShowUnsavedDialog(false);
-    setIsDirty(false);
     const pending = pendingActionRef.current;
     pendingActionRef.current = null;
     pending?.();
   };
 
-  const handleCancelLeaveFromDialog = () => {
-    setShowUnsavedDialog(false);
-    pendingActionRef.current = null;
-  };
-
-  const handleContentChange = (nextContent: JSONContent) => {
-    // without any locked blocks we just accept whatever the editor gives us
-    setContent(nextContent);
-    const currentJson = JSON.stringify(nextContent);
-    setIsDirty(currentJson !== originalContentRef.current);
-    setSaveState('idle');
-  };
-
-  const deleteEntryByDate = useCallback(
-    async (dateOnly: string) => {
-      if (!dateOnly) return;
-
-      setErrorText(null);
-      try {
-        await fetch(`/api/diary/${dateOnly}${diaryQuery}`, { method: 'DELETE' });
-        setEntries((prev) => prev.filter((entry) => entry.entryDate !== dateOnly));
-
-        if (selectedDate === dateOnly) {
-          setSelectedDate(null);
-          setContent(EMPTY_DOC);
-          // nothing to clear anymore
-          originalContentRef.current = JSON.stringify(EMPTY_DOC);
-          setIsDirty(false);
-          setSaveState('idle');
-        }
-
-        setDeleteTargetDate(null);
-      } catch (error) {
-        setErrorText(error instanceof Error ? error.message : 'Failed to delete diary entry');
-      }
-    },
-    [diaryQuery, selectedDate],
-  );
-
+  // ── Effects ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.replace('/login');
       return;
     }
-
     if (status === 'authenticated') {
       void fetchJournals();
     }
-    // `router` is intentionally omitted from the dependency list.  The
-    // object returned by `useRouter()` is recreated on every render in our
-    // tests (and sometimes in production), which would cause this effect to
-    // rerun endlessly and trigger a "maximum update depth exceeded" warning.
-    // We only care about the `status` / `fetchJournals` changes here, so
-    // disabling the exhaustive-deps rule is safe.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchJournals, status]);
 
   useEffect(() => {
     if (status !== 'authenticated' || !activeJournalId) return;
-    setSelectedDate(null);
-    setContent(EMPTY_DOC);
-    // no template locking to reset
-    originalContentRef.current = JSON.stringify(EMPTY_DOC);
-    setIsDirty(false);
-    setSaveState('idle');
+    resetToEmpty();
     void fetchEntries();
     void fetchTemplates();
-    setShowTemplateMenu(false);
-    resetTemplateEditor();
-  }, [activeJournalId, fetchEntries, fetchTemplates, status]);
+  }, [activeJournalId, fetchEntries, fetchTemplates, resetToEmpty, status]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!isDirty) return;
       event.preventDefault();
     };
-
     globalThis.addEventListener('beforeunload', onBeforeUnload);
     return () => globalThis.removeEventListener('beforeunload', onBeforeUnload);
   }, [isDirty]);
@@ -786,28 +221,6 @@ export default function DiaryPageClient() {
     if (!activeJournalId || selectedDate || !todayEntryExists) return;
     void loadEntry(today);
   }, [activeJournalId, loadEntry, selectedDate, today, todayEntryExists]);
-
-  useEffect(() => {
-    if (!showJournalMenu) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!journalMenuRef.current) return;
-      if (journalMenuRef.current.contains(event.target as Node)) return;
-      setShowJournalMenu(false);
-    };
-    globalThis.addEventListener('mousedown', onPointerDown);
-    return () => globalThis.removeEventListener('mousedown', onPointerDown);
-  }, [showJournalMenu]);
-
-  useEffect(() => {
-    if (!showTemplateMenu) return;
-    const onPointerDown = (event: MouseEvent) => {
-      if (!templateMenuRef.current) return;
-      if (templateMenuRef.current.contains(event.target as Node)) return;
-      setShowTemplateMenu(false);
-    };
-    globalThis.addEventListener('mousedown', onPointerDown);
-    return () => globalThis.removeEventListener('mousedown', onPointerDown);
-  }, [showTemplateMenu]);
 
   useEffect(() => {
     const media = globalThis.matchMedia?.('(min-width: 768px)');
@@ -820,11 +233,10 @@ export default function DiaryPageClient() {
 
   useEffect(() => {
     if (!isMobile) return;
-    if (selectedDate && selectedEntryExists) {
-      setMobileSidebarVisible(false);
-    }
+    if (selectedDate && selectedEntryExists) setMobileSidebarVisible(false);
   }, [isMobile, selectedDate, selectedEntryExists]);
 
+  // ── Loading spinner ──────────────────────────────────────────────────────────
   if (status === 'loading' || status === 'unauthenticated') {
     return (
       <div className="flex h-full items-center justify-center">
@@ -833,435 +245,104 @@ export default function DiaryPageClient() {
     );
   }
 
-  const leftPanelContent = (
-    <DiaryLeftPanel
-      viewMode={viewMode}
-      monthCursor={monthCursor}
-      setMonthCursor={setMonthCursor}
-      selectedDate={selectedDate}
-      entriesByDate={entriesByDate}
-      handleSelectDate={handleSelectDate}
-      loadingList={loadingList}
-      loadingEntry={loadingEntry}
-      entries={entries}
-      groupedEntries={groupedEntries}
-      setDeleteTargetDate={setDeleteTargetDate}
-      diaryTemperatureUnit={diaryTemperatureUnit}
-      dateLocale={dateLocale}
-      t={t}
-      resolveWeatherLabel={resolveWeatherLabel}
-    />
-  );
+  const initialLoading = journals.length === 0 || loadingList || loadingEntry;
+  const createPrimaryButtonClass =
+    'bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold shadow-sm transition-colors disabled:opacity-60';
+  const createActionButtonClass =
+    'border-border bg-card hover:bg-accent/70 hover:border-primary/35 flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium shadow-xs transition-colors';
 
-  const headerSubtitle = getHeaderSubtitle(selectedDate, selectedWeatherSummary?.locationShort, t);
-
-  const sidebarContent = (
-    <div
-      className={cn(
-        'border-border bg-card/80 flex h-full w-full shrink-0 flex-col border-b md:border-r md:border-b-0',
-        isMobile ? 'max-w-full' : 'max-w-[256px]',
-        'md:w-64 md:min-w-64',
-      )}
-    >
-      <div className="border-border border-b p-3">
-        {/* toggle row (mimics notebook sidebar header) */}
-        <div className="mb-2 flex items-center justify-between">
-          <h1 className="text-primary text-xl font-semibold tracking-tight">
-            {t('sidebar.titleDiary')}
-          </h1>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={effectiveVisible ? t('sidebar.hide') : t('sidebar.show')}
-                data-ui-sound-event={effectiveVisible ? 'close' : 'open'}
-                className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
-                onClick={() => {
-                  if (isMobile) {
-                    setMobileSidebarVisible((prev) => !prev);
-                  } else {
-                    setSidebarVisible((prev) => !prev);
-                  }
-                }}
-              >
-                {effectiveVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{effectiveVisible ? t('sidebar.hide') : t('sidebar.show')}</p>
-            </TooltipContent>
-          </Tooltip>
+  const mainContent = (
+    <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      {initialLoading ? (
+        <div className="border-border bg-card flex items-center justify-between border-b px-3 py-2.5 sm:px-4 sm:py-3">
+          <div className="bg-muted h-6 w-48 animate-pulse rounded" />
         </div>
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div ref={journalMenuRef} className="relative w-full min-w-0 sm:flex-1">
-            <button
-              type="button"
-              onClick={() => setShowJournalMenu((prev) => !prev)}
-              className="border-border bg-background hover:bg-accent flex h-9 w-full min-w-0 items-center justify-between rounded-md border px-2 text-sm"
-            >
-              <span className="truncate">
-                {activeJournal?.name ?? journals[0]?.name ?? t('diary.journal')}
-              </span>
-              <ChevronDown size={14} className="text-muted-foreground ml-2 shrink-0" />
-            </button>
+      ) : (
+        <DiaryHeader
+          selectedDate={selectedDate}
+          weatherSummary={selectedWeatherSummary}
+          saveState={saveState}
+          isDirty={isDirty}
+          loadingEntry={loadingEntry}
+          creatingEntry={creatingEntry}
+          mobileSidebarVisible={mobileSidebarVisible}
+          templates={templates}
+          diaryTemperatureUnit={diaryTemperatureUnit}
+          dateLocale={dateLocale}
+          onShowMobileSidebar={() => setMobileSidebarVisible(true)}
+          onSave={() => {
+            void saveCurrentEntry(selectedDate, content);
+          }}
+          onApplyTemplate={applyTemplate}
+          onOpenTemplateManager={() => setShowTemplateManagerDialog(true)}
+        />
+      )}
 
-            {showJournalMenu && (
-              <div className="border-border bg-popover absolute z-50 mt-1 max-h-50 w-full overflow-y-auto rounded-md border p-1 shadow-md">
-                {journals.map((journal) => {
-                  const isActive = journal.id === activeJournalId;
-                  return (
-                    <button
-                      key={journal.id}
-                      type="button"
-                      disabled={isActive}
-                      onClick={() => {
-                        setActiveJournalId(journal.id);
-                        setShowJournalMenu(false);
-                      }}
-                      className={cn(
-                        'hover:bg-accent w-full rounded-sm px-2 py-1.5 text-left text-sm disabled:cursor-default',
-                        isActive ? 'bg-accent text-accent-foreground' : '',
-                      )}
-                    >
-                      {journal.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
+      {!initialLoading && (!selectedDate || !selectedEntryExists) && (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="border-border bg-card w-full max-w-lg rounded-xl border p-6">
+            <h2 className="mb-4 text-lg font-semibold">{t('diary.journal')}</h2>
+            <div className="space-y-3">
               <button
                 type="button"
-                aria-label={t('diary.new')}
-                className="border-border hover:bg-accent rounded-md border p-2"
-                onClick={() => setShowCreateJournalDialog(true)}
+                onClick={() => createEntryForDate(today)}
+                className={cn(createPrimaryButtonClass, 'w-full')}
+                disabled={todayEntryExists || creatingEntry}
               >
                 <Plus size={14} />
+                {t('diary.createToday')}
               </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{t('diary.new')}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label={t('tree.rename')}
-                disabled={!activeJournalId}
-                className="border-border hover:bg-accent disabled:text-muted-foreground rounded-md border p-2 disabled:opacity-60"
+                className={createActionButtonClass}
                 onClick={() => {
-                  if (!activeJournal) return;
-                  setRenameJournalName(activeJournal.name);
-                  setShowRenameJournalDialog(true);
+                  setCreateDateValue(selectedDate ?? today);
+                  setShowCreateDialog(true);
                 }}
+                disabled={creatingEntry}
               >
-                <Pencil size={14} />
+                <CalendarDays size={14} />
+                {t('diary.chooseDateCreate')}
               </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{t('tree.rename')}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('diary.templates')}
-                disabled={!activeJournalId}
-                className="border-border hover:bg-accent disabled:text-muted-foreground rounded-md border p-2 disabled:opacity-60"
-                onClick={() => setShowTemplateManagerDialog(true)}
-              >
-                <FileText size={14} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{t('diary.templates')}</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('diary.openEditor')}
-                className="border-border hover:bg-accent rounded-md border p-2 md:hidden"
-                onClick={() => setMobileSidebarVisible(false)}
-              >
-                <PanelLeftClose size={14} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{t('diary.openEditor')}</p>
-            </TooltipContent>
-          </Tooltip>
-        </div>
-
-        <div className="mb-3 flex items-center gap-2">
-          <button
-            type="button"
-            className={cn(
-              'flex items-center gap-1 rounded-md px-2 py-1.5 text-sm',
-              viewMode === 'list' ? toggleActiveClass : toggleInactiveClass,
-            )}
-            onClick={() => setViewMode('list')}
-          >
-            <List size={14} />
-            {t('diary.viewList')}
-          </button>
-          <button
-            type="button"
-            className={cn(
-              'flex items-center gap-1 rounded-md px-2 py-1.5 text-sm',
-              viewMode === 'calendar' ? toggleActiveClass : toggleInactiveClass,
-            )}
-            onClick={() => setViewMode('calendar')}
-          >
-            <CalendarDays size={14} />
-            {t('diary.viewCalendar')}
-          </button>
-        </div>
-
-        <div className="space-y-2">
-          {!todayEntryExists && (
-            <button
-              type="button"
-              className={cn(createPrimaryButtonClass, 'w-full justify-start')}
-              onClick={handleCreateTodayFromSidebar}
-              disabled={creatingEntry}
-            >
-              <Plus size={14} />
-              {t('diary.createToday')}
-            </button>
-          )}
-          <button
-            type="button"
-            className={createActionButtonClass}
-            onClick={handleOpenCreateDateDialog}
-          >
-            <CalendarDays size={14} />
-            {t('diary.createAnotherDate')}
-          </button>
-        </div>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        {errorText && (
-          <p className="text-destructive mb-3 text-sm" role="alert">
-            {errorText}
-          </p>
-        )}
-        {leftPanelContent}
-      </div>
-    </div>
-  );
-
-  const initialLoading = journals.length === 0 || loadingList || loadingEntry;
-  const headerLoading = initialLoading;
-
-  const headerNode = headerLoading ? (
-    <div className="border-border bg-card flex items-center justify-between border-b px-3 py-2.5 sm:px-4 sm:py-3">
-      <div className="bg-muted h-6 w-48 animate-pulse rounded" />
-    </div>
-  ) : (
-    <header className="border-border bg-card flex flex-wrap items-center justify-between gap-2 border-b px-3 py-2.5 sm:px-4 sm:py-3">
-      <div className="flex">
-        {/* mobile open-sidebar button (similar to notebook) */}
-        {!mobileSidebarVisible && (
-          <button
-            type="button"
-            aria-label={t('sidebar.show')}
-            data-ui-sound-event="open"
-            className="motion-interactive icon-tilt-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground mr-1 rounded p-1.5 transition-colors md:hidden"
-            onClick={() => setMobileSidebarVisible(true)}
-          >
-            <Menu size={20} />
-          </button>
-        )}
-        <div>
-          <h1 className="flex items-center gap-2 text-lg font-semibold">
-            {selectedDate && selectedWeatherSummary ? (
-              <span className="bg-muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium">
-                {getWeatherIcon(selectedWeatherSummary.weatherCode)}{' '}
-                {formatTemp(selectedWeatherSummary.tempC, diaryTemperatureUnit)}
-              </span>
-            ) : null}
-            <span>
-              {selectedDate
-                ? formatDateLong(parseLocalDate(selectedDate), dateLocale)
-                : t('nav.diary')}
-            </span>
-          </h1>
-          <p className="text-muted-foreground text-sm">{headerSubtitle}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {/* sidebar toggle relocated into the sidebar for clearer UX */}
-
-        <div ref={templateMenuRef} className="relative">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                aria-label={t('diary.applyTemplate')}
-                disabled={!selectedDate || !selectedEntryExists || templates.length === 0}
-                onClick={() => setShowTemplateMenu((prev) => !prev)}
-                className="border-border bg-background hover:bg-accent disabled:text-muted-foreground inline-flex items-center gap-1 rounded-md border p-2 text-xs disabled:opacity-60"
-              >
-                <FileText size={14} />
-                <ChevronDown size={12} />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="text-xs">{t('diary.applyTemplate')}</p>
-            </TooltipContent>
-          </Tooltip>
-
-          {showTemplateMenu && (
-            <div className="border-border bg-popover absolute right-0 z-50 mt-1 max-h-56 w-64 overflow-y-auto rounded-md border p-1 shadow-md">
-              {templates.map((template) => (
-                <button
-                  key={template.id}
-                  type="button"
-                  className="hover:bg-accent w-full rounded-sm px-2 py-1.5 text-left text-sm"
-                  onClick={() => applyTemplate(template)}
-                >
-                  <p className="truncate font-medium">{template.name}</p>
-                  <p className="text-muted-foreground line-clamp-2 text-xs">
-                    {decodeTemplateText(template.body)}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={t('diary.templates')}
-              disabled={!activeJournalId}
-              onClick={() => setShowTemplateManagerDialog(true)}
-              className="border-border bg-background hover:bg-accent disabled:text-muted-foreground inline-flex items-center rounded-md border p-2 text-xs disabled:opacity-60"
-            >
-              <Edit3 size={14} />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">{t('diary.templates')}</p>
-          </TooltipContent>
-        </Tooltip>
-
-        <span
-          className={cn(
-            'hidden text-xs sm:inline',
-            saveState === 'saving' && 'text-muted-foreground',
-            saveState === 'saved' && 'text-green-600 dark:text-green-400',
-            saveState === 'error' && 'text-destructive',
-          )}
-        >
-          {saveState === 'saving' && t('diary.saving')}
-          {saveState === 'saved' && t('main.saved')}
-          {saveState === 'error' && t('diary.saveFailed')}
-          {saveState === 'idle' && (isDirty ? t('diary.unsavedChanges') : t('diary.ready'))}
-        </span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={t('main.save')}
-              disabled={!isDirty || !selectedDate || loadingEntry || creatingEntry}
-              onClick={() => {
-                void saveCurrentEntry();
-              }}
-              className={
-                isDirty && selectedDate && !loadingEntry && !creatingEntry
-                  ? 'inline-flex items-center gap-1 rounded-md bg-indigo-600 px-3 py-2 text-sm text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600'
-                  : 'bg-muted text-muted-foreground inline-flex cursor-not-allowed items-center gap-1 rounded-md px-3 py-2 text-sm'
-              }
-            >
-              <Save size={14} />
-              {t('main.save')}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p className="text-xs">{t('main.save')}</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
-    </header>
-  );
-
-  let mainContent: React.ReactNode;
-  if (headerLoading) {
-    mainContent = (
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">{headerNode}</section>
-    );
-  } else {
-    mainContent = (
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {headerNode}
-        {!selectedDate || !selectedEntryExists ? (
-          <div className="flex flex-1 items-center justify-center p-6">
-            <div className="border-border bg-card w-full max-w-lg rounded-xl border p-6">
-              <h2 className="mb-4 text-lg font-semibold">{t('diary.journal')}</h2>
-              <div className="space-y-3">
-                <button
-                  type="button"
-                  onClick={() => createEntryForDate(today)}
-                  className={cn(createPrimaryButtonClass, 'w-full')}
-                  disabled={todayEntryExists || creatingEntry}
-                >
-                  <Plus size={14} />
-                  {t('diary.createToday')}
-                </button>
-                <button
-                  type="button"
-                  className={createActionButtonClass}
-                  onClick={handleOpenCreateDateDialog}
-                  disabled={creatingEntry}
-                >
-                  <CalendarDays size={14} />
-                  {t('diary.chooseDateCreate')}
-                </button>
-              </div>
             </div>
           </div>
-        ) : (
-          <>
-            {editor && <EditorToolbar editor={editor} blockId={`diary-${selectedDate}`} />}
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {loadingEntry ? (
-                <div className="p-6">
-                  <div className="bg-muted h-40 animate-pulse rounded-xl" />
-                </div>
-              ) : (
-                <PageEditor
-                  key={selectedDate || 'empty'}
-                  content={content}
-                  editable
-                  mode="diary"
-                  onChange={handleContentChange}
-                  pageId={`diary-${selectedDate}`}
-                  onEditorReady={setEditor}
-                />
-              )}
-            </div>
-          </>
-        )}
-      </section>
-    );
-  }
+        </div>
+      )}
+      {!initialLoading && selectedDate && selectedEntryExists && (
+        <>
+          {editor && <EditorToolbar editor={editor} blockId={`diary-${selectedDate}`} />}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {loadingEntry ? (
+              <div className="p-6">
+                <div className="bg-muted h-40 animate-pulse rounded-xl" />
+              </div>
+            ) : (
+              <PageEditor
+                key={selectedDate || 'empty'}
+                content={content}
+                editable
+                mode="diary"
+                onChange={handleContentChange}
+                pageId={`diary-${selectedDate}`}
+                onEditorReady={setEditor}
+              />
+            )}
+          </div>
+        </>
+      )}
+    </section>
+  );
 
   return (
     <>
       <UnsavedChangesDialog
         open={showUnsavedDialog}
-        onSaveAndLeave={handleSaveAndLeaveFromDialog}
-        onLeaveWithout={handleDiscardAndLeaveFromDialog}
-        onCancel={handleCancelLeaveFromDialog}
+        onSaveAndLeave={handleSaveAndLeave}
+        onLeaveWithout={handleDiscardAndLeave}
+        onCancel={() => {
+          setShowUnsavedDialog(false);
+          pendingActionRef.current = null;
+        }}
       />
 
       <AlertDialog
@@ -1280,7 +361,7 @@ export default function DiaryPageClient() {
             <AlertDialogAction
               onClick={() => {
                 if (deleteTargetDate) {
-                  void deleteEntryByDate(deleteTargetDate);
+                  void deleteEntryByDate(deleteTargetDate, selectedDate);
                 }
               }}
             >
@@ -1290,253 +371,38 @@ export default function DiaryPageClient() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles size={18} />
-              {t('diary.createEntryTitle')}
-            </DialogTitle>
-            <DialogDescription>{t('diary.createEntryDescription')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="border-border rounded-xl border p-3">
-              <DiaryCalendar
-                monthDate={monthCursor}
-                selectedDate={createDateValue}
-                entriesByDate={entriesByDate}
-                onPrevMonth={() =>
-                  setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
-                }
-                onNextMonth={() =>
-                  setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
-                }
-                onSetMonthDate={(nextDate) => setMonthCursor(nextDate)}
-                onSelectDate={(dateOnly) => setCreateDateValue(dateOnly)}
-                prevMonthLabel={t('diary.prevMonth')}
-                nextMonthLabel={t('diary.nextMonth')}
-                dateLocale={dateLocale}
-                weekDayLabels={[
-                  t('diary.weekday.su'),
-                  t('diary.weekday.mo'),
-                  t('diary.weekday.tu'),
-                  t('diary.weekday.we'),
-                  t('diary.weekday.th'),
-                  t('diary.weekday.fr'),
-                  t('diary.weekday.sa'),
-                ]}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowCreateDialog(false)}
-                className="border-border hover:bg-accent rounded-xl border px-3 py-2 text-sm"
-              >
-                {t('delete.cancel')}
-              </button>
-              <button
-                type="button"
-                className={createPrimaryButtonClass}
-                onClick={handleCreateForPickedDate}
-                disabled={!createDateValue || creatingEntry}
-              >
-                <Plus size={14} />
-                {t('diary.createEntry')}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showCreateJournalDialog} onOpenChange={setShowCreateJournalDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('diary.createJournalTitle')}</DialogTitle>
-            <DialogDescription>{t('diary.createJournalDescription')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <input
-              value={newJournalName}
-              onChange={(event) => setNewJournalName(event.target.value)}
-              placeholder={t('diary.journalName')}
-              className="border-border bg-background focus:ring-ring h-10 w-full rounded-md border px-3 text-sm focus:ring-2 focus:outline-none"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowCreateJournalDialog(false)}
-                className="border-border hover:bg-accent rounded-md border px-3 py-2 text-sm"
-              >
-                {t('delete.cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void handleCreateJournal();
-                }}
-                className={createPrimaryButtonClass}
-              >
-                {t('diary.create')}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showRenameJournalDialog} onOpenChange={setShowRenameJournalDialog}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('diary.renameJournalTitle')}</DialogTitle>
-            <DialogDescription>{t('diary.renameJournalDescription')}</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <input
-              value={renameJournalName}
-              onChange={(event) => setRenameJournalName(event.target.value)}
-              placeholder={t('diary.journalName')}
-              className="border-border bg-background focus:ring-ring h-10 w-full rounded-md border px-3 text-sm focus:ring-2 focus:outline-none"
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowRenameJournalDialog(false)}
-                className="border-border hover:bg-accent rounded-md border px-3 py-2 text-sm"
-              >
-                {t('delete.cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void handleRenameJournal();
-                }}
-                className={createPrimaryButtonClass}
-              >
-                {t('main.save')}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={showTemplateManagerDialog}
-        onOpenChange={(open) => {
-          setShowTemplateManagerDialog(open);
-          if (!open) resetTemplateEditor();
+      <DiaryCreateEntryDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        selectedDate={createDateValue}
+        onSelectDate={setCreateDateValue}
+        monthCursor={monthCursor}
+        onPrevMonth={() =>
+          setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+        }
+        onNextMonth={() =>
+          setMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+        }
+        onSetMonthDate={setMonthCursor}
+        entriesByDate={entriesByDate}
+        onConfirm={() => {
+          if (!createDateValue) return;
+          createEntryForDate(createDateValue);
+          setShowCreateDialog(false);
         }}
-      >
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{t('diary.templateManagerTitle')}</DialogTitle>
-            <DialogDescription>{t('diary.templateManagerDescription')}</DialogDescription>
-          </DialogHeader>
+        creatingEntry={creatingEntry}
+        dateLocale={dateLocale}
+      />
 
-          <div className="space-y-4">
-            <div className="border-border max-h-56 space-y-2 overflow-y-auto rounded-md border p-2">
-              {loadingTemplates && (
-                <p className="text-muted-foreground px-2 py-1 text-sm">
-                  {t('diary.loadingTemplates')}
-                </p>
-              )}
-
-              {!loadingTemplates && templates.length === 0 && (
-                <p className="text-muted-foreground px-2 py-1 text-sm">{t('diary.noTemplates')}</p>
-              )}
-
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className="border-border bg-card/70 flex items-center justify-between gap-2 rounded-md border p-2"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{template.name}</p>
-                    <p className="text-muted-foreground line-clamp-2 text-xs">
-                      {decodeTemplateText(template.body)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      className="border-border hover:bg-accent rounded-md border px-2 py-1 text-xs"
-                      onClick={() => {
-                        const parsed = parseTemplateBodyToForm(template.body);
-                        setEditingTemplateId(template.id);
-                        setTemplateNameInput(template.name);
-                        setTemplateTitleInput(parsed.title);
-                        setTemplatePromptsInput(parsed.promptsText);
-                      }}
-                    >
-                      {t('diary.editTemplate')}
-                    </button>
-                    <button
-                      type="button"
-                      className="border-border hover:bg-accent rounded-md border px-2 py-1 text-xs"
-                      onClick={() => {
-                        void handleDeleteTemplate(template.id);
-                      }}
-                    >
-                      {t('delete.delete')}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <input
-                value={templateNameInput}
-                onChange={(event) => setTemplateNameInput(event.target.value)}
-                placeholder={t('diary.templateNamePlaceholder')}
-                className="border-border bg-background focus:ring-ring h-10 w-full rounded-md border px-3 text-sm focus:ring-2 focus:outline-none"
-              />
-              <input
-                value={templateTitleInput}
-                onChange={(event) => setTemplateTitleInput(event.target.value)}
-                placeholder={t('diary.templateTitlePlaceholder')}
-                className="border-border bg-background focus:ring-ring h-10 w-full rounded-md border px-3 text-sm focus:ring-2 focus:outline-none"
-              />
-              <textarea
-                value={templatePromptsInput}
-                onChange={(event) => setTemplatePromptsInput(event.target.value)}
-                placeholder={t('diary.templatePromptsPlaceholder')}
-                rows={6}
-                className="border-border bg-background focus:ring-ring w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
-              />
-              <p className="text-muted-foreground text-xs">{t('diary.templateHint')}</p>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              {editingTemplateId && (
-                <button
-                  type="button"
-                  className="border-border hover:bg-accent rounded-md border px-3 py-2 text-sm"
-                  onClick={resetTemplateEditor}
-                >
-                  {t('diary.cancelEditTemplate')}
-                </button>
-              )}
-              <button
-                type="button"
-                className={createPrimaryButtonClass}
-                onClick={() => {
-                  if (editingTemplateId) {
-                    void handleUpdateTemplate();
-                    return;
-                  }
-                  void handleCreateTemplate();
-                }}
-                disabled={
-                  !templateNameInput.trim() ||
-                  !buildTemplateBodyFromForm(templateTitleInput, templatePromptsInput).trim()
-                }
-              >
-                {editingTemplateId ? t('diary.updateTemplate') : t('diary.createTemplate')}
-              </button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DiaryTemplateManagerDialog
+        open={showTemplateManagerDialog}
+        onOpenChange={setShowTemplateManagerDialog}
+        templates={templates}
+        loadingTemplates={loadingTemplates}
+        onCreate={createTemplate}
+        onUpdate={updateTemplate}
+        onDelete={deleteTemplate}
+      />
 
       <div className="bg-background relative flex h-full overflow-hidden">
         <Sidebar
@@ -1548,7 +414,44 @@ export default function DiaryPageClient() {
             onClose: () => setMobileSidebarVisible(false),
           }}
         >
-          {sidebarContent}
+          <DiarySidebarContent
+            journals={journals}
+            activeJournalId={activeJournalId}
+            activeJournal={activeJournal}
+            setActiveJournalId={setActiveJournalId}
+            createJournal={createJournal}
+            renameJournal={renameJournal}
+            effectiveVisible={effectiveVisible}
+            isMobile={isMobile}
+            setSidebarVisible={setSidebarVisible}
+            setMobileSidebarVisible={setMobileSidebarVisible}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            monthCursor={monthCursor}
+            setMonthCursor={setMonthCursor}
+            selectedDate={selectedDate}
+            entriesByDate={entriesByDate}
+            entries={entries}
+            groupedEntries={groupedEntries}
+            handleSelectDate={handleSelectDate}
+            loadingList={loadingList}
+            loadingEntry={loadingEntry}
+            setDeleteTargetDate={setDeleteTargetDate}
+            diaryTemperatureUnit={diaryTemperatureUnit}
+            dateLocale={dateLocale}
+            todayEntryExists={todayEntryExists}
+            creatingEntry={creatingEntry}
+            onCreateToday={() => {
+              if (todayEntryExists) return;
+              createEntryForDate(today);
+            }}
+            onOpenCreateDateDialog={() => {
+              setCreateDateValue(selectedDate ?? today);
+              setShowCreateDialog(true);
+            }}
+            onOpenTemplateManager={() => setShowTemplateManagerDialog(true)}
+            error={entryError ?? journalError}
+          />
         </Sidebar>
         <div className="h-full flex-1">{mainContent}</div>
       </div>

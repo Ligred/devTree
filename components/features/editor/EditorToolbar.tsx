@@ -9,7 +9,7 @@
  *
  * Extracted from the old TextBlock so it applies to the unified page editor.
  */
-import React, { useCallback, useEffect, useRef, useState, useLayoutEffect } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { Editor } from '@tiptap/core';
@@ -155,7 +155,6 @@ function DictationOverlay({ editor, text }: { editor: Editor; text: string }) {
 
 // ─── ToolbarButton ────────────────────────────────────────────────────────────
 
-
 export interface ToolbarButtonProps {
   readonly onClick: () => void;
   readonly active?: boolean;
@@ -165,34 +164,30 @@ export interface ToolbarButtonProps {
   readonly children?: React.ReactNode;
 }
 
-export const ToolbarButton = /*#__PURE__*/React.forwardRef<
-  HTMLButtonElement,
-  ToolbarButtonProps
->(function ToolbarButton(
-  { onClick, active, title, onMouseDown: onMouseDownProp, children },
-  ref,
-) {
-  return (
-    <button
-      ref={ref}
-      type="button"
-      title={title}
-      onMouseDown={(e) => {
-        e.preventDefault(); // keep editor focus
-        onMouseDownProp?.(e);
-        onClick();
-      }}
-      className={cn(
-        'motion-interactive flex h-7 w-7 items-center justify-center rounded text-sm transition-colors',
-        active
-          ? 'bg-accent text-accent-foreground'
-          : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-      )}
-    >
-      {children}
-    </button>
-  );
-});
+export const ToolbarButton = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, ToolbarButtonProps>(
+  function ToolbarButton({ onClick, active, title, onMouseDown: onMouseDownProp, children }, ref) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        title={title}
+        onMouseDown={(e) => {
+          e.preventDefault(); // keep editor focus
+          onMouseDownProp?.(e);
+          onClick();
+        }}
+        className={cn(
+          'motion-interactive flex h-7 w-7 items-center justify-center rounded text-sm transition-colors',
+          active
+            ? 'bg-accent text-accent-foreground'
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+        )}
+      >
+        {children}
+      </button>
+    );
+  },
+);
 
 // ─── PortalDropdown ───────────────────────────────────────────────────────────
 // Renders children in a fixed-position portal anchored below the given element.
@@ -230,9 +225,7 @@ function PortalDropdown({
 
   if (!open) return null;
   return createPortal(
-    <div style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 1000 }}>
-      {children}
-    </div>,
+    <div style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 1000 }}>{children}</div>,
     document.body,
   );
 }
@@ -301,10 +294,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
       // the real selection which still contains the text the user highlighted.
       let savedSelection = linkSelectionRef.current ?? editor.state.selection;
       const currentSel = editor.state.selection;
-      if (
-        savedSelection.from === savedSelection.to &&
-        currentSel.from !== currentSel.to
-      ) {
+      if (savedSelection.from === savedSelection.to && currentSel.from !== currentSel.to) {
         savedSelection = currentSel;
       }
 
@@ -415,9 +405,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
         <ToolbarButton
           ref={headingBtnRef}
           title="Heading"
-          active={
-            [1, 2, 3, 4, 5, 6].some((l) => editor.isActive('heading', { level: l }))
-          }
+          active={[1, 2, 3, 4, 5, 6].some((l) => editor.isActive('heading', { level: l }))}
           onClick={() => {
             const opening = !headingOpen;
             closeAll();
@@ -426,9 +414,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
         >
           {/* show current level or generic icon */}
           {(() => {
-            const level = [1, 2, 3, 4, 5, 6].find((l) =>
-              editor.isActive('heading', { level: l }),
-            );
+            const level = [1, 2, 3, 4, 5, 6].find((l) => editor.isActive('heading', { level: l }));
             switch (level) {
               case 1:
                 return <Heading1 size={14} />;
@@ -468,7 +454,11 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                       className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        editor.chain().focus().toggleHeading({ level: level as 1 | 2 | 3 }).run();
+                        editor
+                          .chain()
+                          .focus()
+                          .toggleHeading({ level: level as 1 | 2 | 3 })
+                          .run();
                         setHeadingOpen(false);
                       }}
                     >
@@ -498,7 +488,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
           <Type size={14} />
           {/* show current selection or default */}
           {currentFontFamily && currentFontFamily !== 'Default' && (
-            <span className="ml-1 truncate max-w-16 text-xs">
+            <span className="ml-1 max-w-16 truncate text-xs">
               {FONT_FAMILIES.find((f) => f.value === currentFontFamily)?.name || 'Custom'}
             </span>
           )}
@@ -549,14 +539,16 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                         }
                         setFontFamilyOpen(false);
                       }}
-                  >
-                    <span style={font.value ? { fontFamily: font.value } : undefined}>{font.name}</span>
-                  </button>
-                ))}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+                    >
+                      <span style={font.value ? { fontFamily: font.value } : undefined}>
+                        {font.name}
+                      </span>
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </PortalDropdown>
       </div>
 
@@ -573,7 +565,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
         >
           <Text size={14} />
           {currentFontSize && currentFontSize !== 'Default' && (
-            <span className="ml-1 truncate max-w-12 text-xs">{currentFontSize}</span>
+            <span className="ml-1 max-w-12 truncate text-xs">{currentFontSize}</span>
           )}
         </ToolbarButton>
         <PortalDropdown anchorRef={fontSizeBtnRef} open={fontSizeOpen}>
@@ -596,39 +588,44 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                   transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                   className="border-border bg-popover z-50 max-h-60 w-32 overflow-auto rounded-lg border p-2 shadow-lg"
                 >
-                {FONT_SIZES.map((size) => (
-                  <button
-                    key={size.name}
-                    type="button"
-                    className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (size.value) {
-                        const { empty, from, to } = editor.state.selection;
-                        if (empty) {
-                          editor
-                            .chain()
-                            .focus()
-                            .setTextSelection({ from: 1, to: editor.state.doc.content.size })
-                            .setFontSize(size.value)
-                            .setTextSelection({ from, to })
-                            .run();
+                  {FONT_SIZES.map((size) => (
+                    <button
+                      key={size.name}
+                      type="button"
+                      className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (size.value) {
+                          const { empty, from, to } = editor.state.selection;
+                          if (empty) {
+                            editor
+                              .chain()
+                              .focus()
+                              .setTextSelection({ from: 1, to: editor.state.doc.content.size })
+                              .setFontSize(size.value)
+                              .setTextSelection({ from, to })
+                              .run();
+                          } else {
+                            editor.chain().focus().setFontSize(size.value).run();
+                          }
                         } else {
-                          editor.chain().focus().setFontSize(size.value).run();
+                          editor.chain().focus().unsetFontSize().run();
                         }
-                      } else {
-                        editor.chain().focus().unsetFontSize().run();
-                      }
-                      setFontSizeOpen(false);
-                    }}
-                  >
-                    <span style={size.value ? { fontSize: size.value } : undefined} className="truncate max-w-12">{size.name}</span>
-                  </button>
-                ))}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+                        setFontSizeOpen(false);
+                      }}
+                    >
+                      <span
+                        style={size.value ? { fontSize: size.value } : undefined}
+                        className="max-w-12 truncate"
+                      >
+                        {size.name}
+                      </span>
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </PortalDropdown>
       </div>
 
@@ -678,11 +675,9 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
         <ToolbarButton
           ref={alignBtnRef}
           title="Text alignment"
-          active={
-            ['left', 'center', 'right', 'justify'].some((a) =>
-              editor.isActive({ textAlign: a as any }),
-            )
-          }
+          active={['left', 'center', 'right', 'justify'].some((a) =>
+            editor.isActive({ textAlign: a as any }),
+          )}
           onClick={() => {
             const opening = !alignOpen;
             closeAll();
@@ -717,32 +712,36 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                   transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                   className="border-border bg-popover z-50 w-28 rounded-lg border p-2 shadow-lg"
                 >
-                {[
-                  { label: 'Left', icon: <AlignLeft size={14} />, value: 'left' },
-                  { label: 'Center', icon: <AlignCenter size={14} />, value: 'center' },
-                  { label: 'Right', icon: <AlignRight size={14} />, value: 'right' },
-                  { label: 'Justify', icon: <AlignJustify size={14} />, value: 'justify' },
-                ].map(({ label, icon, value }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      editor.chain().focus().setTextAlign(value as any).run();
-                      setAlignOpen(false);
-                    }}
-                  >
-                    {icon}
-                    {label}
-                  </button>
-                ))}
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
+                  {[
+                    { label: 'Left', icon: <AlignLeft size={14} />, value: 'left' },
+                    { label: 'Center', icon: <AlignCenter size={14} />, value: 'center' },
+                    { label: 'Right', icon: <AlignRight size={14} />, value: 'right' },
+                    { label: 'Justify', icon: <AlignJustify size={14} />, value: 'justify' },
+                  ].map(({ label, icon, value }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      className="hover:bg-accent flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        editor
+                          .chain()
+                          .focus()
+                          .setTextAlign(value as any)
+                          .run();
+                        setAlignOpen(false);
+                      }}
+                    >
+                      {icon}
+                      {label}
+                    </button>
+                  ))}
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
         </PortalDropdown>
-        </div>
+      </div>
       <span className="bg-border mx-1 h-5 w-px" />
 
       {/* Lists & blockquote */}
@@ -838,18 +837,17 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                     {name}
                   </button>
                 ))}
-                <div className="mt-1 border-t border-border pt-1">
+                <div className="border-border mt-1 border-t pt-1">
                   <label className="flex items-center gap-2 text-xs">
                     <input
                       type="color"
-                      className="h-6 w-6 p-0 border-none"
+                      className="h-6 w-6 border-none p-0"
                       onChange={(e) => {
                         const clr = e.target.value;
                         editor.chain().focus().setColor(clr).run();
                         setColorOpen(false);
                       }}
-                    />
-                    {' '}
+                    />{' '}
                     Custom
                   </label>
                 </div>
@@ -910,16 +908,17 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
                     {name}
                   </button>
                 ))}
-                <div className="mt-1 border-t border-border pt-1">
+                <div className="border-border mt-1 border-t pt-1">
                   <label className="flex items-center gap-2 text-xs">
                     <input
                       type="color"
-                      className="h-6 w-6 p-0 border-none"
+                      className="h-6 w-6 border-none p-0"
                       onChange={(e) => {
                         const clr = e.target.value;
                         editor.chain().focus().toggleHighlight({ color: clr }).run();
                         setHighlightOpen(false);
-                      }}/>
+                      }}
+                    />
                     Custom
                   </label>
                 </div>

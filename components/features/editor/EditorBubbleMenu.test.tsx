@@ -9,7 +9,13 @@ vi.mock('motion/react', () => {
   return {
     AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     motion: {
-      div: ({ children, initial, animate, exit, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => (
+      div: ({
+        children,
+        initial,
+        animate,
+        exit,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>) => (
         <div {...props}>{children}</div>
       ),
     },

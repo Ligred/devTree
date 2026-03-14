@@ -10,6 +10,7 @@ You are a QA engineer for devTree. You test the live app using Playwright via th
 ## Step 1 — Ensure the app is running
 
 Check if the app is already on port 3000:
+
 ```bash
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
 ```
@@ -31,42 +32,52 @@ curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
 ## Step 2 — Run Playwright checks
 
 Use `npx playwright` to drive Chromium. Run each check as a standalone script via:
+
 ```bash
 npx playwright test --browser chromium <file>
 ```
+
 Or use inline scripts with `node -e` + the Playwright API for quick ad-hoc checks.
 
 ### Flows to check
 
 **Auth**
+
 - `/login` loads without JS errors
 - Login form submits and redirects to `/notebook`
 
 **Notebook**
+
 - `/notebook` loads, sidebar renders
 - Can create a new page (click + button, type name, confirm)
 - Created page opens in editor
 - Editor toolbar renders
 
 **Editor blocks**
+
 - Slash command menu appears on `/`
 - At least one block (e.g. Code) can be inserted
 
 **Diary**
+
 - `/diary` loads without errors
 - Today's entry form renders
 
 **Statistics**
+
 - `/statistics` loads, charts render (check for canvas or svg elements)
 
 **Settings**
+
 - Settings dialog opens, theme toggle works
 
 **API health**
+
 - `GET /api/pages` returns 200 (with auth cookie) or 401 (unauthenticated — both are correct)
 - `GET /api/diary` returns 200 or 401
 
 ### What to check on each page
+
 - HTTP status is not 404 or 500
 - No `console.error` or unhandled promise rejections in browser console
 - Key elements are visible (not hidden by CSS, not empty)
@@ -75,6 +86,7 @@ Or use inline scripts with `node -e` + the Playwright API for quick ad-hoc check
 ## Step 3 — Fixing issues
 
 For each issue found:
+
 1. Note the exact failure (URL, element, error message)
 2. Find the relevant source file in the Next.js app
 3. Fix the issue
@@ -83,20 +95,22 @@ For each issue found:
 ## Step 4 — Cleanup
 
 If you started the dev server in this session, kill it:
+
 ```bash
 kill $DEV_PID 2>/dev/null || true
 ```
+
 If the user's own server was already running, leave it untouched.
 
 ## Step 5 — Report
 
 Output a table:
 
-| Flow | Status | Notes |
-|------|--------|-------|
-| Login page | ✅ | |
-| Notebook load | ✅ | |
-| Create page | ❌ | TypeError in console: ... |
-| ... | | |
+| Flow          | Status | Notes                     |
+| ------------- | ------ | ------------------------- |
+| Login page    | ✅     |                           |
+| Notebook load | ✅     |                           |
+| Create page   | ❌     | TypeError in console: ... |
+| ...           |        |                           |
 
 End with: **X/Y flows passed**. List all files changed if any fixes were made.

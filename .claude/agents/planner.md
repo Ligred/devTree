@@ -25,21 +25,27 @@ Produce a clear, actionable implementation plan. Do NOT write code — only plan
 ## Plan format
 
 ### Goal
+
 One sentence describing what will be built.
 
 ### Files to create
+
 List each file path and its purpose.
 
 ### Files to modify
+
 List each file path, what changes, and why.
 
 ### Implementation steps
+
 Numbered steps in dependency order (what must happen before what).
 
 ### Trade-offs & risks
+
 Any non-obvious decisions or things that could go wrong.
 
 ### Out of scope
+
 Explicitly list what is NOT included to prevent scope creep.
 
 ## Rules

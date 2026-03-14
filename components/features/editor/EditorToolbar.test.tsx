@@ -9,7 +9,13 @@ vi.mock('motion/react', () => {
   return {
     AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     motion: {
-      div: ({ children, initial, animate, exit, ...props }: { children?: React.ReactNode } & Record<string, unknown>) => (
+      div: ({
+        children,
+        initial,
+        animate,
+        exit,
+        ...props
+      }: { children?: React.ReactNode } & Record<string, unknown>) => (
         <div {...props}>{children}</div>
       ),
     },
@@ -198,7 +204,17 @@ describe('EditorToolbar', () => {
 
     // stub the button's bounding rect so the portal can compute a nonzero position
     const btn = screen.getByTitle('Font family');
-    btn.getBoundingClientRect = () => ({ left: 123, bottom: 456, top: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => '' });
+    btn.getBoundingClientRect = () => ({
+      left: 123,
+      bottom: 456,
+      top: 0,
+      right: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => '',
+    });
 
     fireEvent.mouseDown(btn);
     const option = await screen.findByText('Arial');
@@ -216,7 +232,9 @@ describe('EditorToolbar', () => {
 
   it('opens font size dropdown and applies selection', async () => {
     const { editor, chainCalls } = createEditorMock();
-    const { container } = render(<EditorToolbar editor={editor as never} blockId="block-fontsize" />);
+    const { container } = render(
+      <EditorToolbar editor={editor as never} blockId="block-fontsize" />,
+    );
 
     fireEvent.mouseDown(screen.getByTitle('Font size'));
     const option = await screen.findByText('16');
@@ -230,11 +248,23 @@ describe('EditorToolbar', () => {
 
   it('opens heading dropdown and toggles heading', async () => {
     const { editor, chainCalls } = createEditorMock();
-    const { container } = render(<EditorToolbar editor={editor as never} blockId="block-heading" />);
+    const { container } = render(
+      <EditorToolbar editor={editor as never} blockId="block-heading" />,
+    );
 
     // stub coords for heading button too
     const btn = screen.getByTitle('Heading');
-    btn.getBoundingClientRect = () => ({ left: 50, bottom: 80, top: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => '' });
+    btn.getBoundingClientRect = () => ({
+      left: 50,
+      bottom: 80,
+      top: 0,
+      right: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => '',
+    });
 
     fireEvent.mouseDown(btn);
     const h2button = await screen.findByText('H2');

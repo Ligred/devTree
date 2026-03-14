@@ -3,6 +3,7 @@ Use the `qa-runner` agent to test the live app like a manual QA tester.
 $ARGUMENTS
 
 The agent will:
+
 1. Check if the app is already running on port 3000 — start `pnpm dev` only if not
 2. Walk through all key flows: auth, notebook, editor, diary, statistics, settings
 3. Check each page for JS console errors, broken routes, missing elements, crash UI

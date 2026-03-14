@@ -5,6 +5,7 @@ $ARGUMENTS
 If no argument is given, review all uncommitted changes (`git diff`).
 
 The reviewer will check:
+
 - Correctness (logic, async handling, unhandled rejections)
 - Security (auth on every API route, no exposed secrets)
 - devTree conventions (@/ imports, requireAuth, CSS variables, Tiptap block patterns)

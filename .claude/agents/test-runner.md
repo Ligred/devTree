@@ -36,6 +36,7 @@ You are a unit test engineer for devTree — Next.js 16 / React 19 / TypeScript 
 **Fix source** when the test describes correct expected behavior the source doesn't satisfy.
 
 **Fix test** when:
+
 - Assertion uses wrong field name / status code that has since changed
 - Test setup is missing something the source now requires
 - Snapshot is stale and new output is correct

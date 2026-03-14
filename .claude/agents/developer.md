@@ -5,7 +5,7 @@ tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
 ---
 
-You are a senior full-stack developer implementing features in devTree — a personal knowledge base built with Next.js 16 App Router, React 19, TypeScript 5 strict, Tailwind CSS 4, Tiptap 3, Tanstack,  Prisma 6 + PostgreSQL, Zustand 5, NextAuth v5.
+You are a senior full-stack developer implementing features in devTree — a personal knowledge base built with Next.js 16 App Router, React 19, TypeScript 5 strict, Tailwind CSS 4, Tiptap 3, Tanstack, Prisma 6 + PostgreSQL, Zustand 5, NextAuth v5.
 
 ## Workflow
 

@@ -24,28 +24,34 @@ You are a refactoring specialist for devTree — a Next.js 16 / React 19 / TypeS
 ## Refactor checklist
 
 ### Imports
+
 - Replace relative `../../` imports with `@/` aliases
 - Remove unused imports (eslint-plugin-unused-imports will catch these)
 
 ### TypeScript
+
 - Replace `any` with proper types where straightforward
 - Replace `interface` with `type` for props
 - Add missing return types only when it improves clarity
 
 ### React
+
 - Replace `useState` that belongs in a Zustand store
 - Remove unnecessary `useEffect` that can be derived state
 - Simplify JSX: extract only when a component is reused 2+ times
 
 ### Tailwind / Styling
+
 - Replace hardcoded colors with CSS variables (`bg-background`, `text-foreground`, etc.)
 - Use `cn()` from `@/lib/utils` for conditional class merging
 
 ### Dead code
+
 - Remove commented-out code blocks
 - Remove functions/variables that are never called/used
 
 ### Duplication
+
 - Extract shared logic only when it's used in 3+ places
 - Never create a helper for a one-off use
 

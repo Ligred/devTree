@@ -15,8 +15,12 @@ vi.mock('motion/react', async (importOriginal) => {
     AnimatePresence: ({ children }: any) => <>{children}</>,
     motion: {
       ...actual.motion,
-      div: ({ children, initial, animate, exit, ...props }: any) => <div {...props}>{children}</div>,
-      aside: ({ children, initial, animate, exit, ...props }: any) => <aside {...props}>{children}</aside>,
+      div: ({ children, initial, animate, exit, ...props }: any) => (
+        <div {...props}>{children}</div>
+      ),
+      aside: ({ children, initial, animate, exit, ...props }: any) => (
+        <aside {...props}>{children}</aside>
+      ),
     },
   };
 });
