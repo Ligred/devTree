@@ -171,9 +171,11 @@ public class EditorTests : E2ETestBase
         await App.Editor.AddBlockAsync("Image");
         await App.Editor.SetImageUrlAsync(imgUrl);
 
-        // After saving, the image element should appear
+        // The image element renders immediately when the URL attribute is set.
+        // We check the src attribute rather than visibility because Tiptap applies
+        // visibility:hidden to the selected atom node as a selection decoration.
         var img = Page.Locator("img[src*='Typescript']");
-        await Expect(img).ToBeVisibleAsync(new() { Timeout = 10_000 });
+        await Expect(img).ToHaveAttributeAsync("src", imgUrl, new() { Timeout = 10_000 });
     }
 
     [Test]

@@ -198,8 +198,11 @@ function ConfirmationDialog({
           {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>{cancelText}</AlertDialogCancel>
+          <AlertDialogCancel data-testid="confirm-delete-cancel" onClick={onCancel}>
+            {cancelText}
+          </AlertDialogCancel>
           <AlertDialogAction
+            data-testid="confirm-delete-confirm"
             onClick={onConfirm}
             className={isDestructive ? 'bg-red-600 hover:bg-red-700' : undefined}
           >

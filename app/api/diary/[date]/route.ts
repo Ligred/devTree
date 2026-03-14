@@ -196,7 +196,7 @@ async function resolveJournalId(req: NextRequest, userId: string): Promise<strin
     select: { id: true, ownerId: true, name: true },
   });
 
-  if (!journal || journal.ownerId !== userId) {
+  if (journal?.ownerId !== userId) {
     return NextResponse.json({ error: 'Journal not found' }, { status: 404 });
   }
 

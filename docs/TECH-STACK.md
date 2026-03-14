@@ -94,7 +94,7 @@ This document describes every major library and technology used in the project: 
 - **What:** Unstyled, accessible component primitives (Dialog, Dropdown Menu, etc.).
 - **Why:** Accessibility (focus, keyboard, ARIA) out of the box; we style with Tailwind.
 - **Where:**
-  - `components/ui/dialog.tsx` — Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription (used by SettingsDialog, DeleteConfirmDialog).
+  - `components/ui/dialog.tsx` — Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription (used by SettingsDialog).
   - `@radix-ui/react-dropdown-menu` — UserMenu dropdown.
   - `components/ui/tree-view.tsx` — FileExplorer tree.
   - `components/ui/alert-dialog.tsx` — Delete confirmation.

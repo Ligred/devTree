@@ -76,14 +76,19 @@ _Production improvement:_ Add auto-save (debounced API call on every block chang
 ```mermaid
 graph TD
     App["app/page.tsx\n(entry point)"]
-    App --> Providers["shared/providers.tsx\n(ThemeProvider + I18nProvider)"]
+    App --> Providers["shared/providers.tsx\n(ThemeProvider + I18nProvider\n+ ConfirmationProvider)"]
     Providers --> AppShell["shared/AppShell.tsx"]
     AppShell --> ActivityBar["shared/ActivityBar\n(navigation sidebar)"]
     AppShell --> Workspace["features/Workspace\n(all page state lives here)"]
+    AppShell --> DiaryPageClient["app/diary\nDiaryPageClient"]
 
     Workspace --> FileExplorer["features/FileExplorer\n(tree-view UI)"]
     Workspace --> MainContent["features/MainContent\n(header + page editor + stats)"]
-    Workspace --> Dialogs["DeleteConfirmDialog\nUnsavedChangesDialog"]
+    Workspace --> Dialogs["UnsavedChangesDialog\n(useConfirmation for delete)"]
+
+    DiaryPageClient --> DiaryLeftPanel["diary/DiaryLeftPanel\n(calendar or timeline list)"]
+    DiaryPageClient --> DiaryHeader["diary/DiaryHeader\n(save, weather, templates)"]
+    DiaryPageClient --> PageEditor2["features/editor/PageEditor\n(Tiptap, mode='diary')"]
 
     FileExplorer --> FolderRenameRow
 
@@ -268,6 +273,35 @@ erDiagram
 1. **Excalidraw's own `excalidraw-library` localStorage key** — all personal library items are persisted automatically by Excalidraw itself. We intentionally do NOT maintain a parallel custom key; doing so creates two copies with identical IDs that Excalidraw merges into one list, causing React duplicate-key warnings.
 2. **Backend (`GET /api/user/libraries`)** — URL-sourced libraries the user has imported across any device, loaded on mount when authenticated and merged via `updateLibrary({ merge: true })`. Excalidraw deduplicates by item ID so repeat loads are safe.
 3. **Hash import (`#addLibrary=URL&token=`)** — on-demand import via `libraries.excalidraw.com` redirect; merged into the live canvas and saved to the backend.
+
+### Diary Model
+
+Each user can have multiple journals. Each journal has dated entries (one per day) and reusable templates. Entry content is stored as Tiptap `JSONContent`. Weather/location snapshots are captured on the day of creation using the Open-Meteo API and Nominatim.
+
+```mermaid
+erDiagram
+    USER ||--o{ DIARY_JOURNAL : "has"
+    DIARY_JOURNAL {
+        string id PK
+        string name
+        string ownerId FK
+    }
+    DIARY_JOURNAL ||--o{ DIARY_ENTRY : "contains"
+    DIARY_ENTRY {
+        string id PK
+        string journalId FK
+        string entryDate "YYYY-MM-DD unique per journal"
+        Json content "Tiptap JSONContent"
+        Json weather "optional snapshot"
+    }
+    DIARY_JOURNAL ||--o{ DIARY_TEMPLATE : "has"
+    DIARY_TEMPLATE {
+        string id PK
+        string journalId FK
+        string name
+        string body "Tiptap JSON string"
+    }
+```
 
 ### Tree Model
 
@@ -767,6 +801,7 @@ graph TD
         UUtils["Utility functions\n(treeUtils, pageUtils)"]
         UI18n["i18n hook\n(i18n.test.tsx)"]
         UStores["Zustand stores\n(recordingStore, statsStore)"]
+        UDiary["Diary components\n(DiaryPageClient, DiaryLeftPanel)"]
     end
 
     subgraph Visual["Visual Tests (Storybook)"]
@@ -789,7 +824,7 @@ graph TD
 
 | Layer             | Count | Speed  | Confidence               | Cost |
 | ----------------- | ----- | ------ | ------------------------ | ---- |
-| Unit tests        | ~260  | ~3s    | Component logic + stores | Low  |
+| Unit tests        | ~437  | ~3s    | Component logic + stores | Low  |
 | Storybook stories | ~20   | Manual | Visual appearance        | Low  |
 | E2E tests         | ~98   | ~60s   | Full user journeys       | High |
 
