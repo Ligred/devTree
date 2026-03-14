@@ -1,6 +1,6 @@
 import type { JSONContent } from '@tiptap/react';
 
-import type { CachedWeatherSummary, DiaryTranslate, WeatherSnapshot } from './types';
+import type { CachedWeatherSummary, DiaryTranslate, WeatherSummary } from './types';
 
 export const EMPTY_DOC: JSONContent = { type: 'doc', content: [] };
 const DIARY_WEATHER_CACHE_KEY = 'devtree:diaryWeatherSummary';
@@ -274,7 +274,7 @@ export function parseTemplateBodyToForm(body: string): { title: string; promptsT
 export async function fetchWeatherSnapshotForDate(
   dateOnly: string,
   locationEnabled: boolean,
-): Promise<WeatherSnapshot | null> {
+): Promise<WeatherSummary | null> {
   if (!locationEnabled || !('geolocation' in navigator)) return null;
 
   const cachedRaw = globalThis.localStorage.getItem(DIARY_WEATHER_CACHE_KEY);
@@ -289,8 +289,8 @@ export async function fetchWeatherSnapshotForDate(
           weatherLabel: cached.weatherLabel,
           locationName: cached.locationName,
           locationShort: cached.locationShort,
-          locationLat: cached.locationLat,
-          locationLon: cached.locationLon,
+          locationLat: null,
+          locationLon: null,
         };
       }
     } catch {

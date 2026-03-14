@@ -67,13 +67,7 @@ export type WeatherSummary = {
 export type CachedWeatherSummary = WeatherSummary & {
   cachedAt: number;
   date: string;
-  locationLat: number;
-  locationLon: number;
 };
 
-export type WeatherSnapshot = WeatherSummary & {
-  locationLat: number;
-  locationLon: number;
-};
 
 export type DiaryTranslate = (key: string) => string;
