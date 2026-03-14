@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { getOwnedPage, normalizeTags } from '@/lib/apiUtils';
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
 type Params = { params: Promise<{ pageId: string }> };
-
-/** Verify that a page exists and belongs to the given user. */
-async function getOwnedPage(pageId: string, userId: string) {
-  const page = await prisma.page.findUnique({ where: { id: pageId } });
-  if (!page || page.ownerId !== userId) return null;
-  return page;
-}
 
 // ─── POST /api/pages/[pageId]/blocks ──────────────────────────────────────────
 // Creates a new block on the page.
@@ -61,12 +55,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     order = (maxOrder._max.order ?? -1) + 1;
   }
 
-  const tags = Array.isArray(body.tags)
-    ? (body.tags as unknown[])
-        .filter((t): t is string => typeof t === 'string')
-        .map((t) => t.toLowerCase().trim())
-        .filter(Boolean)
-    : [];
+  const tags = Array.isArray(body.tags) ? normalizeTags(body.tags as unknown[]) : [];
 
   try {
     const block = await prisma.block.create({

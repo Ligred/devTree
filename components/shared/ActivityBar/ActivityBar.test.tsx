@@ -13,11 +13,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
-vi.mock('@/components/features/SettingsDialog/useSettingsDialog', () => ({
-  useSettingsDialog: () => ({ openSettings: vi.fn() }),
+vi.mock('@/lib/stores/uiStore', () => ({
+  useUIStore: () => ({ openSettings: vi.fn() }),
 }));
 
-vi.mock('@/lib/statsStore', () => ({
+vi.mock('@/lib/stores/statsStore', () => ({
   useStatsStore: () => ({ enabled: true }),
 }));
 

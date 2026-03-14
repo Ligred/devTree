@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { JSONContent } from '@tiptap/react';
 
 import { parseLocalDate } from '@/lib/dateUtils';
-import { useSettingsStore } from '@/lib/settingsStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 import {
   EMPTY_DOC,

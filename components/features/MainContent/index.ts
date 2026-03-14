@@ -16,12 +16,3 @@ export type {
   TableBlockContent,
   TextBlockContent,
 } from './types';
-export {
-  isTextBlockContent,
-  isCodeBlockContent,
-  isLinkBlockContent,
-  isTableBlockContent,
-  isAgendaBlockContent,
-  isImageBlockContent,
-  isAudioBlockContent,
-} from './types';

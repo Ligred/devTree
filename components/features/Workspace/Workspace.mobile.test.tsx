@@ -16,11 +16,11 @@ vi.mock('@/lib/i18n', () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('@/lib/settingsStore', () => ({
+vi.mock('@/lib/stores/settingsStore', () => ({
   useSettingsStore: () => true,
 }));
 
-vi.mock('@/lib/usePageTracking', () => ({
+vi.mock('@/lib/hooks/usePageTracking', () => ({
   usePageTracking: () => undefined,
 }));
 

@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shared/ui/tooltip';
-import { useTextTruncation } from '@/lib/utils';
+import { useTextTruncation } from '@/lib/hooks/useTextTruncation';
 
 interface TruncatedTextProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;

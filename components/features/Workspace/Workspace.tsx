@@ -33,9 +33,9 @@ import { useConfirmation } from '@/lib/confirmationContext';
 import { useWritingTracking } from '@/lib/hooks/useWritingTracking';
 import { useI18n } from '@/lib/i18n';
 import { getLastNotebookPageId, setLastNotebookPageId } from '@/lib/notebookPageMemory';
-import { useSettingsStore } from '@/lib/settingsStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { playUiSound } from '@/lib/stores/uiSoundEffects';
-import { usePageTracking } from '@/lib/usePageTracking';
+import { usePageTracking } from '@/lib/hooks/usePageTracking';
 import { cn } from '@/lib/utils';
 
 import { buildTreeDataWithActions } from './buildTreeData';

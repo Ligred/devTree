@@ -60,7 +60,7 @@ vi.mock('motion/react', async (importOriginal) => {
     },
   };
 });
-vi.mock('@/lib/settingsStore', () => ({
+vi.mock('@/lib/stores/settingsStore', () => ({
   useSettingsStore: () => ({ diaryLocationEnabled: false, diaryTemperatureUnit: 'c' }),
 }));
 

@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { normalizeName } from '@/lib/apiUtils';
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
-
-function normalizeName(name: string): string {
-  return name.trim().toLocaleLowerCase();
-}
+import { EMPTY_DOC } from '@/lib/tiptapUtils';
 
 // ─── GET /api/pages ─────────────────────────────────────────────────────────
 // Returns all pages (with blocks) owned by the authenticated user, sorted by order.
@@ -92,10 +90,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // All new pages start as unified Tiptap documents (empty doc JSON).
-  // Legacy block-based pages keep content = null (existing rows unchanged).
-  const emptyTiptapDoc = { type: 'doc', content: [] };
-
   try {
     const page = await prisma.page.create({
       data: {
@@ -103,7 +97,7 @@ export async function POST(req: NextRequest) {
         ownerId: userId,
         folderId,
         order,
-        content: emptyTiptapDoc,
+        content: EMPTY_DOC,
       },
       include: { blocks: true },
     });

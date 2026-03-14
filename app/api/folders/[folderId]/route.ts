@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { normalizeName } from '@/lib/apiUtils';
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
-
-function normalizeName(name: string): string {
-  return name.trim().toLocaleLowerCase();
-}
 
 type Params = { params: Promise<{ folderId: string }> };
 

@@ -33,7 +33,7 @@ import { Plus } from 'lucide-react';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 
 import { useI18n } from '@/lib/i18n';
-import { CommentMark } from '@/lib/tiptap-comment-mark';
+import { CommentMark } from '@/components/features/editor/extensions/CommentMark';
 
 import { BlockControls, BlockPickerMenu } from './BlockControls';
 import { EditableContext } from './EditableContext';

@@ -1,8 +1,9 @@
 import type { JSONContent } from '@tiptap/react';
 
+import { EMPTY_DOC } from '@/lib/tiptapUtils';
 import type { CachedWeatherSummary, DiaryTranslate, WeatherSummary } from './types';
 
-export const EMPTY_DOC: JSONContent = { type: 'doc', content: [] };
+export { EMPTY_DOC };
 const DIARY_WEATHER_CACHE_KEY = 'devtree:diaryWeatherSummary';
 const WEATHER_CACHE_TTL_MS = 30 * 60 * 1000;
 

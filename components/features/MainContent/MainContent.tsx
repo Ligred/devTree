@@ -43,7 +43,7 @@ import { EditorToolbar } from '@/components/features/editor/EditorToolbar';
 import { PageEditor } from '@/components/features/editor/PageEditor';
 import { useI18n } from '@/lib/i18n';
 import { downloadMarkdown, extractInlineTagsFromContent } from '@/lib/pageUtils';
-import { useSettingsStore } from '@/lib/settingsStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { cn } from '@/lib/utils';
 
 import { PageMeta } from './PageMeta';

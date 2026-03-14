@@ -14,8 +14,8 @@ import type { SummaryData } from '@/components/features/Statistics/types';
 import { ActivityBar } from '@/components/shared/ActivityBar/ActivityBar';
 import { UserMenu } from '@/components/shared/UserMenu/UserMenu';
 import { useGlobalUiSoundDelegation } from '@/lib/hooks/useGlobalUiSoundDelegation';
-import { useStatsStore } from '@/lib/statsStore';
-import { useUIStore } from '@/lib/uiStore';
+import { useStatsStore } from '@/lib/stores/statsStore';
+import { useUIStore } from '@/lib/stores/uiStore';
 
 /** Routes where the ActivityBar (main nav) should NOT appear. */
 const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password'];

@@ -14,7 +14,7 @@ import { UnsavedChangesDialog } from '@/components/features/Workspace/UnsavedCha
 import { Sidebar } from '@/components/shared/Sidebar';
 import { useConfirmation } from '@/lib/confirmationContext';
 import { useI18n } from '@/lib/i18n';
-import { useSettingsStore } from '@/lib/settingsStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { cn } from '@/lib/utils';
 
 import { DiaryCreateEntryDialog } from './DiaryCreateEntryDialog';
