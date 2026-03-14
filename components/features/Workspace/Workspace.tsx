@@ -29,6 +29,7 @@ import { MainContent } from '@/components/features/MainContent';
 import type { Page } from '@/components/features/MainContent/types';
 import { Sidebar } from '@/components/shared/Sidebar';
 import type { TreeDataItem } from '@/components/shared/ui/tree-view';
+import { useConfirmation } from '@/lib/confirmationContext';
 import { useWritingTracking } from '@/lib/hooks/useWritingTracking';
 import { useI18n } from '@/lib/i18n';
 import { getLastNotebookPageId, setLastNotebookPageId } from '@/lib/notebookPageMemory';
@@ -38,7 +39,6 @@ import { usePageTracking } from '@/lib/usePageTracking';
 import { cn } from '@/lib/utils';
 
 import { buildTreeDataWithActions } from './buildTreeData';
-import { DeleteConfirmDialog } from './DeleteConfirmDialog';
 import { FolderRenameRow } from './FolderRenameRow';
 import { useSaveLogic } from './hooks/useSaveLogic';
 import { useTreeOperations } from './hooks/useTreeOperations';
@@ -131,6 +131,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
   const isTransitioningRef = useRef(false);
 
   const { t } = useI18n();
+  const { confirm } = useConfirmation();
   const reducedMotion = useReducedMotion();
   const tagsPerPageEnabled = useSettingsStore((s) => s.tagsPerPageEnabled);
   const router = useRouter();
@@ -187,6 +188,7 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
     showErrorToast,
     t,
     setActivePageId,
+    confirm,
     onFileCreated: (pageId) => {
       // Cancel any debounced title-blur save for the page we're leaving.
       // Without this, clicking "New page" while the title input is focused
@@ -701,16 +703,6 @@ export function Workspace({ initialRoutePageId }: WorkspaceProps) {
           {errorToast}
         </div>
       )}
-
-      <DeleteConfirmDialog
-        open={treeOps.deleteDialog !== null}
-        onOpenChange={(open) => {
-          if (!open) treeOps.setDeleteDialog(null);
-        }}
-        title={treeOps.deleteDialog?.title ?? ''}
-        description={treeOps.deleteDialog?.description ?? ''}
-        onConfirm={treeOps.handleConfirmDelete}
-      />
 
       <UnsavedChangesDialog
         open={saveLogic.pendingNavId !== null}

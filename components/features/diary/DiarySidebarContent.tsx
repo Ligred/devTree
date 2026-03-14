@@ -53,8 +53,7 @@ type Props = {
   groupedEntries: Array<{ month: string; items: DiaryMeta[] }>;
   handleSelectDate: (date: string) => void;
   loadingList: boolean;
-  loadingEntry: boolean;
-  setDeleteTargetDate: React.Dispatch<React.SetStateAction<string | null>>;
+  setDeleteTargetDate: (dateOnly: string) => void;
   diaryTemperatureUnit: 'c' | 'f';
   dateLocale: string;
   // Entry creation
@@ -96,7 +95,6 @@ export function DiarySidebarContent({
   groupedEntries,
   handleSelectDate,
   loadingList,
-  loadingEntry,
   setDeleteTargetDate,
   diaryTemperatureUnit,
   dateLocale,
@@ -427,7 +425,6 @@ export function DiarySidebarContent({
             entriesByDate={entriesByDate}
             handleSelectDate={handleSelectDate}
             loadingList={loadingList}
-            loadingEntry={loadingEntry}
             entries={entries}
             groupedEntries={groupedEntries}
             setDeleteTargetDate={setDeleteTargetDate}

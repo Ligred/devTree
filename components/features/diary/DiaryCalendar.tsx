@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { toDateOnly } from './diaryUtils';
 import type { DiaryMeta } from './types';
 
-interface DiaryCalendarProps {
+type DiaryCalendarProps = {
   monthDate: Date;
   selectedDate: string | null;
   entriesByDate: Record<string, DiaryMeta>;
@@ -21,7 +21,7 @@ interface DiaryCalendarProps {
   nextMonthLabel: string;
   dateLocale: string;
   weekDayLabels: [string, string, string, string, string, string, string];
-}
+};
 
 export function DiaryCalendar({
   monthDate,

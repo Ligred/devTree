@@ -6,8 +6,12 @@ The refactorer will:
 
 - Read all files in scope first
 - Improve code quality WITHOUT changing behavior
+- Always try to use shared (reusable) components
+- If we don't have reusable component, create it
+- Each component should be in own folder with tests and stories
 - Fix: relative imports → @/ aliases, any → proper types, hardcoded colors → CSS vars, dead code, duplication (3+ uses only)
 - Run `npx tsc --noEmit`, `pnpm lint`, and `pnpm test` to confirm nothing broke
+- Update documentation
 
 Constraints:
 

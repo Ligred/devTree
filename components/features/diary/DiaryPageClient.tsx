@@ -12,16 +12,7 @@ import { EditorToolbar } from '@/components/features/editor/EditorToolbar';
 import { PageEditor } from '@/components/features/editor/PageEditor';
 import { UnsavedChangesDialog } from '@/components/features/Workspace/UnsavedChangesDialog';
 import { Sidebar } from '@/components/shared/Sidebar';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/shared/ui/alert-dialog';
+import { useConfirmation } from '@/lib/confirmationContext';
 import { useI18n } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/settingsStore';
 import { cn } from '@/lib/utils';
@@ -40,6 +31,7 @@ export default function DiaryPageClient() {
   const { status } = useSession();
   const router = useRouter();
   const { t, locale } = useI18n();
+  const { confirm } = useConfirmation();
   const { diaryTemperatureUnit } = useSettingsStore();
   const dateLocale = locale === 'uk' ? 'uk-UA' : 'en-US';
 
@@ -58,7 +50,6 @@ export default function DiaryPageClient() {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showTemplateManagerDialog, setShowTemplateManagerDialog] = useState(false);
-  const [deleteTargetDate, setDeleteTargetDate] = useState<string | null>(null);
   const [createDateValue, setCreateDateValue] = useState(today);
   const pendingActionRef = useRef<(() => void) | null>(null);
 
@@ -162,6 +153,23 @@ export default function DiaryPageClient() {
       });
     },
     [loadEntry, requestWithUnsavedGuard, selectedDate],
+  );
+
+  const handleDeleteEntry = useCallback(
+    async (dateOnly: string) => {
+      const confirmed = await confirm({
+        title: t('diary.deleteTitle'),
+        description: t('diary.deleteDescription'),
+        confirmText: t('delete.delete'),
+        cancelText: t('delete.cancel'),
+        variant: 'destructive',
+        tone: 'destructive',
+      });
+      if (confirmed) {
+        void deleteEntryByDate(dateOnly, selectedDate);
+      }
+    },
+    [confirm, t, deleteEntryByDate, selectedDate],
   );
 
   const applyTemplate = (template: DiaryTemplate) => {
@@ -345,32 +353,6 @@ export default function DiaryPageClient() {
         }}
       />
 
-      <AlertDialog
-        open={deleteTargetDate !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTargetDate(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('diary.deleteTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>{t('diary.deleteDescription')}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t('delete.cancel')}</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (deleteTargetDate) {
-                  void deleteEntryByDate(deleteTargetDate, selectedDate);
-                }
-              }}
-            >
-              {t('delete.delete')}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <DiaryCreateEntryDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
@@ -435,8 +417,7 @@ export default function DiaryPageClient() {
             groupedEntries={groupedEntries}
             handleSelectDate={handleSelectDate}
             loadingList={loadingList}
-            loadingEntry={loadingEntry}
-            setDeleteTargetDate={setDeleteTargetDate}
+            setDeleteTargetDate={handleDeleteEntry}
             diaryTemperatureUnit={diaryTemperatureUnit}
             dateLocale={dateLocale}
             todayEntryExists={todayEntryExists}

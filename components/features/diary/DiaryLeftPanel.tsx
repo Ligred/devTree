@@ -4,7 +4,7 @@ import { DiaryCalendar } from './DiaryCalendar';
 import { DiaryTimelineList } from './DiaryTimelineList';
 import type { DiaryMeta, DiaryTranslate, DiaryViewMode } from './types';
 
-interface LeftPanelProps {
+type LeftPanelProps = {
   viewMode: DiaryViewMode;
   monthCursor: Date;
   setMonthCursor: React.Dispatch<React.SetStateAction<Date>>;
@@ -12,15 +12,14 @@ interface LeftPanelProps {
   entriesByDate: Record<string, DiaryMeta>;
   handleSelectDate: (dateOnly: string) => void;
   loadingList: boolean;
-  loadingEntry?: boolean;
   entries: DiaryMeta[];
   groupedEntries: Array<{ month: string; items: DiaryMeta[] }>;
-  setDeleteTargetDate: React.Dispatch<React.SetStateAction<string | null>>;
+  setDeleteTargetDate: (dateOnly: string) => void;
   diaryTemperatureUnit: 'c' | 'f';
   dateLocale: string;
   t: DiaryTranslate;
   resolveWeatherLabel: (weatherCode?: number | null, fallback?: string | null) => string;
-}
+};
 
 export function DiaryLeftPanel({
   viewMode,
@@ -30,7 +29,6 @@ export function DiaryLeftPanel({
   entriesByDate,
   handleSelectDate,
   loadingList,
-  loadingEntry,
   entries,
   groupedEntries,
   setDeleteTargetDate,
@@ -69,9 +67,7 @@ export function DiaryLeftPanel({
     );
   }
 
-  if (loadingList || loadingEntry) {
-    // show a generic skeleton when either the entry itself or the list is
-    // currently loading so the sidebar doesn't appear stale during fetches
+  if (loadingList) {
     return (
       <div className="p-6">
         <div className="bg-muted h-40 animate-pulse rounded-xl" />

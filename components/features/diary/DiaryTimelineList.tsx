@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { formatTemp, getWeatherIcon } from './diaryUtils';
 import type { DiaryMeta } from './types';
 
-interface DiaryTimelineListProps {
+type DiaryTimelineListProps = {
   groupedEntries: Array<{ month: string; items: DiaryMeta[] }>;
   selectedDate: string | null;
   onSelectDate: (dateOnly: string) => void;
@@ -21,7 +21,7 @@ interface DiaryTimelineListProps {
   hasContentLabel: string;
   deleteLabel: string;
   resolveWeatherLabel: (weatherCode?: number | null, fallback?: string | null) => string;
-}
+};
 
 export function DiaryTimelineList({
   groupedEntries,

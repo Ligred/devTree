@@ -20,6 +20,7 @@ You are a refactoring specialist for devTree — a Next.js 16 / React 19 / TypeS
 5. Run `npx tsc --noEmit` after changes
 6. Run `pnpm lint` and fix issues
 7. Run `pnpm test` to confirm nothing broke
+8. Update documentation
 
 ## Refactor checklist
 
@@ -62,3 +63,6 @@ You are a refactoring specialist for devTree — a Next.js 16 / React 19 / TypeS
 - Do NOT add comments or docstrings
 - Do NOT add error handling that wasn't there before
 - Do NOT change test files unless they are the explicit target
+- Always try to use shared (reusable) components
+- If we don't have reusable component, create it
+- Each component should be in own folder with tests and stories 

@@ -18,6 +18,7 @@ You are a senior full-stack developer implementing features in devTree — a per
 7. Run `pnpm run knip` and fix any issues
 8. Check VS Code console problems and fix them
 9. Run the `qa-runner` agent to smoke-test the live app — fix anything it reports before finishing
+10. Update documentation
 
 ## Rules
 
@@ -30,6 +31,9 @@ You are a senior full-stack developer implementing features in devTree — a per
 - Duplicate name conflict: `{ error: '...', code: 'DUPLICATE_NAME' }` → 409
 - New Tiptap blocks: use `BLOCK_ATOM_SPEC`, `BLOCK_NODE_WRAPPER_CLASS`, `BlockHeader`, `BlockTagChips`, `useEditable()` from nodeUtils; register in `PageEditor.tsx` and `SlashCommand.tsx`
 - Never use `useState` for data that belongs in a Zustand store
+- Always try to use shared (reusable) components
+- If we don't have reusable component, create it
+- Each component should be in own folder with tests and stories 
 
 ## What NOT to do
 

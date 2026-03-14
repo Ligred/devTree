@@ -17,7 +17,6 @@ function makeProps(overrides = {}) {
     entriesByDate: {} as Record<string, any>,
     handleSelectDate: () => {},
     loadingList: false,
-    loadingEntry: false,
     entries: [],
     groupedEntries: [],
     setDeleteTargetDate: () => {},
@@ -32,12 +31,6 @@ function makeProps(overrides = {}) {
 describe('DiaryLeftPanel', () => {
   it('shows list skeleton when loadingList is true', () => {
     const { container } = render(<DiaryLeftPanel {...makeProps({ loadingList: true })} />);
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByText('diary.noEntries')).not.toBeInTheDocument();
-  });
-
-  it('shows list skeleton when loadingEntry is true', () => {
-    const { container } = render(<DiaryLeftPanel {...makeProps({ loadingEntry: true })} />);
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
     expect(screen.queryByText('diary.noEntries')).not.toBeInTheDocument();
   });

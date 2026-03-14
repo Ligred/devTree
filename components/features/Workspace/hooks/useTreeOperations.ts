@@ -24,6 +24,7 @@ import type { JSONContent } from '@tiptap/react';
 
 import type { Block, Page } from '@/components/features/MainContent';
 import type { TreeDataItem } from '@/components/shared/ui/tree-view';
+import type { ConfirmationConfig } from '@/lib/confirmationContext';
 import { playUiSound } from '@/lib/stores/uiSoundEffects';
 
 import type { TreeRoot } from '../treeTypes';
@@ -60,12 +61,6 @@ const DUPLICATE_NAME_ERROR_KEY = 'tree.duplicateNameError';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type DeleteDialogState = {
-  nodeId: string;
-  title: string;
-  description: string;
-} | null;
-
 export type TreeOperationsParams = {
   treeRoot: TreeRoot;
   treeRootRef: React.RefObject<TreeRoot>;
@@ -90,17 +85,15 @@ export type TreeOperationsParams = {
   onPageIdReplaced: (oldId: string, newId: string) => void;
   /** Called so delete can clear the active page if it was deleted. */
   setActivePageId: React.Dispatch<React.SetStateAction<string | null>>;
+  confirm: (config: ConfirmationConfig) => Promise<boolean>;
 };
 
 export type TreeOperationsResult = {
   createFile: (parentId: string) => void;
   createFolder: (parentId: string) => void;
   handleDeleteNode: (nodeId: string) => void;
-  handleConfirmDelete: () => void;
   handleDocumentDrag: (source: TreeDataItem, target: TreeDataItem) => void;
   handleRenameFolder: (folderId: string, name: string) => boolean;
-  deleteDialog: DeleteDialogState;
-  setDeleteDialog: React.Dispatch<React.SetStateAction<DeleteDialogState>>;
   editingFolderId: string | null;
   setEditingFolderId: React.Dispatch<React.SetStateAction<string | null>>;
 };
@@ -121,8 +114,8 @@ export function useTreeOperations({
   onFileCreated,
   onPageIdReplaced,
   setActivePageId,
+  confirm,
 }: TreeOperationsParams): TreeOperationsResult {
-  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
 
   // ── createFolder ───────────────────────────────────────────────────────────
@@ -237,7 +230,44 @@ export function useTreeOperations({
     ],
   );
 
-  // ── handleDeleteNode (open dialog) ─────────────────────────────────────────
+  // ── executeDelete (runs after confirmation) ────────────────────────────────
+
+  const executeDelete = useCallback(
+    (nodeId: string) => {
+      const { root: nextRoot, removed } = removeNode(treeRoot, nodeId);
+      if (!removed) return;
+      playUiSound('delete');
+      const pageIdsToRemove = collectPageIdsInSubtree(removed);
+
+      setTreeRoot(nextRoot);
+      setPages((prevPages) => prevPages.filter((p) => !pageIdsToRemove.includes(p.id)));
+      setActivePageId((current) => (pageIdsToRemove.includes(current ?? '') ? null : current));
+      for (const pageId of pageIdsToRemove) {
+        serverBlocksRef.current.delete(pageId);
+        serverPagesRef.current.delete(pageId);
+      }
+
+      const isFolder = dbFolderIds.current.has(nodeId);
+      if (isFolder) {
+        void apiDeleteFolder(nodeId).catch((err) => console.error('[deleteFolder]', err));
+      } else {
+        for (const pid of pageIdsToRemove) {
+          void apiDeletePage(pid).catch((err) => console.error('[deletePage]', err));
+        }
+      }
+    },
+    [
+      treeRoot,
+      setTreeRoot,
+      setPages,
+      setActivePageId,
+      serverBlocksRef,
+      serverPagesRef,
+      dbFolderIds,
+    ],
+  );
+
+  // ── handleDeleteNode ───────────────────────────────────────────────────────
 
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
@@ -257,50 +287,19 @@ export function useTreeOperations({
         description = t('delete.folderDescriptionOnly', { name: node.name });
       }
 
-      setDeleteDialog({ nodeId, title, description });
+      void confirm({
+        title,
+        description,
+        confirmText: t('delete.delete'),
+        cancelText: t('delete.cancel'),
+        variant: 'destructive',
+        tone: 'destructive',
+      }).then((confirmed) => {
+        if (confirmed) executeDelete(nodeId);
+      });
     },
-    [treeRoot, t],
+    [treeRoot, t, confirm, executeDelete],
   );
-
-  // ── handleConfirmDelete ────────────────────────────────────────────────────
-
-  const handleConfirmDelete = useCallback(() => {
-    if (!deleteDialog) return;
-    const { nodeId } = deleteDialog;
-
-    const { root: nextRoot, removed } = removeNode(treeRoot, nodeId);
-    if (!removed) return;
-    playUiSound('delete');
-    const pageIdsToRemove = collectPageIdsInSubtree(removed);
-
-    // Optimistic update
-    setTreeRoot(nextRoot);
-    setPages((prevPages) => prevPages.filter((p) => !pageIdsToRemove.includes(p.id)));
-    setActivePageId((current) => (pageIdsToRemove.includes(current ?? '') ? null : current));
-    for (const pageId of pageIdsToRemove) {
-      serverBlocksRef.current.delete(pageId);
-      serverPagesRef.current.delete(pageId);
-    }
-    setDeleteDialog(null);
-
-    const isFolder = dbFolderIds.current.has(nodeId);
-    if (isFolder) {
-      void apiDeleteFolder(nodeId).catch((err) => console.error('[deleteFolder]', err));
-    } else {
-      for (const pid of pageIdsToRemove) {
-        void apiDeletePage(pid).catch((err) => console.error('[deletePage]', err));
-      }
-    }
-  }, [
-    deleteDialog,
-    treeRoot,
-    setTreeRoot,
-    setPages,
-    setActivePageId,
-    serverBlocksRef,
-    serverPagesRef,
-    dbFolderIds,
-  ]);
 
   // ── handleDocumentDrag ─────────────────────────────────────────────────────
 
@@ -378,11 +377,8 @@ export function useTreeOperations({
     createFile,
     createFolder,
     handleDeleteNode,
-    handleConfirmDelete,
     handleDocumentDrag,
     handleRenameFolder,
-    deleteDialog,
-    setDeleteDialog,
     editingFolderId,
     setEditingFolderId,
   };

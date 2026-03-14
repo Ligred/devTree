@@ -80,15 +80,8 @@ vi.mock('@/components/features/Workspace/UnsavedChangesDialog', () => ({
 
 // other UI components which may perform real DOM operations can be stubbed as
 // simple fragments to avoid errors during rendering
-vi.mock('@/components/shared/ui/alert-dialog', () => ({
-  AlertDialog: ({ children }: any) => <>{children}</>,
-  AlertDialogAction: ({ children }: any) => <>{children}</>,
-  AlertDialogCancel: ({ children }: any) => <>{children}</>,
-  AlertDialogContent: ({ children }: any) => <>{children}</>,
-  AlertDialogDescription: ({ children }: any) => <>{children}</>,
-  AlertDialogFooter: ({ children }: any) => <>{children}</>,
-  AlertDialogHeader: ({ children }: any) => <>{children}</>,
-  AlertDialogTitle: ({ children }: any) => <>{children}</>,
+vi.mock('@/lib/confirmationContext', () => ({
+  useConfirmation: () => ({ confirm: vi.fn().mockResolvedValue(false) }),
 }));
 vi.mock('@/components/shared/ui/dialog', () => ({
   Dialog: ({ children }: any) => <>{children}</>,

@@ -410,7 +410,10 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     });
 
     return new NextResponse(null, { status: 204 });
-  } catch {
-    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return new NextResponse(null, { status: 204 });
+    }
+    return handleDiaryApiError('[DELETE /api/diary/[date]]', error, 'Failed to delete diary entry');
   }
 }

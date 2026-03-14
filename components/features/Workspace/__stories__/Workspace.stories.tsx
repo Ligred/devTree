@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/nextjs-vite';
 
 import { Workspace } from '@/components/features/Workspace';
+import { ConfirmationProvider } from '@/lib/confirmationContext';
 
 const meta: Meta<typeof Workspace> = {
   title: 'App/Workspace',
@@ -30,8 +31,10 @@ export const Default: Story = {
     },
   },
   render: () => (
-    <div className="h-screen w-full">
-      <Workspace />
-    </div>
+    <ConfirmationProvider>
+      <div className="h-screen w-full">
+        <Workspace />
+      </div>
+    </ConfirmationProvider>
   ),
 };

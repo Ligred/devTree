@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return NextResponse.json(
-        { error: 'A journal with this name already exists' },
+        { error: 'A journal with this name already exists', code: 'DUPLICATE_NAME' },
         { status: 409 },
       );
     }

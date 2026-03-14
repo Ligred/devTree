@@ -261,7 +261,11 @@ export function useDiaryEntries(
       if (!dateOnly) return;
       setError(null);
       try {
-        await fetch(`/api/diary/${dateOnly}${diaryQuery}`, { method: 'DELETE' });
+        const res = await fetch(`/api/diary/${dateOnly}${diaryQuery}`, { method: 'DELETE' });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? 'Failed to delete diary entry');
+        }
         setEntries((prev) => prev.filter((e) => e.entryDate !== dateOnly));
         if (currentSelectedDate === dateOnly) {
           resetToEmpty();

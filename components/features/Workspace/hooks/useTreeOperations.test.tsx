@@ -36,7 +36,11 @@ function flushMicrotasks() {
   return new Promise<void>((resolve) => queueMicrotask(resolve));
 }
 
-function createHarness(initialRoot: TreeRoot, initialPages: Page[] = []) {
+function createHarness(
+  initialRoot: TreeRoot,
+  initialPages: Page[] = [],
+  confirm = vi.fn().mockResolvedValue(true),
+) {
   const state: { root: TreeRoot; pages: Page[]; activePageId: string | null } = {
     root: initialRoot,
     pages: initialPages,
@@ -87,6 +91,7 @@ function createHarness(initialRoot: TreeRoot, initialPages: Page[] = []) {
       onFileCreated,
       onPageIdReplaced,
       setActivePageId,
+      confirm,
     }),
   );
 
@@ -100,6 +105,7 @@ function createHarness(initialRoot: TreeRoot, initialPages: Page[] = []) {
     onFileCreated,
     onPageIdReplaced,
     setActivePageId,
+    confirm,
   };
 }
 
@@ -155,7 +161,8 @@ describe('useTreeOperations', () => {
     expect(h.showErrorToast).toHaveBeenCalledWith('tree.duplicateNameError');
   });
 
-  it('opens delete dialog and confirms page deletion with active page reset', () => {
+  it('calls confirm then deletes page and resets active page when confirmed', async () => {
+    const confirm = vi.fn().mockResolvedValue(true);
     const h = createHarness(
       {
         id: 'root',
@@ -163,6 +170,7 @@ describe('useTreeOperations', () => {
         children: [{ id: 'n1', name: 'Doc', pageId: 'p1' }],
       },
       [{ id: 'p1', title: 'Doc', blocks: [] }],
+      confirm,
     );
     h.state.activePageId = 'p1';
 
@@ -170,15 +178,35 @@ describe('useTreeOperations', () => {
       h.hook.result.current.handleDeleteNode('n1');
     });
 
-    expect(h.hook.result.current.deleteDialog).not.toBeNull();
+    expect(confirm).toHaveBeenCalledTimes(1);
 
-    act(() => {
-      h.hook.result.current.handleConfirmDelete();
-    });
+    await flushMicrotasks();
 
     expect(h.state.root.children).toHaveLength(0);
     expect(h.state.pages).toHaveLength(0);
     expect(h.state.activePageId).toBeNull();
+  });
+
+  it('does not delete when confirm resolves false', async () => {
+    const confirm = vi.fn().mockResolvedValue(false);
+    const h = createHarness(
+      {
+        id: 'root',
+        name: 'Root',
+        children: [{ id: 'n1', name: 'Doc', pageId: 'p1' }],
+      },
+      [{ id: 'p1', title: 'Doc', blocks: [] }],
+      confirm,
+    );
+
+    act(() => {
+      h.hook.result.current.handleDeleteNode('n1');
+    });
+
+    await flushMicrotasks();
+
+    expect(h.state.root.children).toHaveLength(1);
+    expect(h.state.pages).toHaveLength(1);
   });
 
   it('guards against duplicate folder rename and syncs valid db-backed rename', async () => {

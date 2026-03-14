@@ -86,6 +86,10 @@ vi.mock('./hooks/useWorkspaceData', () => ({
   }),
 }));
 
+vi.mock('@/lib/confirmationContext', () => ({
+  useConfirmation: () => ({ confirm: vi.fn().mockResolvedValue(false) }),
+}));
+
 vi.mock('./hooks/useTreeOperations', () => ({
   useTreeOperations: () => ({
     createFile: vi.fn(),
@@ -95,9 +99,6 @@ vi.mock('./hooks/useTreeOperations', () => ({
     handleRenameFolder: vi.fn(),
     editingFolderId: null,
     setEditingFolderId: vi.fn(),
-    deleteDialog: null,
-    setDeleteDialog: vi.fn(),
-    handleConfirmDelete: vi.fn(),
   }),
 }));
 
