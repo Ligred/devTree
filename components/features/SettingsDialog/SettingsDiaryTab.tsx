@@ -7,14 +7,18 @@ import { useI18n } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { saveUserPreferences } from '@/lib/userPreferences';
 
-import { SegmentButton, SectionHeader, SettingRow } from './settingsShared';
+import { SectionHeader, SegmentButton, SettingRow } from './settingsShared';
 
 type Props = Readonly<{ open: boolean }>;
 
 export function SettingsDiaryTab({ open }: Props) {
   const { t } = useI18n();
-  const { diaryLocationEnabled, diaryTemperatureUnit, setDiaryLocationEnabled, setDiaryTemperatureUnit } =
-    useSettingsStore();
+  const {
+    diaryLocationEnabled,
+    diaryTemperatureUnit,
+    setDiaryLocationEnabled,
+    setDiaryTemperatureUnit,
+  } = useSettingsStore();
 
   const [browserLocationBlocked, setBrowserLocationBlocked] = useState(false);
   const [locationPermissionMessage, setLocationPermissionMessage] = useState<string | null>(null);

@@ -16,9 +16,10 @@ You are a senior full-stack developer implementing features in devTree — a per
 5. Run `pnpm lint` and fix any lint errors
 6. Run `pnpm run format`
 7. Run `pnpm run knip` and fix any issues
-8. Check VS Code console problems and fix them
-9. Run the `qa-runner` agent to smoke-test the live app — fix anything it reports before finishing
-10. Update documentation
+8. Write or update unit tests for every new function, component, or API route — use the `test-writer` agent for new code
+9. Run `pnpm test:unit` and fix every failure before continuing
+10. Run the `qa-runner` agent to smoke-test the live app — fix anything it reports before finishing
+11. Update documentation
 
 ## Rules
 
@@ -33,7 +34,7 @@ You are a senior full-stack developer implementing features in devTree — a per
 - Never use `useState` for data that belongs in a Zustand store
 - Always try to use shared (reusable) components
 - If we don't have reusable component, create it
-- Each component should be in own folder with tests and stories 
+- Each component should be in own folder with tests and stories
 
 ## What NOT to do
 

@@ -390,4 +390,4 @@ export function getHeaderSubtitle(
   return `${t('diary.locationLabel')}: ${locationShort}`;
 }
 
-export {EMPTY_DOC} from '@/lib/tiptapUtils';
+export { EMPTY_DOC } from '@/lib/tiptapUtils';

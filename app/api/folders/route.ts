@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { normalizeName } from '@/lib/apiUtils';
 import { requireAuth } from '@/lib/apiAuth';
+import { normalizeName } from '@/lib/apiUtils';
 import { prisma } from '@/lib/prisma';
 
 // ─── GET /api/folders ─────────────────────────────────────────────────────────

@@ -49,6 +49,7 @@ import { type Locale, useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
 import { BookmarksPanel } from './BookmarksPanel';
+import { EmojiPickerPopover } from './EmojiPickerPopover';
 
 // ─── Colors ───────────────────────────────────────────────────────────────────
 
@@ -262,6 +263,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
   const [alignOpen, setAlignOpen] = useState(false);
   const [fontFamilyOpen, setFontFamilyOpen] = useState(false);
   const [fontSizeOpen, setFontSizeOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
   // for display: determine which font/size is active at the selection (if any)
   const textStyleAttrs = editor?.getAttributes('textStyle') || {};
@@ -280,6 +282,7 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
     setAlignOpen(false);
     setFontFamilyOpen(false);
     setFontSizeOpen(false);
+    setEmojiOpen(false);
   };
 
   // ─── Link ──────────────────────────────────────────────────────────────────
@@ -1142,6 +1145,16 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
           )}
         </AnimatePresence>
       </div>
+
+      <EmojiPickerPopover
+        editor={editor}
+        open={emojiOpen}
+        onOpen={() => {
+          closeAll();
+          setEmojiOpen((v) => !v);
+        }}
+        onClose={() => setEmojiOpen(false)}
+      />
 
       <span className="bg-border mx-1 h-5 w-px" />
 

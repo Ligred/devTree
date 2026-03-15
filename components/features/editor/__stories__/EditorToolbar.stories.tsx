@@ -12,6 +12,7 @@ const fakeEditor = {
   focus: () => fakeEditor,
   extendMarkRange: () => fakeEditor,
   setLink: () => fakeEditor,
+  insertContent: () => fakeEditor,
   run: () => true,
   isActive: () => false,
   getAttributes: () => ({}),

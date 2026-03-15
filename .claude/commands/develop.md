@@ -10,7 +10,10 @@ The developer will:
 - If we don't have reusable component, create it
 - Each component should be in own folder with tests and stories
 - Follow all devTree conventions (@/ imports, requireAuth, Tailwind CSS vars, etc.)
-- Run `npx tsc --noEmit`, `pnpm run lint`, `pnpm run format` and 'pnpm run knip' after implementation
+- Run `npx tsc --noEmit`, `pnpm run lint`, `pnpm run format` and `pnpm run knip` after implementation
+- Write or update unit tests for all new code (use test-writer agent)
+- Run `pnpm test:unit` and fix all failures
+- Run qa-runner to smoke-test the live app and fix any browser issues
 - Update documentation
 
 If a plan exists in the conversation, follow it. Otherwise explore the codebase first to understand the context.

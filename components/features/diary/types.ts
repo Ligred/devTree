@@ -69,5 +69,4 @@ export type CachedWeatherSummary = WeatherSummary & {
   date: string;
 };
 
-
 export type DiaryTranslate = (key: string) => string;

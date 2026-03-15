@@ -36,7 +36,12 @@ type BlockTagChipsProps = {
   showEmpty?: boolean;
 };
 
-export function BlockTagChips({ tags, isEditable, onChange, showEmpty }: Readonly<BlockTagChipsProps>) {
+export function BlockTagChips({
+  tags,
+  isEditable,
+  onChange,
+  showEmpty,
+}: Readonly<BlockTagChipsProps>) {
   const { tagsPerBlockEnabled } = useSettingsStore();
   const [inputVal, setInputVal] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);

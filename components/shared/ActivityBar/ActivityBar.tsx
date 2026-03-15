@@ -7,11 +7,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import { BarChart2, BookHeart, BookOpen, Settings } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 
-import { useUIStore } from '@/lib/stores/uiStore';
 import { TooltipProvider } from '@/components/shared/ui/tooltip';
 import { useI18n } from '@/lib/i18n';
 import { getLastNotebookPageId } from '@/lib/notebookPageMemory';
 import { useStatsStore } from '@/lib/stores/statsStore';
+import { useUIStore } from '@/lib/stores/uiStore';
 
 import { ActivityBarItem } from './ActivityBarItem';
 

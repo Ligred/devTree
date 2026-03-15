@@ -88,7 +88,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 <span
                   className={cn(
                     'shrink-0',
-                    activeTab === id ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground',
+                    activeTab === id
+                      ? 'text-indigo-600 dark:text-indigo-400'
+                      : 'text-muted-foreground',
                   )}
                   aria-hidden
                 >

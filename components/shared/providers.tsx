@@ -6,11 +6,11 @@ import { SessionProvider, useSession } from 'next-auth/react';
 import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
 
 import { ConfirmationProvider } from '@/lib/confirmationContext';
+import { useSessionTracking } from '@/lib/hooks/useSessionTracking';
 import { I18nProvider, type Locale, useI18n } from '@/lib/i18n';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useStatsStore } from '@/lib/stores/statsStore';
 import { loadUserPreferences } from '@/lib/userPreferences';
-import { useSessionTracking } from '@/lib/hooks/useSessionTracking';
 
 import { RecordingIndicator } from './RecordingIndicator';
 

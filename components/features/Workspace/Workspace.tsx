@@ -30,12 +30,12 @@ import type { Page } from '@/components/features/MainContent/types';
 import { Sidebar } from '@/components/shared/Sidebar';
 import type { TreeDataItem } from '@/components/shared/ui/tree-view';
 import { useConfirmation } from '@/lib/confirmationContext';
+import { usePageTracking } from '@/lib/hooks/usePageTracking';
 import { useWritingTracking } from '@/lib/hooks/useWritingTracking';
 import { useI18n } from '@/lib/i18n';
 import { getLastNotebookPageId, setLastNotebookPageId } from '@/lib/notebookPageMemory';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { playUiSound } from '@/lib/stores/uiSoundEffects';
-import { usePageTracking } from '@/lib/hooks/usePageTracking';
 import { cn } from '@/lib/utils';
 
 import { buildTreeDataWithActions } from './buildTreeData';

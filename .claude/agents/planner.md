@@ -40,6 +40,10 @@ List each file path, what changes, and why.
 
 Numbered steps in dependency order (what must happen before what).
 
+### Tests to write
+
+List each test file and what scenarios it must cover (happy path, error states, edge cases).
+
 ### Trade-offs & risks
 
 Any non-obvious decisions or things that could go wrong.

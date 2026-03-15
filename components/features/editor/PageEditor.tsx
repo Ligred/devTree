@@ -32,8 +32,8 @@ import StarterKit from '@tiptap/starter-kit';
 import { Plus } from 'lucide-react';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 
-import { useI18n } from '@/lib/i18n';
 import { CommentMark } from '@/components/features/editor/extensions/CommentMark';
+import { useI18n } from '@/lib/i18n';
 
 import { BlockControls, BlockPickerMenu } from './BlockControls';
 import { EditableContext } from './EditableContext';
@@ -43,6 +43,7 @@ import { BookmarkMark } from './extensions/BookmarkMark';
 import { CanvasNode } from './extensions/CanvasNode';
 import { ChecklistNode } from './extensions/ChecklistNode';
 import { CodeBlockNode } from './extensions/CodeBlockNode';
+import { EmojiSuggestion } from './extensions/EmojiSuggestion';
 import { ImageNode } from './extensions/ImageNode';
 import { InlineTagMark } from './extensions/InlineTagMark';
 import { LinkCardNode } from './extensions/LinkCardNode';
@@ -300,6 +301,7 @@ export function PageEditor({
       BookmarkMark,
       InlineTagMark,
       SlashCommand,
+      EmojiSuggestion,
     ];
 
     if (isNotebookMode) {
