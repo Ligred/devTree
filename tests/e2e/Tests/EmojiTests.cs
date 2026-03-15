@@ -26,10 +26,7 @@ public class EmojiTests : E2ETestBase
         await App.Editor.ClickToolbarButtonAsync("Emoji");
         await _page.WaitForTimeoutAsync(400);
 
-        // emoji-mart renders a custom element <em-emoji-picker> or a shadow host
-        // We verify the picker container is present in the DOM
-        var picker = _page.Locator("em-emoji-picker, .emoji-picker, [data-testid='emoji-picker']");
-        // Fallback: check for the search input inside the picker
+        // emoji-mart renders a search input inside its shadow DOM — use that as the presence signal
         var pickerSearch = _page.GetByPlaceholder("Search").Last;
         await Expect(pickerSearch).ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
@@ -86,5 +83,6 @@ public class EmojiTests : E2ETestBase
         // The ":" trigger text is replaced by the emoji character
         var proseMirror = _page.Locator(".ProseMirror").Last;
         await Expect(proseMirror).Not.ToContainTextAsync(":fire");
+        await Expect(proseMirror).ToContainTextAsync("🔥", new() { Timeout = 5_000 });
     }
 }

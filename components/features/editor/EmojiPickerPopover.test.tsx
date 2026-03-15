@@ -8,12 +8,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmojiPickerPopover } from './EmojiPickerPopover';
 
 // ─── Capture onEmojiSelect from the Picker mock ───────────────────────────────
+// vi.mock factories are hoisted above all imports/let declarations, so
+// mockPickerRef.onEmojiSelect would be in the TDZ when the factory runs.
+// vi.hoisted creates a value that is available before hoisting takes place.
 
-let capturedOnEmojiSelect: ((e: { native: string }) => void) | null = null;
+const mockPickerRef = vi.hoisted(
+  () => ({ onEmojiSelect: null as ((e: { native: string }) => void) | null }),
+);
 
 vi.mock('@emoji-mart/react', () => ({
   default: (props: { onEmojiSelect: (e: { native: string }) => void }) => {
-    capturedOnEmojiSelect = props.onEmojiSelect;
+    mockPickerRef.onEmojiSelect = props.onEmojiSelect;
     return null;
   },
 }));
@@ -73,7 +78,7 @@ function buildFakeEditor() {
 
 describe('EmojiPickerPopover', () => {
   beforeEach(() => {
-    capturedOnEmojiSelect = null;
+    mockPickerRef.onEmojiSelect = null;
   });
 
   it('renders the Emoji toolbar button', () => {
@@ -120,9 +125,9 @@ describe('EmojiPickerPopover', () => {
       />,
     );
 
-    // The mocked Picker sets capturedOnEmojiSelect only when rendered;
+    // The mocked Picker sets mockPickerRef.onEmojiSelect only when rendered;
     // if the picker is not rendered, the captured callback stays null.
-    expect(capturedOnEmojiSelect).toBeNull();
+    expect(mockPickerRef.onEmojiSelect).toBeNull();
   });
 
   it('renders the picker when open is true', async () => {
@@ -138,7 +143,7 @@ describe('EmojiPickerPopover', () => {
     );
 
     await waitFor(() => {
-      expect(capturedOnEmojiSelect).not.toBeNull();
+      expect(mockPickerRef.onEmojiSelect).not.toBeNull();
     });
   });
 
@@ -156,11 +161,11 @@ describe('EmojiPickerPopover', () => {
     );
 
     await waitFor(() => {
-      expect(capturedOnEmojiSelect).not.toBeNull();
+      expect(mockPickerRef.onEmojiSelect).not.toBeNull();
     });
 
     act(() => {
-      capturedOnEmojiSelect!({ native: '😊' });
+      mockPickerRef.onEmojiSelect?.({ native: '😊' });
     });
 
     expect(onClose).toHaveBeenCalledOnce();
@@ -182,11 +187,11 @@ describe('EmojiPickerPopover', () => {
     );
 
     await waitFor(() => {
-      expect(capturedOnEmojiSelect).not.toBeNull();
+      expect(mockPickerRef.onEmojiSelect).not.toBeNull();
     });
 
     act(() => {
-      capturedOnEmojiSelect!({ native: '🔥' });
+      mockPickerRef.onEmojiSelect?.({ native: '🔥' });
     });
 
     expect(insertContent).toHaveBeenCalledWith('🔥');
