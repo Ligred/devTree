@@ -22,11 +22,13 @@ export const ToolbarButton = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, T
         ref={ref}
         type="button"
         title={title}
+        // preventDefault keeps the editor focused on mouse click.
+        // The actual action fires via onClick, which also handles keyboard (Enter/Space).
         onMouseDown={(e) => {
-          e.preventDefault(); // keep editor focus
+          e.preventDefault();
           onMouseDownProp?.(e);
-          onClick();
         }}
+        onClick={onClick}
         className={cn(
           'motion-interactive flex h-7 w-7 items-center justify-center rounded text-sm transition-colors',
           active

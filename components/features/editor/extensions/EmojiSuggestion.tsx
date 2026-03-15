@@ -155,6 +155,7 @@ function buildSuggestionOptions(): Omit<SuggestionOptions<EmojiItem>, 'editor'> 
       let reactRenderer: ReactRenderer<EmojiListHandle> | null = null;
       let popupEl: HTMLDivElement | null = null;
       let removeOutsideListener: (() => void) | null = null;
+      let activeEditor: import('@tiptap/core').Editor | null = null;
 
       const cleanup = () => {
         if (removeOutsideListener) {
@@ -171,6 +172,7 @@ function buildSuggestionOptions(): Omit<SuggestionOptions<EmojiItem>, 'editor'> 
 
       return {
         onStart(props) {
+          activeEditor = props.editor;
           popupEl = document.createElement('div');
           popupEl.style.position = 'fixed';
           popupEl.style.zIndex = '9999';
@@ -204,6 +206,7 @@ function buildSuggestionOptions(): Omit<SuggestionOptions<EmojiItem>, 'editor'> 
         },
 
         onUpdate(props) {
+          activeEditor = props.editor;
           reactRenderer?.updateProps(props);
           if (!props.clientRect) return;
           const rect = props.clientRect();
@@ -215,13 +218,15 @@ function buildSuggestionOptions(): Omit<SuggestionOptions<EmojiItem>, 'editor'> 
 
         onKeyDown(props) {
           if (props.event.key === 'Escape') {
-            cleanup();
+            // blur ends the suggestion session, which triggers onExit → cleanup
+            activeEditor?.commands.blur();
             return true;
           }
           return reactRenderer?.ref?.onKeyDown(props.event) ?? false;
         },
 
         onExit() {
+          activeEditor = null;
           cleanup();
         },
       };

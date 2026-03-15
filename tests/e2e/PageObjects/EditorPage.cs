@@ -313,7 +313,9 @@ public class EditorPage(IPage page)
     public async Task OpenEmojiPickerAsync()
     {
         await ClickToolbarButtonAsync("Emoji");
-        await _page.WaitForTimeoutAsync(300);
+        // Wait for the picker's search input rather than a fixed sleep
+        var pickerSearch = _page.GetByPlaceholder("Search").Last;
+        await pickerSearch.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
     }
 
     /// <summary>
@@ -326,13 +328,12 @@ public class EditorPage(IPage page)
         var editor = _page.Locator(".page-editor-content").Last;
         await editor.ClickAsync();
         await editor.PressSequentiallyAsync($":{query}");
-        await _page.WaitForTimeoutAsync(600);
 
-        // The suggestion popup renders buttons with the emoji + shortcode text
         var suggestionList = _page.Locator(".tiptap-emoji-list");
         await suggestionList.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
         var firstItem = suggestionList.Locator("button").First;
         await firstItem.ClickAsync();
-        await _page.WaitForTimeoutAsync(200);
+        // Wait for the popup to disappear as a deterministic commit signal
+        await suggestionList.WaitForAsync(new() { State = WaitForSelectorState.Detached, Timeout = 3_000 });
     }
 }

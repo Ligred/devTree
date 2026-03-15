@@ -24,9 +24,8 @@ public class EmojiTests : E2ETestBase
     public async Task EmojiToolbarButton_OpensPicker()
     {
         await App.Editor.ClickToolbarButtonAsync("Emoji");
-        await Page.WaitForTimeoutAsync(400);
 
-        // emoji-mart renders a search input inside its shadow DOM — use that as the presence signal
+        // emoji-mart renders a search input — wait for it directly instead of a fixed sleep
         var pickerSearch = Page.GetByPlaceholder("Search").Last;
         await Expect(pickerSearch).ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
@@ -35,17 +34,16 @@ public class EmojiTests : E2ETestBase
     public async Task EmojiToolbarButton_InsertsEmojiOnSelect()
     {
         await App.Editor.ClickToolbarButtonAsync("Emoji");
-        await Page.WaitForTimeoutAsync(400);
 
-        // Search for a specific emoji to get a deterministic result
+        // Wait for picker, then search for a deterministic result
         var pickerSearch = Page.GetByPlaceholder("Search").Last;
+        await Expect(pickerSearch).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await pickerSearch.FillAsync("thumbs");
-        await Page.WaitForTimeoutAsync(500);
 
-        // Click the first emoji button in the picker results
-        var emojiBtn = Page.Locator("em-emoji-picker button[data-emoji-id], button[aria-label*='thumbs']").First;
+        // Scope the emoji button lookup to the picker root to avoid matching unrelated buttons
+        var pickerRoot = Page.Locator("em-emoji-picker");
+        var emojiBtn = pickerRoot.Locator("button[data-emoji-id], button[aria-label*='thumbs']").First;
         await emojiBtn.ClickAsync(new() { Timeout = 5_000 });
-        await Page.WaitForTimeoutAsync(300);
 
         // Verify the emoji appears in the editor
         var proseMirror = Page.Locator(".ProseMirror").Last;
@@ -58,7 +56,6 @@ public class EmojiTests : E2ETestBase
         var editor = Page.Locator(".page-editor-content").Last;
         await editor.ClickAsync();
         await editor.PressSequentiallyAsync(":thumbs");
-        await Page.WaitForTimeoutAsync(600);
 
         // Suggestion dropdown should appear
         var suggestionPopup = Page.Locator(".tiptap-emoji-list");
@@ -71,14 +68,14 @@ public class EmojiTests : E2ETestBase
         var editor = Page.Locator(".page-editor-content").Last;
         await editor.ClickAsync();
         await editor.PressSequentiallyAsync(":fire");
-        await Page.WaitForTimeoutAsync(600);
 
         var suggestionPopup = Page.Locator(".tiptap-emoji-list");
         await suggestionPopup.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
 
         var firstItem = suggestionPopup.Locator("button").First;
         await firstItem.ClickAsync();
-        await Page.WaitForTimeoutAsync(200);
+        // Wait for the suggestion popup to disappear as the commit signal
+        await suggestionPopup.WaitForAsync(new() { State = WaitForSelectorState.Detached, Timeout = 3_000 });
 
         // The ":" trigger text is replaced by the emoji character
         var proseMirror = Page.Locator(".ProseMirror").Last;

@@ -95,7 +95,7 @@ function createEditorMock(active: ActiveMap = {}, selectionEmpty = false) {
 }
 
 describe('ToolbarButton', () => {
-  it('calls onClick on mouse down', () => {
+  it('calls onClick on click', () => {
     const onClick = vi.fn();
     render(
       <ToolbarButton title="Bold" onClick={onClick}>
@@ -103,7 +103,7 @@ describe('ToolbarButton', () => {
       </ToolbarButton>,
     );
 
-    fireEvent.mouseDown(screen.getByTitle('Bold'));
+    fireEvent.click(screen.getByTitle('Bold'));
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 });
@@ -114,7 +114,7 @@ describe('EditorToolbar', () => {
 
     render(<EditorToolbar editor={editor as never} blockId="block-1" />);
 
-    fireEvent.mouseDown(screen.getByTitle('Text color'));
+    fireEvent.click(screen.getByTitle('Text color'));
     fireEvent.mouseDown(await screen.findByRole('button', { name: 'Red' }));
 
     expect(chainCalls).toContainEqual({ name: 'setColor', args: ['#dc2626'] });
@@ -128,7 +128,7 @@ describe('EditorToolbar', () => {
 
     render(<EditorToolbar editor={editor as never} blockId="block-2" />);
 
-    fireEvent.mouseDown(screen.getByTitle('Add link'));
+    fireEvent.click(screen.getByTitle('Add link'));
 
     const urlInput = await screen.findByPlaceholderText('https://');
     fireEvent.change(urlInput, { target: { value: 'https://example.com' } });
@@ -146,7 +146,9 @@ describe('EditorToolbar', () => {
     render(<EditorToolbar editor={editor as never} blockId="block-4" />);
 
     // initial mock selection is {from:2,to:6}
+    // fire mouseDown first to capture the selection, then click to open the popup
     fireEvent.mouseDown(screen.getByTitle('Add link'));
+    fireEvent.click(screen.getByTitle('Add link'));
     // simulate loss of selection (e.g. toolbar click moved cursor)
     editor.state.selection = { empty: true, from: 0, to: 0 } as any;
 
@@ -164,7 +166,7 @@ describe('EditorToolbar', () => {
     const { editor } = createEditorMock({}, true);
 
     render(<EditorToolbar editor={editor as never} blockId="block-3" />);
-    fireEvent.mouseDown(screen.getByTitle('Bookmarks'));
+    fireEvent.click(screen.getByTitle('Bookmarks'));
 
     expect(await screen.findByTestId('bookmarks-panel')).toBeInTheDocument();
   });
@@ -173,7 +175,7 @@ describe('EditorToolbar', () => {
     const { editor } = createEditorMock({}, true);
 
     const { container } = render(<EditorToolbar editor={editor as never} blockId="block-3b" />);
-    fireEvent.mouseDown(screen.getByTitle('Bookmarks'));
+    fireEvent.click(screen.getByTitle('Bookmarks'));
 
     const bookmarksPanel = await screen.findByTestId('bookmarks-panel');
     const popupContainer = bookmarksPanel.parentElement;
@@ -187,7 +189,7 @@ describe('EditorToolbar', () => {
 
     render(<EditorToolbar editor={editor as never} blockId="block-4" />);
 
-    fireEvent.mouseDown(screen.getByTitle('Add comment'));
+    fireEvent.click(screen.getByTitle('Add comment'));
     const textarea = await screen.findByPlaceholderText('Add a note…');
     fireEvent.change(textarea, { target: { value: 'My editor note' } });
     fireEvent.mouseDown(screen.getByRole('button', { name: 'Apply' }));
@@ -216,7 +218,7 @@ describe('EditorToolbar', () => {
       toJSON: () => '',
     });
 
-    fireEvent.mouseDown(btn);
+    fireEvent.click(btn);
     const option = await screen.findByText('Arial');
 
     // portal wrapper should have used the coords above
@@ -236,7 +238,7 @@ describe('EditorToolbar', () => {
       <EditorToolbar editor={editor as never} blockId="block-fontsize" />,
     );
 
-    fireEvent.mouseDown(screen.getByTitle('Font size'));
+    fireEvent.click(screen.getByTitle('Font size'));
     const option = await screen.findByText('16');
 
     expect(option.closest('body')).toBe(document.body);
@@ -266,7 +268,7 @@ describe('EditorToolbar', () => {
       toJSON: () => '',
     });
 
-    fireEvent.mouseDown(btn);
+    fireEvent.click(btn);
     const h2button = await screen.findByText('H2');
 
     const wrapper = h2button.closest('div[style]');
@@ -283,7 +285,7 @@ describe('EditorToolbar', () => {
     const { editor, chainCalls } = createEditorMock();
     render(<EditorToolbar editor={editor as never} blockId="block-align" />);
 
-    fireEvent.mouseDown(screen.getByTitle('Text alignment'));
+    fireEvent.click(screen.getByTitle('Text alignment'));
     const justifyBtn = await screen.findByText('Justify');
     fireEvent.mouseDown(justifyBtn);
 
@@ -294,7 +296,7 @@ describe('EditorToolbar', () => {
     const { editor, chainCalls } = createEditorMock();
     render(<EditorToolbar editor={editor as never} blockId="block-color" />);
 
-    fireEvent.mouseDown(screen.getByTitle('Text color'));
+    fireEvent.click(screen.getByTitle('Text color'));
     const input = await screen.findByLabelText('Custom', { selector: 'input[type=color]' });
     fireEvent.change(input, { target: { value: '#abcdef' } });
 
@@ -305,7 +307,7 @@ describe('EditorToolbar', () => {
     const { editor, chainCalls } = createEditorMock();
     render(<EditorToolbar editor={editor as never} blockId="block-highlight" />);
 
-    fireEvent.mouseDown(screen.getByTitle('Highlight'));
+    fireEvent.click(screen.getByTitle('Highlight'));
     const input = await screen.findByLabelText('Custom', { selector: 'input[type=color]' });
     fireEvent.change(input, { target: { value: '#123456' } });
 
@@ -316,7 +318,7 @@ describe('EditorToolbar', () => {
     const { editor, chainCalls } = createEditorMock({}, false);
 
     render(<EditorToolbar editor={editor as never} blockId="block-5" />);
-    fireEvent.mouseDown(screen.getByTitle('Bookmarks'));
+    fireEvent.click(screen.getByTitle('Bookmarks'));
 
     expect(chainCalls).toContainEqual({
       name: 'setBookmark',

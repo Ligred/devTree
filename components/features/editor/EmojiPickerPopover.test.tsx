@@ -1,5 +1,7 @@
 /** @vitest-environment happy-dom */
 import '@testing-library/jest-dom/vitest';
+import type { ReactNode } from 'react';
+
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -33,7 +35,7 @@ vi.mock('./ToolbarButton', () => ({
     active: _active,
   }: {
     onClick: () => void;
-    children: React.ReactNode;
+    children: ReactNode;
     title: string;
     active?: boolean;
   }) => (
