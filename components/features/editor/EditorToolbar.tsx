@@ -50,7 +50,6 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { VoiceDictationButton } from '@/components/features/MainContent/voice-dictation/VoiceDictationButton';
 import { VoiceDictationLanguageButton } from '@/components/features/MainContent/voice-dictation/VoiceDictationLanguageButton';
 import { type Locale, useI18n } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 
 import { BookmarksPanel } from './BookmarksPanel';
 import { EmojiPickerPopover } from './EmojiPickerPopover';
