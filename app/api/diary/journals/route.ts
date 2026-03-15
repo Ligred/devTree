@@ -29,29 +29,8 @@ function handleDiaryApiError(scope: string, error: unknown, fallbackMessage: str
   return NextResponse.json({ error: fallbackMessage }, { status: 500 });
 }
 
-type DiaryJournalDelegate = {
-  findMany: (
-    args: unknown,
-  ) => Promise<Array<{ id: string; name: string; createdAt: Date; updatedAt: Date }>>;
-  findFirst: (args: unknown) => Promise<{ id: string; name: string } | null>;
-  create: (
-    args: unknown,
-  ) => Promise<{ id: string; name: string; createdAt: Date; updatedAt: Date }>;
-};
-
-type DiaryTemplateDelegate = {
-  create: (args: unknown) => Promise<{ id: string }>;
-};
-
-const delegates = prisma as unknown as {
-  diaryJournal: DiaryJournalDelegate;
-  diaryTemplate: DiaryTemplateDelegate;
-};
-
-const diaryJournalDelegate = delegates.diaryJournal;
-
 async function createDefaultTemplate(journalId: string): Promise<void> {
-  await delegates.diaryTemplate.create({
+  await prisma.diaryTemplate.create({
     data: {
       journalId,
       name: DEFAULT_TEMPLATE_NAME,
@@ -62,21 +41,31 @@ async function createDefaultTemplate(journalId: string): Promise<void> {
 }
 
 async function ensureMainJournal(userId: string): Promise<{ id: string; name: string }> {
-  const existing = await diaryJournalDelegate.findFirst({
+  const existing = await prisma.diaryJournal.findFirst({
     where: { ownerId: userId, name: 'main' },
     select: { id: true, name: true },
   });
 
   if (existing) return existing;
 
-  const created = await diaryJournalDelegate.create({
-    data: { ownerId: userId, name: 'main' },
-    select: { id: true, name: true, createdAt: true, updatedAt: true },
-  });
-
-  await createDefaultTemplate(created.id);
-
-  return created;
+  try {
+    const created = await prisma.diaryJournal.create({
+      data: { ownerId: userId, name: 'main' },
+      select: { id: true, name: true, createdAt: true, updatedAt: true },
+    });
+    await createDefaultTemplate(created.id);
+    return created;
+  } catch (error) {
+    // Concurrent request already created the journal — fetch and return it
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      const journal = await prisma.diaryJournal.findFirst({
+        where: { ownerId: userId, name: 'main' },
+        select: { id: true, name: true },
+      });
+      if (journal) return journal;
+    }
+    throw error;
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -86,7 +75,7 @@ export async function GET(req: NextRequest) {
   try {
     await ensureMainJournal(auth.userId);
 
-    const journals = await diaryJournalDelegate.findMany({
+    const journals = await prisma.diaryJournal.findMany({
       where: { ownerId: auth.userId },
       orderBy: [{ createdAt: 'asc' }],
       select: { id: true, name: true, createdAt: true, updatedAt: true },
@@ -119,7 +108,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const journal = await diaryJournalDelegate.create({
+    const journal = await prisma.diaryJournal.create({
       data: { ownerId: auth.userId, name },
       select: { id: true, name: true, createdAt: true, updatedAt: true },
     });

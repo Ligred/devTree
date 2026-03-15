@@ -11,6 +11,7 @@ export function useDiaryTemplates(activeJournalId: string | null) {
   const fetchTemplates = useCallback(async () => {
     if (!activeJournalId) {
       setTemplates([]);
+      setLoadingTemplates(false);
       return;
     }
     setLoadingTemplates(true);

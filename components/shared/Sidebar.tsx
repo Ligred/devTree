@@ -67,6 +67,7 @@ export function Sidebar({
               type="button"
               aria-label="Show sidebar"
               data-ui-sound-event="open"
+              tabIndex={visible ? -1 : 0}
               className="motion-interactive icon-pop-hover text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded p-1.5 transition-colors"
               onClick={onShow}
             >
