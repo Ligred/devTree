@@ -7,6 +7,13 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+// Track whether we're mounted in a DOM environment before calling createPortal.
+function useMounted() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  return mounted;
+}
+
 import type { Editor } from '@tiptap/core';
 import { Smile } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -31,6 +38,7 @@ export function EmojiPickerPopover({
   onOpen,
   onClose,
 }: Readonly<EmojiPickerPopoverProps>) {
+  const mounted = useMounted();
   const reducedMotion = useReducedMotion();
   const popupDuration = reducedMotion ? 0.01 : 0.16;
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -78,7 +86,7 @@ export function EmojiPickerPopover({
         <Smile size={14} />
       </ToolbarButton>
 
-      {createPortal(
+      {mounted && createPortal(
         <AnimatePresence>
           {open && (
             <>

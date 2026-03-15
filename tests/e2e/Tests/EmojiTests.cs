@@ -25,8 +25,8 @@ public class EmojiTests : E2ETestBase
     {
         await App.Editor.ClickToolbarButtonAsync("Emoji");
 
-        // emoji-mart renders a search input — wait for it directly instead of a fixed sleep
-        var pickerSearch = Page.GetByPlaceholder("Search").Last;
+        // Scope to em-emoji-picker to avoid matching other "Search" inputs on the page
+        var pickerSearch = Page.Locator("em-emoji-picker").GetByPlaceholder("Search");
         await Expect(pickerSearch).ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
 
@@ -35,8 +35,8 @@ public class EmojiTests : E2ETestBase
     {
         await App.Editor.ClickToolbarButtonAsync("Emoji");
 
-        // Wait for picker, then search for a deterministic result
-        var pickerSearch = Page.GetByPlaceholder("Search").Last;
+        // Scope to em-emoji-picker to avoid matching other "Search" inputs on the page
+        var pickerSearch = Page.Locator("em-emoji-picker").GetByPlaceholder("Search");
         await Expect(pickerSearch).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await pickerSearch.FillAsync("thumbs");
 

@@ -313,8 +313,8 @@ public class EditorPage(IPage page)
     public async Task OpenEmojiPickerAsync()
     {
         await ClickToolbarButtonAsync("Emoji");
-        // Wait for the picker's search input rather than a fixed sleep
-        var pickerSearch = _page.GetByPlaceholder("Search").Last;
+        // Scope to em-emoji-picker to avoid matching other "Search" inputs on the page
+        var pickerSearch = _page.Locator("em-emoji-picker").GetByPlaceholder("Search");
         await pickerSearch.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
     }
 
