@@ -25,7 +25,7 @@ vi.mock('@emoji-mart/react', () => ({
 
 vi.mock('@emoji-mart/data', () => ({ default: {} }));
 
-vi.mock('./EditorToolbar', () => ({
+vi.mock('./ToolbarButton', () => ({
   ToolbarButton: ({
     onClick,
     children,

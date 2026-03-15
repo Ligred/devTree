@@ -10,7 +10,11 @@
  * Extracted from the old TextBlock so it applies to the unified page editor.
  */
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+
 import { createPortal } from 'react-dom';
+
+export { ToolbarButton, type ToolbarButtonProps } from './ToolbarButton';
+import { ToolbarButton } from './ToolbarButton';
 
 import type { Editor } from '@tiptap/core';
 import {
@@ -153,42 +157,6 @@ function DictationOverlay({ editor, text }: { editor: Editor; text: string }) {
     document.body,
   );
 }
-
-// ─── ToolbarButton ────────────────────────────────────────────────────────────
-
-export interface ToolbarButtonProps {
-  readonly onClick: () => void;
-  readonly active?: boolean;
-  readonly title?: string;
-  /** optional handler executed before onClick when the button is pressed */
-  readonly onMouseDown?: (e: React.MouseEvent<HTMLButtonElement>) => void;
-  readonly children?: React.ReactNode;
-}
-
-export const ToolbarButton = /*#__PURE__*/ React.forwardRef<HTMLButtonElement, ToolbarButtonProps>(
-  function ToolbarButton({ onClick, active, title, onMouseDown: onMouseDownProp, children }, ref) {
-    return (
-      <button
-        ref={ref}
-        type="button"
-        title={title}
-        onMouseDown={(e) => {
-          e.preventDefault(); // keep editor focus
-          onMouseDownProp?.(e);
-          onClick();
-        }}
-        className={cn(
-          'motion-interactive flex h-7 w-7 items-center justify-center rounded text-sm transition-colors',
-          active
-            ? 'bg-accent text-accent-foreground'
-            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-        )}
-      >
-        {children}
-      </button>
-    );
-  },
-);
 
 // ─── PortalDropdown ───────────────────────────────────────────────────────────
 // Renders children in a fixed-position portal anchored below the given element.
@@ -1150,8 +1118,9 @@ export function EditorToolbar({ editor, blockId }: EditorToolbarProps) {
         editor={editor}
         open={emojiOpen}
         onOpen={() => {
+          const opening = !emojiOpen;
           closeAll();
-          setEmojiOpen((v) => !v);
+          setEmojiOpen(opening);
         }}
         onClose={() => setEmojiOpen(false)}
       />

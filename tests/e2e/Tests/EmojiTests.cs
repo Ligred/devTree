@@ -17,17 +17,17 @@ public class EmojiTests : E2ETestBase
     [Test]
     public async Task EmojiToolbarButton_IsVisible()
     {
-        await Expect(_page.Locator("button[title='Emoji']").First).ToBeVisibleAsync();
+        await Expect(Page.Locator("button[title='Emoji']").First).ToBeVisibleAsync();
     }
 
     [Test]
     public async Task EmojiToolbarButton_OpensPicker()
     {
         await App.Editor.ClickToolbarButtonAsync("Emoji");
-        await _page.WaitForTimeoutAsync(400);
+        await Page.WaitForTimeoutAsync(400);
 
         // emoji-mart renders a search input inside its shadow DOM — use that as the presence signal
-        var pickerSearch = _page.GetByPlaceholder("Search").Last;
+        var pickerSearch = Page.GetByPlaceholder("Search").Last;
         await Expect(pickerSearch).ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
 
@@ -35,53 +35,53 @@ public class EmojiTests : E2ETestBase
     public async Task EmojiToolbarButton_InsertsEmojiOnSelect()
     {
         await App.Editor.ClickToolbarButtonAsync("Emoji");
-        await _page.WaitForTimeoutAsync(400);
+        await Page.WaitForTimeoutAsync(400);
 
         // Search for a specific emoji to get a deterministic result
-        var pickerSearch = _page.GetByPlaceholder("Search").Last;
+        var pickerSearch = Page.GetByPlaceholder("Search").Last;
         await pickerSearch.FillAsync("thumbs");
-        await _page.WaitForTimeoutAsync(500);
+        await Page.WaitForTimeoutAsync(500);
 
         // Click the first emoji button in the picker results
-        var emojiBtn = _page.Locator("em-emoji-picker button[data-emoji-id], button[aria-label*='thumbs']").First;
+        var emojiBtn = Page.Locator("em-emoji-picker button[data-emoji-id], button[aria-label*='thumbs']").First;
         await emojiBtn.ClickAsync(new() { Timeout = 5_000 });
-        await _page.WaitForTimeoutAsync(300);
+        await Page.WaitForTimeoutAsync(300);
 
         // Verify the emoji appears in the editor
-        var proseMirror = _page.Locator(".ProseMirror").Last;
+        var proseMirror = Page.Locator(".ProseMirror").Last;
         await Expect(proseMirror).ToContainTextAsync("👍", new() { Timeout = 5_000 });
     }
 
     [Test]
     public async Task InlineTrigger_ColonShowsEmojiSuggestions()
     {
-        var editor = _page.Locator(".page-editor-content").Last;
+        var editor = Page.Locator(".page-editor-content").Last;
         await editor.ClickAsync();
         await editor.PressSequentiallyAsync(":thumbs");
-        await _page.WaitForTimeoutAsync(600);
+        await Page.WaitForTimeoutAsync(600);
 
         // Suggestion dropdown should appear
-        var suggestionPopup = _page.Locator(".tiptap-emoji-list");
+        var suggestionPopup = Page.Locator(".tiptap-emoji-list");
         await Expect(suggestionPopup).ToBeVisibleAsync(new() { Timeout = 5_000 });
     }
 
     [Test]
     public async Task InlineTrigger_SelectingEmojiInsertsIt()
     {
-        var editor = _page.Locator(".page-editor-content").Last;
+        var editor = Page.Locator(".page-editor-content").Last;
         await editor.ClickAsync();
         await editor.PressSequentiallyAsync(":fire");
-        await _page.WaitForTimeoutAsync(600);
+        await Page.WaitForTimeoutAsync(600);
 
-        var suggestionPopup = _page.Locator(".tiptap-emoji-list");
+        var suggestionPopup = Page.Locator(".tiptap-emoji-list");
         await suggestionPopup.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
 
         var firstItem = suggestionPopup.Locator("button").First;
         await firstItem.ClickAsync();
-        await _page.WaitForTimeoutAsync(200);
+        await Page.WaitForTimeoutAsync(200);
 
         // The ":" trigger text is replaced by the emoji character
-        var proseMirror = _page.Locator(".ProseMirror").Last;
+        var proseMirror = Page.Locator(".ProseMirror").Last;
         await Expect(proseMirror).Not.ToContainTextAsync(":fire");
         await Expect(proseMirror).ToContainTextAsync("🔥", new() { Timeout = 5_000 });
     }

@@ -26,7 +26,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 
-import { ToolbarButton } from './EditorToolbar';
+import { ToolbarButton } from './ToolbarButton';
 
 const TEXT_COLORS = [
   { name: 'Default', value: '' },

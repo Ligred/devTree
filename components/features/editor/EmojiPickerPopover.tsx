@@ -11,7 +11,7 @@ import type { Editor } from '@tiptap/core';
 import { Smile } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
-import { ToolbarButton } from './EditorToolbar';
+import { ToolbarButton } from './ToolbarButton';
 
 // Lazy-load the heavy Picker component
 const EmojiMartPicker = lazy(() =>
