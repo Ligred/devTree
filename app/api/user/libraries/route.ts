@@ -55,9 +55,10 @@
  *   re-fetch from the library URL on the server so that we avoid server-side
  *   CORS blockers.
  */
-import type { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
+import type { Prisma } from '@prisma/client';
 
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';

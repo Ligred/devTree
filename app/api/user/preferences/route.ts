@@ -17,6 +17,8 @@ export type UserPreferences = {
   uiSoundsVolume?: number;
   hoverSoundsVolume?: number;
   typingSoundsVolume?: number;
+  diaryLocationEnabled?: boolean;
+  diaryTemperatureUnit?: 'c' | 'f';
   // Statistics tracking preferences (all default to true when absent)
   statisticsEnabled?: boolean;
   trackSessionTime?: boolean;
@@ -38,6 +40,9 @@ function getUpdates(body: Partial<Record<keyof UserPreferences, unknown>>): User
   if (body.locale === 'en' || body.locale === 'uk') {
     updates.locale = body.locale;
   }
+  if (body.diaryTemperatureUnit === 'c' || body.diaryTemperatureUnit === 'f') {
+    updates.diaryTemperatureUnit = body.diaryTemperatureUnit;
+  }
 
   const booleanKeys = [
     'tagsPerPageEnabled',
@@ -46,6 +51,7 @@ function getUpdates(body: Partial<Record<keyof UserPreferences, unknown>>): User
     'uiSoundsEnabled',
     'hoverSoundsEnabled',
     'typingSoundsEnabled',
+    'diaryLocationEnabled',
     'statisticsEnabled',
     'trackSessionTime',
     'trackPageTime',

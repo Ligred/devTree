@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+
 import { hashPassword } from '../lib/auth/password';
 
 const prisma = new PrismaClient();
@@ -104,7 +105,9 @@ async function main() {
     },
   });
   if (deletedPages.count > 0 || deletedFolders.count > 0) {
-    console.log(`Cleaned up: ${deletedPages.count} non-seed pages, ${deletedFolders.count} non-seed folders`);
+    console.log(
+      `Cleaned up: ${deletedPages.count} non-seed pages, ${deletedFolders.count} non-seed folders`,
+    );
   }
 
   // ── Pages ─────────────────────────────────────────────────────────────────────
@@ -282,10 +285,16 @@ async function main() {
   if (existingCount === 0) {
     const dailyMessages = [
       { text: 'Every note you write is a thought made permanent.', emoji: '✍️' },
-      { text: "Knowledge compounds just like interest. You're investing in yourself.", emoji: '📈' },
+      {
+        text: "Knowledge compounds just like interest. You're investing in yourself.",
+        emoji: '📈',
+      },
       { text: 'The act of writing clarifies thinking. Keep going.', emoji: '💡' },
       { text: 'Small, consistent steps outperform long occasional bursts.', emoji: '🐢' },
-      { text: "Your notes today are the shortcuts you'll thank yourself for tomorrow.", emoji: '🗺️' },
+      {
+        text: "Your notes today are the shortcuts you'll thank yourself for tomorrow.",
+        emoji: '🗺️',
+      },
       { text: "A second brain starts with a single note. You've already started.", emoji: '🧠' },
       { text: 'Deep work leaves a trace. Your blocks are proof.', emoji: '🔬' },
       { text: 'Reviewing old notes once is worth writing them ten times.', emoji: '🔁' },

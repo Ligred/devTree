@@ -24,6 +24,7 @@ A **personal knowledge base** built as a learning project to explore modern full
 | ⬇️ **Export**               | Download any page as a Markdown `.md` file                                                                        |
 | ⌨️ **Keyboard shortcuts**   | `Cmd+S` save · `Cmd+K` search                                                                                     |
 | 🧪 **Testing**              | Vitest unit tests · Storybook stories · C# .NET + Playwright E2E                                                  |
+| 📔 **Diary**                | Journaling feature with calendar view, multiple journals, reusable templates, and optional weather snapshots      |
 | 🐳 **Docker**               | Full-stack Docker Compose setup with PostgreSQL                                                                   |
 
 ---
@@ -254,6 +255,7 @@ devTree/
 │   │   └── audio/               # POST upload audio blocks
 │   ├── api/folders/             # CRUD for folders (route + [folderId]/)
 │   ├── api/pages/               # CRUD for pages (route + [pageId]/)
+│   ├── api/diary/               # CRUD for diary entries, journals, and templates
 │   ├── api/stats/               # Statistics API (activity, content, events, summary, topics)
 │   ├── api/user/
 │   │   ├── avatar/              # POST upload avatar
@@ -263,6 +265,7 @@ devTree/
 │   │   └── profile/             # PATCH name, image
 │   ├── forgot-password/         # Password reset placeholder
 │   ├── login/                   # Sign-in page (email/password + OAuth)
+│   ├── diary/                   # Diary/journaling page (DiaryPageClient)
 │   ├── notebook/                # Main workspace — SPA shell (/notebook?page=<id>)
 │   ├── p/[pageId]/              # Short redirect → /notebook?page=<id>
 │   ├── pages/[pageId]/          # Legacy redirect → /notebook?page=<id>
@@ -279,6 +282,9 @@ devTree/
 │   │   │   └── extensions/      # Custom nodes: AudioNode, CanvasNode, ChecklistNode,
 │   │   │                        #   CodeBlockNode, ImageNode, LinkCardNode, TableBlockNode,
 │   │   │                        #   VideoNode, BookmarkMark, InlineTagMark, SlashCommand
+│   │   ├── diary/               # DiaryPageClient, DiaryLeftPanel, DiarySidebarContent,
+│   │   │                        #   DiaryHeader, DiaryCalendar, DiaryTimelineList,
+│   │   │                        #   DiaryCreateEntryDialog, DiaryTemplateManagerDialog
 │   │   ├── FileExplorer/        # Sidebar file tree (FileExplorer.tsx)
 │   │   ├── MainContent/         # Right panel: header, page title, tag bar, editor
 │   │   │   └── voice-dictation/ # VoiceDictationButton, VoiceDictationLanguageButton,
@@ -293,13 +299,12 @@ devTree/
 │   │       ├── treeTypes.ts     # TreeRoot / TreeNode types
 │   │       ├── treeUtils.ts     # Pure tree manipulation functions
 │   │       ├── workspaceApi.ts  # API call helpers for pages/folders
-│   │       ├── DeleteConfirmDialog.tsx
 │   │       ├── FolderRenameRow.tsx
 │   │       └── UnsavedChangesDialog.tsx
 │   └── shared/                  # Reusable components
 │       ├── ActivityBar/         # Navigation sidebar (ActivityBar + ActivityBarItem)
 │       ├── AppShell.tsx         # Top-level app layout
-│       ├── providers.tsx        # ThemeProvider + I18nProvider
+│       ├── providers.tsx        # ThemeProvider + I18nProvider + ConfirmationProvider
 │       ├── RecordingIndicator.tsx
 │       ├── UserMenu/            # Avatar dropdown (theme, language, settings, sign out)
 │       └── ui/                  # Radix-based primitives:

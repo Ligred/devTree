@@ -15,22 +15,25 @@
  *  pageId         – used by voice-dictation and other scoped hooks
  *  onEditorReady  – called with the Editor instance once mounted (null on destroy)
  */
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import Heading from '@tiptap/extension-heading';
 import Highlight from '@tiptap/extension-highlight';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
-import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import TextAlign from '@tiptap/extension-text-align';
 import { Color, TextStyle } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
+import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { type Editor, EditorContent, type JSONContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Plus } from 'lucide-react';
 import GlobalDragHandle from 'tiptap-extension-global-drag-handle';
 
-import { CommentMark } from '@/lib/tiptap-comment-mark';
+import { useI18n } from '@/lib/i18n';
+import { CommentMark } from '@/components/features/editor/extensions/CommentMark';
 
 import { BlockControls, BlockPickerMenu } from './BlockControls';
 import { EditableContext } from './EditableContext';
@@ -43,9 +46,115 @@ import { CodeBlockNode } from './extensions/CodeBlockNode';
 import { ImageNode } from './extensions/ImageNode';
 import { InlineTagMark } from './extensions/InlineTagMark';
 import { LinkCardNode } from './extensions/LinkCardNode';
+import { SlashCommand } from './extensions/SlashCommand';
 import { TableBlockNode } from './extensions/TableBlockNode';
+import { FontFamily, FontSize } from './extensions/Typography';
 import { VideoNode } from './extensions/VideoNode';
 import './PageEditor.css';
+
+// A small extension derived from the built-in heading which allows us to
+// carry through an arbitrary `contenteditable` attribute.  Tiptap's default
+// heading extension only knows about the `level` attribute, so any extra attr
+// would be discarded when rendering.  We need the DOM property in order to
+// prevent the browser from ever placing the caret inside a template heading.
+const TemplateHeading = Heading.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      contenteditable: {
+        default: null,
+        parseHTML: (element) => element.getAttribute('contenteditable'),
+        renderHTML: (attributes) => {
+          if (attributes.contenteditable == null) {
+            return {};
+          }
+          return { contenteditable: attributes.contenteditable };
+        },
+      },
+    };
+  },
+
+  // prevent any mutation (typing or deletion) when a heading is marked
+  // non-editable by the template helper.  The `contenteditable=false` attr
+  // already stops the browser from putting a caret inside the node, but users
+  // could still select it and hit backspace/delete or navigate through it with
+  // arrow keys.  We intercept the relevant key events and the generic before-
+  // input DOM event to swallow them.
+  addKeyboardShortcuts() {
+    const isProtected = (state: any) => {
+      const { selection } = state;
+      const { $from, $to, node } = selection;
+      if (node?.type.name === 'heading' && node.attrs.contenteditable === 'false') {
+        return true;
+      }
+      if ($from.parent.type.name === 'heading' && $from.parent.attrs.contenteditable === 'false') {
+        return true;
+      }
+      // if selection spans multiple nodes, check each for protected heading
+      let protectedFound = false;
+      state.doc.nodesBetween($from.pos, $to.pos, (n: any) => {
+        if (n.type.name === 'heading' && n.attrs.contenteditable === 'false') {
+          protectedFound = true;
+          return false;
+        }
+      });
+      return protectedFound;
+    };
+
+    return {
+      Backspace: ({ editor }) => {
+        return isProtected(editor.state);
+      },
+      Delete: ({ editor }) => {
+        return isProtected(editor.state);
+      },
+    };
+  },
+
+  addProseMirrorPlugins() {
+    const plugin = new Plugin({
+      key: new PluginKey('templateHeading'),
+      props: {
+        handleDOMEvents: {
+          beforeinput: (view: any, event: any) => {
+            // intercept delete/insertText events that could mutate a protected
+            // heading
+            const { inputType } = event;
+            if (
+              inputType.startsWith('delete') ||
+              inputType === 'insertText' ||
+              inputType === 'insertParagraph'
+            ) {
+              const { selection } = view.state;
+              const { $from, $to, node } = selection;
+              if (
+                (node?.type.name === 'heading' && node.attrs.contenteditable === 'false') ||
+                ($from.parent.type.name === 'heading' &&
+                  $from.parent.attrs.contenteditable === 'false')
+              ) {
+                event.preventDefault();
+                return true;
+              }
+              let blocked = false;
+              view.state.doc.nodesBetween($from.pos, $to.pos, (n: any) => {
+                if (n.type.name === 'heading' && n.attrs.contenteditable === 'false') {
+                  blocked = true;
+                  return false;
+                }
+              });
+              if (blocked) {
+                event.preventDefault();
+                return true;
+              }
+            }
+            return false;
+          },
+        },
+      },
+    });
+    return [plugin];
+  },
+});
 
 // ── Tag-filter helper ─────────────────────────────────────────────────────────
 // Returns true if the given top-level Tiptap node matches at least one of the
@@ -70,10 +179,9 @@ function nodeMatchesFilter(node: ProseMirrorNode, activeTags: string[]): boolean
 // ── Apply or clear per-block display filtering ────────────────────────────────
 function applyBlockFilter(editor: Editor, activeTags: string[]) {
   const editorDom = editor.view.dom;
-  const root =
-    editorDom.classList.contains('ProseMirror')
-      ? editorDom
-      : editorDom.querySelector('.ProseMirror');
+  const root = editorDom.classList.contains('ProseMirror')
+    ? editorDom
+    : editorDom.querySelector('.ProseMirror');
   if (!root) return;
 
   if (activeTags.length === 0) {
@@ -110,6 +218,7 @@ const CUSTOM_NODE_NAMES = [
 type Props = {
   content: JSONContent | null;
   editable: boolean;
+  mode?: 'notebook' | 'diary';
   onChange?: (json: JSONContent) => void;
   pageId?: string;
   /** Called once the Tiptap Editor instance is ready (or null on destroy). */
@@ -124,11 +233,14 @@ type Props = {
 export function PageEditor({
   content,
   editable,
+  mode = 'notebook',
   onChange,
   pageId,
   onEditorReady,
   activeFilterTags = [],
 }: Readonly<Props>) {
+  const isNotebookMode = mode === 'notebook';
+  const { t } = useI18n();
   /**
    * Tracks the last JSON content string that was emitted via onChange.
    * Used to prevent the "sync from outside" useEffect from resetting the editor
@@ -147,48 +259,71 @@ export function PageEditor({
    */
   const cleanContentRef = useRef<string | null>(null);
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
+  // compute the placeholder text once; changing the locale should
+  // force a recalculation via the `t` dependency.
+  const placeholderText = useMemo(
+    () => (isNotebookMode ? t('editor.placeholderNotebook') : t('editor.placeholderDiary')),
+    [isNotebookMode, t],
+  );
+
+  // memoize the extensions array so that it remains referentially stable
+  // across renders.  Without this `useEditor` will attempt to reconfigure the
+  // editor when the component rerenders (for example, due to a locale change),
+  // which can trigger "/keyed plugin" errors in our unit tests.
+  const editorExtensions = useMemo(() => {
+    const base: any[] = [
       // ── Built-in / community extensions ──────────────────────────────────
       StarterKit.configure({
-        // Disable built-in code block so our Monaco CodeBlockNode takes over
-        codeBlock: false,
+        // Disable built-in code block only in notebook mode where custom Monaco node is used
+        // StarterKit expects `false | Partial<CodeBlockOptions> | undefined`
+        codeBlock: isNotebookMode ? false : undefined,
         // Disable extensions we configure explicitly below (to avoid Tiptap
         // "duplicate extension names" warning in StarterKit v3 which bundles them).
         link: false,
         underline: false,
+        heading: false, // we'll supply a customized heading extension below
       }),
-      Placeholder.configure({ placeholder: 'Click + to add a block…' }),
+      // our customized heading that supports `contenteditable` attr
+      TemplateHeading.configure({ levels: [1, 2, 3, 4, 5, 6] }),
+      Placeholder.configure({ placeholder: placeholderText }),
       Underline,
       Link.configure({ openOnClick: !editable, autolink: true }),
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Highlight.configure({ multicolor: true }),
       TextStyle,
       Color,
+      FontFamily,
+      FontSize,
 
       // ── Custom marks ──────────────────────────────────────────────────────
       CommentMark,
       BookmarkMark,
       InlineTagMark,
-      // ── Custom atom nodes ─────────────────────────────────────────────────
-      CodeBlockNode,
-      ChecklistNode,
-      CanvasNode,
-      AudioNode,
-      VideoNode,
-      ImageNode,
-      LinkCardNode,
-      TableBlockNode,
+      SlashCommand,
+    ];
 
-      // ── Drag handle (shows a handle on hover beside every block) ──────────
-      // We use the default behaviour — the library creates its own .drag-handle
-      // div beside the editor. BlockControls then portals its React buttons
-      // into that element after mount.
-      GlobalDragHandle.configure({
-        customNodes: CUSTOM_NODE_NAMES,
-      }),
-    ],
+    if (isNotebookMode) {
+      base.push(
+        CodeBlockNode,
+        ChecklistNode,
+        CanvasNode,
+        AudioNode,
+        VideoNode,
+        ImageNode,
+        LinkCardNode,
+        TableBlockNode,
+        GlobalDragHandle.configure({
+          customNodes: CUSTOM_NODE_NAMES,
+        }),
+      );
+    }
+
+    return base;
+  }, [isNotebookMode, placeholderText, editable]);
+
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: editorExtensions,
 
     content: content ?? undefined,
 
@@ -207,7 +342,7 @@ export function PageEditor({
       // against the snapshot taken just before entering edit mode.
       if (cleanContentRef.current !== null) {
         if (jsonStr === cleanContentRef.current) return; // no real change yet
-        cleanContentRef.current = null; // first real edit — ungate
+        cleanContentRef.current = null; // first real edit
       }
       onChange?.(json);
     },
@@ -291,10 +426,10 @@ export function PageEditor({
       <div className="page-editor-root flex flex-col">
         <div className="page-editor-body relative flex-1 px-6 py-4">
           <EditorBubbleMenu editor={editor} />
-          {editable && <BlockControls editor={editor} />}
+          {editable && isNotebookMode && <BlockControls editor={editor} />}
           <EditorContent editor={editor} />
         </div>
-        {editable && <AddBlockButton editor={editor} />}
+        {editable && isNotebookMode && <AddBlockButton editor={editor} />}
       </div>
     </EditableContext.Provider>
   );

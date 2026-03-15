@@ -91,13 +91,6 @@ const LOCALE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year in seconds
  * Read the persisted locale from localStorage (client-only).
  * Used when syncing cookie from localStorage via the layout script.
  */
-export function getStoredLocale(): Locale {
-  if (globalThis.window === undefined) return 'en';
-  const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-  if (stored === 'en' || stored === 'uk') return stored;
-  return 'en';
-}
-
 /** The value exposed by the I18n context to every consumer. */
 type I18nContextValue = {
   locale: Locale;
@@ -174,7 +167,10 @@ export function I18nProvider({
    *   useMemo ensures referential stability when locale, setLocale, and t are
    *   all unchanged.
    */
-  const value = useMemo(() => ({ locale, setLocale: persistLocale, t }), [locale, persistLocale, t]);
+  const value = useMemo(
+    () => ({ locale, setLocale: persistLocale, t }),
+    [locale, persistLocale, t],
+  );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }

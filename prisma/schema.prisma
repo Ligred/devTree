@@ -27,6 +27,8 @@ model User {
   accounts  Account[]
   sessions  Session[]
   pages     Page[]
+  diaryEntries DiaryEntry[]
+  diaryJournals DiaryJournal[]
   folders   Folder[]
   libraries UserLibrary[]
 
@@ -109,6 +111,60 @@ model Page {
   folderId String?
 
   blocks Block[]
+}
+
+model DiaryJournal {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  entries DiaryEntry[]
+  templates DiaryTemplate[]
+
+  @@index([ownerId, updatedAt])
+  @@unique([ownerId, name])
+}
+
+model DiaryTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  journal   DiaryJournal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  journalId String
+
+  @@index([journalId, createdAt])
+  @@unique([journalId, name])
+}
+
+model DiaryEntry {
+  id        String   @id @default(cuid())
+  entryDate DateTime
+  content   Json?
+  weatherTempC  Float?
+  weatherCode   Int?
+  weatherLabel  String?
+  locationName  String?
+  locationShort String?
+  locationLat   Float?
+  locationLon   Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerId String
+
+  journal   DiaryJournal @relation(fields: [journalId], references: [id], onDelete: Cascade)
+  journalId String
+
+  @@unique([ownerId, journalId, entryDate])
+  @@index([ownerId, journalId, entryDate])
 }
 
 model Block {

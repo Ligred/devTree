@@ -34,13 +34,13 @@
  */
 import { useEffect, useState } from 'react';
 
-import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
 import { useTheme } from 'next-themes';
+import Image from 'next/image';
 
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { LogOut, Settings } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { type Locale, useI18n } from '@/lib/i18n';
 import { saveUserPreferences } from '@/lib/userPreferences';
@@ -141,11 +141,7 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
   }, [open]);
 
   return (
-    <DropdownMenu.Root
-      open={open}
-      onOpenChange={setOpen}
-      modal={false}
-    >
+    <DropdownMenu.Root open={open} onOpenChange={setOpen} modal={false}>
       {/* Avatar: user image from session (Google), or initials fallback. */}
       <DropdownMenu.Trigger asChild>
         <button
@@ -161,7 +157,14 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
           )}
         >
           {session?.user?.image ? (
-            <Image src={session.user.image} alt="" fill sizes="32px" className="object-cover" unoptimized />
+            <Image
+              src={session.user.image}
+              alt=""
+              fill
+              sizes="32px"
+              className="object-cover"
+              unoptimized
+            />
           ) : (
             initials
           )}
@@ -181,21 +184,9 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
               collisionPadding={12}
             >
               <motion.div
-                initial={
-                  reducedMotion
-                    ? { opacity: 1 }
-                    : { opacity: 0, scale: 0.97 }
-                }
-                animate={
-                  reducedMotion
-                    ? { opacity: 1 }
-                    : { opacity: 1, scale: 1 }
-                }
-                exit={
-                  reducedMotion
-                    ? { opacity: 0 }
-                    : { opacity: 0, scale: 0.985 }
-                }
+                initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
                 transition={{ duration: reducedMotion ? 0.01 : 0.18, ease: [0.22, 1, 0.36, 1] }}
                 className={cn(
                   'motion-surface border-border bg-popover z-50 min-w-56 overflow-hidden rounded-xl border shadow-xl',
@@ -203,100 +194,109 @@ export function UserMenu({ onOpenSettings }: UserMenuProps) {
                   'text-popover-foreground',
                 )}
               >
-          {/* ── User info header ──────────────────────────────────────── */}
-          <div className="border-border/60 flex items-center gap-3 border-b px-4 py-3">
-            <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white">
-              {session?.user?.image ? (
-                <Image src={session.user.image} alt="" fill sizes="36px" className="object-cover" unoptimized />
-              ) : (
-                initials
-              )}
-            </div>
-            <div className="min-w-0">
-              <p className="text-foreground truncate text-sm font-semibold">{userName}</p>
-              <p className="text-muted-foreground truncate text-xs">{userEmail}</p>
-            </div>
-          </div>
+                {/* ── User info header ──────────────────────────────────────── */}
+                <div className="border-border/60 flex items-center gap-3 border-b px-4 py-3">
+                  <div className="relative flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-linear-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white">
+                    {session?.user?.image ? (
+                      <Image
+                        src={session.user.image}
+                        alt=""
+                        fill
+                        sizes="36px"
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      initials
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-foreground truncate text-sm font-semibold">{userName}</p>
+                    <p className="text-muted-foreground truncate text-xs">{userEmail}</p>
+                  </div>
+                </div>
 
-          {/* ── Theme ────────────────────────────────────────────────── */}
-          <div className="border-border/60 border-b px-4 py-3">
-            <p className="text-muted-foreground mb-2 text-xs font-medium">{t('settings.theme')}</p>
-            <div className="bg-muted/50 flex gap-1 rounded-md p-0.5">
-              {THEME_OPTIONS.map((value) => (
-                <InlineSegment
-                  key={value}
-                  active={theme === value}
-                  onClick={() => {
-                    setTheme(value);
-                    void saveUserPreferences({ theme: value });
-                  }}
-                >
-                  {t(THEME_LABEL_KEYS[value])}
-                </InlineSegment>
-              ))}
-            </div>
-          </div>
+                {/* ── Theme ────────────────────────────────────────────────── */}
+                <div className="border-border/60 border-b px-4 py-3">
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">
+                    {t('settings.theme')}
+                  </p>
+                  <div className="bg-muted/50 flex gap-1 rounded-md p-0.5">
+                    {THEME_OPTIONS.map((value) => (
+                      <InlineSegment
+                        key={value}
+                        active={theme === value}
+                        onClick={() => {
+                          setTheme(value);
+                          void saveUserPreferences({ theme: value });
+                        }}
+                      >
+                        {t(THEME_LABEL_KEYS[value])}
+                      </InlineSegment>
+                    ))}
+                  </div>
+                </div>
 
-          {/* ── Language ─────────────────────────────────────────────── */}
-          <div className="border-border/60 border-b px-4 py-3">
-            <p className="text-muted-foreground mb-2 text-xs font-medium">
-              {t('settings.language')}
-            </p>
-            <div className="bg-muted/50 flex gap-1 rounded-md p-0.5">
-              {LOCALE_OPTIONS.map(({ id, label }) => (
-                <InlineSegment
-                  key={id}
-                  active={locale === id}
-                  onClick={() => {
-                    setLocale(id);
-                    void saveUserPreferences({ locale: id });
-                  }}
-                >
-                  {label}
-                </InlineSegment>
-              ))}
-            </div>
-          </div>
+                {/* ── Language ─────────────────────────────────────────────── */}
+                <div className="border-border/60 border-b px-4 py-3">
+                  <p className="text-muted-foreground mb-2 text-xs font-medium">
+                    {t('settings.language')}
+                  </p>
+                  <div className="bg-muted/50 flex gap-1 rounded-md p-0.5">
+                    {LOCALE_OPTIONS.map(({ id, label }) => (
+                      <InlineSegment
+                        key={id}
+                        active={locale === id}
+                        onClick={() => {
+                          setLocale(id);
+                          void saveUserPreferences({ locale: id });
+                        }}
+                      >
+                        {label}
+                      </InlineSegment>
+                    ))}
+                  </div>
+                </div>
 
-          {/* ── Settings link ─────────────────────────────────────────── */}
-          <div className="border-border/60 border-b p-1">
-            <DropdownMenu.Item
-              className={cn(
-                'motion-interactive icon-tilt-hover flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5',
-                'text-foreground text-sm transition-colors outline-none',
-                'hover:bg-accent hover:text-accent-foreground',
-                'focus:bg-accent focus:text-accent-foreground',
-              )}
-              onSelect={(e) => {
-                e.preventDefault();
-                setOpen(false);
-                onOpenSettings();
-              }}
-            >
-              <Settings size={14} className="text-muted-foreground shrink-0" />
-              <span>{t('userMenu.settings')}</span>
-            </DropdownMenu.Item>
-          </div>
+                {/* ── Settings link ─────────────────────────────────────────── */}
+                <div className="border-border/60 border-b p-1">
+                  <DropdownMenu.Item
+                    className={cn(
+                      'motion-interactive icon-tilt-hover flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5',
+                      'text-foreground text-sm transition-colors outline-none',
+                      'hover:bg-accent hover:text-accent-foreground',
+                      'focus:bg-accent focus:text-accent-foreground',
+                    )}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setOpen(false);
+                      onOpenSettings();
+                    }}
+                  >
+                    <Settings size={14} className="text-muted-foreground shrink-0" />
+                    <span>{t('userMenu.settings')}</span>
+                  </DropdownMenu.Item>
+                </div>
 
-          {/* ── Sign out ───────────────────────────────────────────────── */}
-          <div className="p-1">
-            <DropdownMenu.Item
-              className={cn(
-                'motion-interactive icon-pop-hover flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5',
-                'text-foreground text-sm transition-colors outline-none',
-                'hover:bg-accent hover:text-accent-foreground',
-                'focus:bg-accent focus:text-accent-foreground',
-              )}
-              onSelect={(e) => {
-                e.preventDefault();
-                setOpen(false);
-                void signOut({ callbackUrl: '/login' });
-              }}
-            >
-              <LogOut size={14} className="text-muted-foreground shrink-0" />
-              <span>{t('userMenu.signOut')}</span>
-            </DropdownMenu.Item>
-          </div>
+                {/* ── Sign out ───────────────────────────────────────────────── */}
+                <div className="p-1">
+                  <DropdownMenu.Item
+                    className={cn(
+                      'motion-interactive icon-pop-hover flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5',
+                      'text-foreground text-sm transition-colors outline-none',
+                      'hover:bg-accent hover:text-accent-foreground',
+                      'focus:bg-accent focus:text-accent-foreground',
+                    )}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setOpen(false);
+                      void signOut({ callbackUrl: '/login' });
+                    }}
+                  >
+                    <LogOut size={14} className="text-muted-foreground shrink-0" />
+                    <span>{t('userMenu.signOut')}</span>
+                  </DropdownMenu.Item>
+                </div>
               </motion.div>
             </DropdownMenu.Content>
           )}

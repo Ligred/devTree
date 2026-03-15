@@ -4,11 +4,7 @@ import React from 'react';
 
 import { motion, useReducedMotion } from 'motion/react';
 
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/shared/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/shared/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface ActivityBarItemProps {
@@ -38,12 +34,8 @@ export function ActivityBarItem({
           aria-disabled={disabled}
           aria-label={label}
           aria-current={active ? 'page' : undefined}
-          whileHover={
-            reducedMotion || disabled ? undefined : { x: 2, scale: 1.08 }
-          }
-          whileTap={
-            reducedMotion || disabled ? undefined : { scale: 0.94 }
-          }
+          whileHover={reducedMotion || disabled ? undefined : { x: 2, scale: 1.08 }}
+          whileTap={reducedMotion || disabled ? undefined : { scale: 0.94 }}
           transition={
             reducedMotion
               ? { duration: 0.01 }
@@ -61,7 +53,7 @@ export function ActivityBarItem({
         >
           {/* Active indicator strip */}
           {active && (
-            <span className="bg-primary absolute right-2 bottom-0 left-2 h-0.5 rounded-t-full md:top-2 md:right-auto md:bottom-2 md:left-0 md:h-auto md:w-0.5 md:rounded-r-full md:rounded-t-none" />
+            <span className="bg-primary absolute right-2 bottom-0 left-2 h-0.5 rounded-t-full md:top-2 md:right-auto md:bottom-2 md:left-0 md:h-auto md:w-0.5 md:rounded-t-none md:rounded-r-full" />
           )}
           <span className="flex h-5 w-5 items-center justify-center">{icon}</span>
         </motion.button>

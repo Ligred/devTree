@@ -40,14 +40,18 @@ describe('DELETE /api/folders/[folderId]', () => {
       error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
     });
 
-    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ folderId: 'f-root' }) });
+    const res = await DELETE(makeDeleteRequest(), {
+      params: Promise.resolve({ folderId: 'f-root' }),
+    });
     expect(res.status).toBe(401);
   });
 
   it('returns 404 when folder is not found or not owned', async () => {
     prismaMock.folder.findUnique.mockResolvedValue(null);
 
-    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ folderId: 'f-root' }) });
+    const res = await DELETE(makeDeleteRequest(), {
+      params: Promise.resolve({ folderId: 'f-root' }),
+    });
     expect(res.status).toBe(404);
   });
 
@@ -60,7 +64,9 @@ describe('DELETE /api/folders/[folderId]', () => {
       { id: 'f-other', parentId: null },
     ]);
 
-    const res = await DELETE(makeDeleteRequest(), { params: Promise.resolve({ folderId: 'f-root' }) });
+    const res = await DELETE(makeDeleteRequest(), {
+      params: Promise.resolve({ folderId: 'f-root' }),
+    });
 
     expect(res.status).toBe(204);
     expect(prismaMock.page.deleteMany).toHaveBeenCalledWith({

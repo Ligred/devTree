@@ -24,7 +24,6 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Editor } from '@tiptap/core';
 import type { JSONContent } from '@tiptap/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   Bookmark,
   Download,
@@ -37,13 +36,14 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { BookmarksPanel } from '@/components/features/editor/BookmarksPanel';
 import { EditorToolbar } from '@/components/features/editor/EditorToolbar';
 import { PageEditor } from '@/components/features/editor/PageEditor';
 import { useI18n } from '@/lib/i18n';
 import { downloadMarkdown, extractInlineTagsFromContent } from '@/lib/pageUtils';
-import { useSettingsStore } from '@/lib/settingsStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { cn } from '@/lib/utils';
 
 import { PageMeta } from './PageMeta';
@@ -294,7 +294,7 @@ export function MainContent({
       <motion.header
         key={`main-header-${page?.id ?? 'empty'}`}
         className="alive-surface border-border bg-card relative z-30 flex h-14 shrink-0 items-center justify-between border-b px-4 shadow-sm md:px-6"
-        initial={reducedMotion ? false : { y: -14, opacity: 0 }}
+        initial={reducedMotion ? undefined : { y: -14, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={
           reducedMotion
@@ -360,14 +360,13 @@ export function MainContent({
                       />
                       <motion.div
                         key="bookmarks-panel"
-                        initial={
-                          reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }
-                        }
-                        animate={
-                          reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }
-                        }
+                        initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                        animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
                         exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
-                        transition={{ duration: reducedMotion ? 0.01 : 0.2, ease: [0.22, 1, 0.36, 1] }}
+                        transition={{
+                          duration: reducedMotion ? 0.01 : 0.2,
+                          ease: [0.22, 1, 0.36, 1],
+                        }}
                         className="absolute top-full right-0 z-50 mt-1"
                       >
                         <BookmarksPanel

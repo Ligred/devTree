@@ -68,7 +68,10 @@ function CustomLegend({ payload }: any) {
     <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 px-2">
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       {payload.map((entry: any) => (
-        <div key={`${entry.value as string}-${entry.color as string}`} className="flex min-w-0 items-center gap-2">
+        <div
+          key={`${entry.value as string}-${entry.color as string}`}
+          className="flex min-w-0 items-center gap-2"
+        >
           <span
             className="h-2.5 w-2.5 shrink-0 rounded-full"
             style={{ background: entry.color as string }}

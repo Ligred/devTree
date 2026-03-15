@@ -9,7 +9,7 @@
  */
 import { Mic, X } from 'lucide-react';
 
-import { useRecordingStore } from '@/lib/recordingStore';
+import { useRecordingStore } from '@/lib/stores/recordingStore';
 
 export function RecordingIndicator() {
   const isRecording = useRecordingStore((s) => s.isRecording);

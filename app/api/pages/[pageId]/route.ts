@@ -1,31 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+
 import { Prisma } from '@prisma/client';
 
+import { getOwnedPage, normalizeName, normalizeTags } from '@/lib/apiUtils';
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
-function normalizeName(name: string): string {
-  return name.trim().toLocaleLowerCase();
-}
-
 type Params = { params: Promise<{ pageId: string }> };
 const PAGE_NOT_FOUND_ERROR = 'Page not found';
-
-// ─── Shared ownership check ───────────────────────────────────────────────────
-
-async function getOwnedPage(pageId: string, userId: string) {
-  const page = await prisma.page.findUnique({
-    where: { id: pageId },
-    include: {
-      blocks: { orderBy: { order: 'asc' } },
-    },
-  });
-
-  if (!page) return null;
-  if (page.ownerId !== userId) return null; // 403 — don't reveal existence
-  return page;
-}
 
 // ─── GET /api/pages/[pageId] ──────────────────────────────────────────────────
 
@@ -34,7 +17,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   if (auth.error) return auth.error;
 
   const { pageId } = await params;
-  const page = await getOwnedPage(pageId, auth.userId);
+  const page = await getOwnedPage(pageId, auth.userId, true);
   if (!page) {
     return NextResponse.json({ error: PAGE_NOT_FOUND_ERROR }, { status: 404 });
   }
@@ -76,9 +59,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     (body.content === null || (typeof body.content === 'object' && !Array.isArray(body.content)))
   ) {
     updates.content =
-      body.content === null
-        ? Prisma.DbNull
-        : (body.content as Prisma.InputJsonValue);
+      body.content === null ? Prisma.DbNull : (body.content as Prisma.InputJsonValue);
   }
 
   if (typeof body.title === 'string') {
@@ -89,10 +70,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     updates.order = body.order;
   }
   if (Array.isArray(body.tags)) {
-    updates.tags = (body.tags as unknown[])
-      .filter((t): t is string => typeof t === 'string')
-      .map((t) => t.toLowerCase().trim())
-      .filter(Boolean);
+    updates.tags = normalizeTags(body.tags as unknown[]);
   }
 
   if (Object.keys(updates).length === 0) {

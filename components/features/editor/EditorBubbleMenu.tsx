@@ -10,7 +10,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import type { Editor } from '@tiptap/react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
   Bold,
   Bookmark,
@@ -23,10 +22,20 @@ import {
   Tag,
   Underline as UnderlineIcon,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 
 import { cn } from '@/lib/utils';
 
 import { ToolbarButton } from './EditorToolbar';
+
+const TEXT_COLORS = [
+  { name: 'Default', value: '' },
+  { name: 'Gray', value: '#6b7280' },
+  { name: 'Red', value: '#dc2626' },
+  { name: 'Blue', value: '#2563eb' },
+  { name: 'Green', value: '#16a34a' },
+  { name: 'Purple', value: '#7c3aed' },
+];
 
 const HIGHLIGHT_COLORS = [
   { name: 'None', value: '' },
@@ -34,6 +43,7 @@ const HIGHLIGHT_COLORS = [
   { name: 'Green', value: '#bbf7d0' },
   { name: 'Blue', value: '#bfdbfe' },
   { name: 'Pink', value: '#fbcfe8' },
+  { name: 'Orange', value: '#fed7aa' },
 ];
 
 /** Custom atom node type names that should NOT show the bubble menu. */
@@ -66,6 +76,7 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
   const [linkOpen, setLinkOpen] = useState(false);
   const [commentOpen, setCommentOpen] = useState(false);
   const [highlightOpen, setHighlightOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
   const [tagOpen, setTagOpen] = useState(false);
   const reducedMotion = useReducedMotion();
   const popupDuration = reducedMotion ? 0.01 : 0.16;
@@ -276,6 +287,77 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
 
         <span className="bg-border mx-0.5 h-4 w-px" />
 
+        {/* Text color */}
+        <div className="relative">
+          <ToolbarButton
+            title="Text color"
+            onClick={() => {
+              setColorOpen((v) => !v);
+              setHighlightOpen(false);
+              setLinkOpen(false);
+              setCommentOpen(false);
+            }}
+          >
+            <span
+              className="border-border inline-block h-4 w-4 rounded border"
+              style={{ backgroundColor: editor.getAttributes('textStyle').color || 'currentColor' }}
+            />
+          </ToolbarButton>
+          <AnimatePresence>
+            {colorOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="fixed inset-0 z-10"
+                  aria-hidden
+                  onClick={() => setColorOpen(false)}
+                />
+                <motion.div
+                  initial={reducedMotion ? { opacity: 1 } : { opacity: 0, scale: 0.97 }}
+                  animate={reducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                  exit={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
+                  transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
+                  className="border-border bg-popover absolute bottom-full left-0 z-20 mb-2 flex gap-1 rounded-lg border p-1.5"
+                >
+                  {TEXT_COLORS.map(({ name, value }) => (
+                    <button
+                      key={name}
+                      type="button"
+                      title={name}
+                      className={cn(
+                        'motion-interactive border-border h-5 w-5 rounded border',
+                        !value && 'bg-transparent',
+                      )}
+                      style={{ backgroundColor: value || 'currentColor' }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        const chain = editor.chain().focus();
+                        if (value) chain.setColor(value).run();
+                        else chain.unsetColor().run();
+                        setColorOpen(false);
+                      }}
+                    />
+                  ))}
+                  <input
+                    type="color"
+                    title="Custom"
+                    className="h-5 w-5 border-none p-0"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      editor.chain().focus().setColor(e.target.value).run();
+                      setColorOpen(false);
+                    }}
+                  />
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+
         {/* Highlight */}
         <div className="relative">
           <ToolbarButton
@@ -327,6 +409,17 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                       }}
                     />
                   ))}
+                  <input
+                    type="color"
+                    title="Custom"
+                    className="h-5 w-5 border-none p-0"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onChange={(e) => {
+                      e.preventDefault();
+                      editor.chain().focus().setHighlight({ color: e.target.value }).run();
+                      setHighlightOpen(false);
+                    }}
+                  />
                 </motion.div>
               </>
             )}
@@ -365,31 +458,31 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                   transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                   className="border-border bg-popover absolute bottom-full left-0 z-20 mb-2 w-64 rounded-lg border p-2 shadow-lg"
                 >
-                <input
-                  ref={linkInputRef}
-                  type="url"
-                  placeholder="https://"
-                  className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
-                  defaultValue={editor.getAttributes('link').href || ''}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                  <input
+                    ref={linkInputRef}
+                    type="url"
+                    placeholder="https://"
+                    className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
+                    defaultValue={editor.getAttributes('link').href || ''}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setLink();
+                      } else if (e.key === 'Escape') {
+                        setLinkOpen(false);
+                      }
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                  <button
+                    type="button"
+                    className="motion-interactive icon-pop-hover bg-primary text-primary-foreground mt-1.5 rounded px-2 py-1 text-xs hover:opacity-90"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
                       setLink();
-                    } else if (e.key === 'Escape') {
-                      setLinkOpen(false);
-                    }
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                />
-                <button
-                  type="button"
-                  className="motion-interactive icon-pop-hover bg-primary text-primary-foreground mt-1.5 rounded px-2 py-1 text-xs hover:opacity-90"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    setLink();
-                  }}
-                >
-                  Apply
-                </button>
+                    }}
+                  >
+                    Apply
+                  </button>
                 </motion.div>
               </>
             )}
@@ -439,42 +532,42 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                   transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                   className="border-border bg-popover absolute bottom-full left-0 z-20 mb-2 w-72 rounded-lg border p-2 shadow-lg"
                 >
-                <textarea
-                  ref={commentInputRef}
-                  placeholder="Add a note…"
-                  rows={2}
-                  className="border-border bg-background w-full resize-none rounded border px-2 py-1.5 text-xs outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setCommentOpen(false);
-                    }
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                />
-                <div className="mt-1.5 flex gap-1">
-                  <button
-                    type="button"
-                    className="motion-interactive icon-pop-hover bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      applyComment();
+                  <textarea
+                    ref={commentInputRef}
+                    placeholder="Add a note…"
+                    rows={2}
+                    className="border-border bg-background w-full resize-none rounded border px-2 py-1.5 text-xs outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setCommentOpen(false);
+                      }
                     }}
-                  >
-                    Apply
-                  </button>
-                  {editor.isActive('comment') && (
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                  <div className="mt-1.5 flex gap-1">
                     <button
                       type="button"
-                      className="motion-interactive icon-spin-hover border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                      className="motion-interactive icon-pop-hover bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        removeComment();
+                        applyComment();
                       }}
                     >
-                      Remove
+                      Apply
                     </button>
-                  )}
-                </div>
+                    {editor.isActive('comment') && (
+                      <button
+                        type="button"
+                        className="motion-interactive icon-spin-hover border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          removeComment();
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
               </>
             )}
@@ -535,47 +628,47 @@ export function EditorBubbleMenu({ editor }: EditorBubbleMenuProps) {
                   transition={{ duration: popupDuration, ease: [0.22, 1, 0.36, 1] }}
                   className="border-border bg-popover absolute bottom-full left-0 z-20 mb-2 w-52 rounded-lg border p-2 shadow-lg"
                 >
-                <p className="text-muted-foreground mb-1.5 text-[10px] font-medium">
-                  Tag selected text
-                </p>
-                <input
-                  ref={tagInputRef}
-                  type="text"
-                  placeholder="e.g. important, review…"
-                  className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      applyInlineTag();
-                    } else if (e.key === 'Escape') {
-                      setTagOpen(false);
-                    }
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                />
-                <div className="mt-1.5 flex gap-1">
-                  <button
-                    type="button"
-                    className="motion-interactive icon-pop-hover bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      applyInlineTag();
+                  <p className="text-muted-foreground mb-1.5 text-[10px] font-medium">
+                    Tag selected text
+                  </p>
+                  <input
+                    ref={tagInputRef}
+                    type="text"
+                    placeholder="e.g. important, review…"
+                    className="border-border bg-background w-full rounded border px-2 py-1.5 text-xs outline-none"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        applyInlineTag();
+                      } else if (e.key === 'Escape') {
+                        setTagOpen(false);
+                      }
                     }}
-                  >
-                    Apply
-                  </button>
-                  {editor.isActive('inlineTag') && (
+                    onMouseDown={(e) => e.stopPropagation()}
+                  />
+                  <div className="mt-1.5 flex gap-1">
                     <button
                       type="button"
-                      className="motion-interactive icon-spin-hover border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                      className="motion-interactive icon-pop-hover bg-primary text-primary-foreground rounded px-2 py-1 text-xs hover:opacity-90"
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        removeInlineTag();
+                        applyInlineTag();
                       }}
                     >
-                      Remove
+                      Apply
                     </button>
-                  )}
-                </div>
+                    {editor.isActive('inlineTag') && (
+                      <button
+                        type="button"
+                        className="motion-interactive icon-spin-hover border-border hover:bg-accent rounded border px-2 py-1 text-xs"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          removeInlineTag();
+                        }}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
               </>
             )}

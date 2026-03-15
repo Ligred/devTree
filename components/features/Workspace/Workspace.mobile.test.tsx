@@ -16,11 +16,11 @@ vi.mock('@/lib/i18n', () => ({
   useI18n: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('@/lib/settingsStore', () => ({
+vi.mock('@/lib/stores/settingsStore', () => ({
   useSettingsStore: () => true,
 }));
 
-vi.mock('@/lib/usePageTracking', () => ({
+vi.mock('@/lib/hooks/usePageTracking', () => ({
   usePageTracking: () => undefined,
 }));
 
@@ -40,6 +40,19 @@ vi.mock('./treeUtils', () => ({
 
 vi.mock('@/components/features/FileExplorer/FileExplorer', () => ({
   FileExplorer: () => <div data-testid="file-explorer" />,
+}));
+
+// capture transition prop passed down to the sidebar so we can assert mobile
+// animation matches desktop (0.34s)
+let capturedSidebarTransition: any = null;
+vi.mock('@/components/shared/Sidebar', () => ({
+  Sidebar: ({ transition, children, visible, mobileOverlay }: any) => {
+    capturedSidebarTransition = transition;
+    const isOpen = visible || mobileOverlay?.open;
+    if (!isOpen) return null;
+    // mimic minimal structure; do not forward unknown props to DOM
+    return <aside data-testid="sidebar-stub">{children}</aside>;
+  },
 }));
 
 vi.mock('@/components/features/MainContent', () => ({
@@ -73,6 +86,10 @@ vi.mock('./hooks/useWorkspaceData', () => ({
   }),
 }));
 
+vi.mock('@/lib/confirmationContext', () => ({
+  useConfirmation: () => ({ confirm: vi.fn().mockResolvedValue(false) }),
+}));
+
 vi.mock('./hooks/useTreeOperations', () => ({
   useTreeOperations: () => ({
     createFile: vi.fn(),
@@ -82,9 +99,6 @@ vi.mock('./hooks/useTreeOperations', () => ({
     handleRenameFolder: vi.fn(),
     editingFolderId: null,
     setEditingFolderId: vi.fn(),
-    deleteDialog: null,
-    setDeleteDialog: vi.fn(),
-    handleConfirmDelete: vi.fn(),
   }),
 }));
 
@@ -148,6 +162,14 @@ describe('Workspace mobile behavior', () => {
 
     await waitFor(() => expect(container.querySelector('aside')).toBeInTheDocument());
     expect(document.body.style.overflow).toBe('hidden');
+
+    // mobile drawer is rendered (mocked component)
+    expect(screen.getByTestId('sidebar-stub')).toBeInTheDocument();
+
+    // the transition prop should match desktop timing (0.34) or be
+    // minimal if reduced motion is active (0.01).
+    expect(capturedSidebarTransition).not.toBeNull();
+    expect([0.34, 0.01]).toContain(capturedSidebarTransition.duration);
 
     fireEvent.keyDown(document, { key: 'Escape' });
 

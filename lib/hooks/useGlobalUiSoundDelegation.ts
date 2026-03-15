@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 
 import {
-  primeUiSounds,
   playHoverSound,
   playTypingSound,
   playUiSound,
-  unlockUiSoundPlayback,
+  primeUiSounds,
   type UiSoundEvent,
+  unlockUiSoundPlayback,
 } from '@/lib/stores/uiSoundEffects';
 
 const INTERACTIVE_SELECTOR =
@@ -116,7 +116,10 @@ export function useGlobalUiSoundDelegation(): void {
       if (!typingTarget) return;
 
       const isTypingKey =
-        event.key.length === 1 || event.key === 'Backspace' || event.key === 'Delete' || event.key === 'Enter';
+        event.key.length === 1 ||
+        event.key === 'Backspace' ||
+        event.key === 'Delete' ||
+        event.key === 'Enter';
       if (!isTypingKey) return;
 
       const now = Date.now();
@@ -138,7 +141,10 @@ export function useGlobalUiSoundDelegation(): void {
       playUiSound(resolveUiSoundEvent(interactive));
     };
 
-    document.addEventListener('pointerdown', handleUserActivation, { capture: true, passive: true });
+    document.addEventListener('pointerdown', handleUserActivation, {
+      capture: true,
+      passive: true,
+    });
     document.addEventListener('keydown', handleUserActivation, { capture: true });
     document.addEventListener('pointerdown', handlePointerDown);
     document.addEventListener('pointerover', handlePointerOver, { passive: true });

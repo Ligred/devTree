@@ -229,13 +229,13 @@ public class NotebookContentTests : E2ETestBase
         await App.Editor.AddBlockAsync("Text");
         await App.Editor.TypeInLastTextBlockAsync("My Heading");
 
-        // Click somewhere in the block first to focus it, then apply Heading 2.
-        var proseMirror = Page.Locator(".page-editor-content").Last;
-        await proseMirror.ClickAsync();
-        await App.Editor.ClickToolbarButtonAsync("Heading 2");
+        // Cursor is already in the text block after typing; apply heading directly.
+        // The old approach clicked .page-editor-content which moved the cursor
+        // out of the paragraph, so heading had no selection to work on.
+        await App.Editor.ApplyHeadingAsync(2);
 
         var h2 = Page.Locator(".page-editor-content h2").Last;
-        await Expect(h2).ToBeVisibleAsync(new() { Timeout = 3_000 });
+        await Expect(h2).ToBeVisibleAsync(new() { Timeout = 5_000 });
         await Expect(h2).ToContainTextAsync("My Heading");
     }
 

@@ -7,8 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ConfirmationProvider } from '@/lib/confirmationContext';
 import { I18nProvider } from '@/lib/i18n';
-import { useRecordingStore } from '@/lib/recordingStore';
-import { useSettingsStore } from '@/lib/settingsStore';
+import { useRecordingStore } from '@/lib/stores/recordingStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 import { attemptStartRecording } from './recordingHelpers';
 import { VoiceDictationButton } from './VoiceDictationButton';

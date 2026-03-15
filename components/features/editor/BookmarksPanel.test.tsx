@@ -19,7 +19,14 @@ function createEditor(bookmarks: BookmarkSeed) {
   const editor = {
     state: {
       doc: {
-        descendants: (visitor: (node: { marks: Array<{ type: { name: string }; attrs: { id: string; label?: string } }> }, pos: number) => void) => {
+        descendants: (
+          visitor: (
+            node: {
+              marks: Array<{ type: { name: string }; attrs: { id: string; label?: string } }>;
+            },
+            pos: number,
+          ) => void,
+        ) => {
           for (const bm of bookmarks) {
             visitor(
               {

@@ -13,12 +13,24 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
 }));
 
-vi.mock('@/components/features/SettingsDialog/useSettingsDialog', () => ({
-  useSettingsDialog: () => ({ openSettings: vi.fn() }),
+vi.mock('@/lib/stores/uiStore', () => ({
+  useUIStore: () => ({ openSettings: vi.fn() }),
 }));
 
-vi.mock('@/lib/statsStore', () => ({
+vi.mock('@/lib/stores/statsStore', () => ({
   useStatsStore: () => ({ enabled: true }),
+}));
+
+vi.mock('@/lib/i18n', () => ({
+  useI18n: () => ({
+    t: (key: string) => {
+      if (key === 'nav.notebook') return 'Notebook';
+      if (key === 'nav.statistics') return 'Statistics';
+      if (key === 'nav.diary') return 'Diary';
+      if (key === 'nav.settings') return 'Settings';
+      return key;
+    },
+  }),
 }));
 
 describe('ActivityBar', () => {

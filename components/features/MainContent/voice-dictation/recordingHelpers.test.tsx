@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { useRecordingStore } from '@/lib/recordingStore';
+import { useRecordingStore } from '@/lib/stores/recordingStore';
 
 import { attemptStartRecording } from './recordingHelpers';
 

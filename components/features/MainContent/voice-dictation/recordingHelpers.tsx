@@ -1,5 +1,5 @@
 import type { ConfirmationConfig } from '@/lib/confirmationContext';
-import { useRecordingStore } from '@/lib/recordingStore';
+import { useRecordingStore } from '@/lib/stores/recordingStore';
 
 type AttemptParams = Readonly<{
   blockId: string;

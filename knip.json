@@ -1,11 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
 
-  "project": [
-    "app/**/*.{ts,tsx}",
-    "components/**/*.{ts,tsx}",
-    "lib/**/*.{ts,tsx}"
-  ],
+  "project": ["app/**/*.{ts,tsx}", "components/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}"],
 
   "ignoreExportsUsedInFile": true,
 

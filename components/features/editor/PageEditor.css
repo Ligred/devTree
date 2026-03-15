@@ -23,7 +23,9 @@
 }
 
 /* Remove the default single-icon ::before added by the library */
-.drag-handle::before { content: none !important; }
+.drag-handle::before {
+  content: none !important;
+}
 
 .drag-handle.hide {
   opacity: 0 !important;
@@ -56,7 +58,9 @@
   background: transparent;
   color: var(--muted-foreground);
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   flex-shrink: 0;
 }
 
@@ -65,8 +69,12 @@
   color: var(--accent-foreground);
 }
 
-.block-ctrl-grip { cursor: grab; }
-.block-ctrl-grip:active { cursor: grabbing; }
+.block-ctrl-grip {
+  cursor: grab;
+}
+.block-ctrl-grip:active {
+  cursor: grabbing;
+}
 
 /* ── Block action context menu ───────────────────────────────────────────── */
 
@@ -101,7 +109,8 @@
   font-size: 0.75rem;
   text-align: left;
   cursor: pointer;
-  transition: background 0.16s var(--motion-ease-standard),
+  transition:
+    background 0.16s var(--motion-ease-standard),
     color 0.16s var(--motion-ease-standard),
     transform 0.16s var(--motion-ease-emphasized);
 }
@@ -133,12 +142,14 @@
   border-radius: 2px;
   padding-bottom: 1px;
   cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
-  }
-  
-  .tiptap-bookmark:hover {
-    background-color: color-mix(in oklch, var(--primary) 24%, transparent);
-    border-bottom-color: color-mix(in oklch, var(--primary) 85%, transparent);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.tiptap-bookmark:hover {
+  background-color: color-mix(in oklch, var(--primary) 24%, transparent);
+  border-bottom-color: color-mix(in oklch, var(--primary) 85%, transparent);
 }
 
 /* ── Comment marks ───────────────────────────────────────────────────────── */
@@ -147,12 +158,14 @@
   border-bottom: 2px solid hsl(50 90% 50% / 0.6);
   cursor: help;
   border-radius: 2px;
-  transition: background-color 120ms ease, border-color 120ms ease;
-  }
-  
-  [data-comment-id]:hover {
-    background-color: hsl(50 95% 72% / 0.52);
-    border-bottom-color: hsl(50 92% 45% / 0.85);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+[data-comment-id]:hover {
+  background-color: hsl(50 95% 72% / 0.52);
+  border-bottom-color: hsl(50 92% 45% / 0.85);
 }
 
 /* ── Inline tag marks ────────────────────────────────────────────────────── */
@@ -170,6 +183,35 @@
   white-space: nowrap;
   /* small gap so it doesn't run into surrounding text */
   margin: 0 1px;
+}
+
+/* avoid margin collapse issues around headings and paragraphs
+   when some headings are marked non-editable (contenteditable="false").
+   Tailwind's preflight gives headings a bottom margin which collapses with the
+   following paragraph; clicking that gap actually hits the heading element (a
+   non-editable region) and the browser dutifully moves the caret to the next
+   editable spot, usually the very end of the document.  By zeroing out the
+   heading bottom margin and instead giving the paragraph the equivalent top
+   margin we guarantee the click target is the paragraph itself.
+*/
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin-bottom: 0;
+}
+
+.ProseMirror p {
+  /* 0.5rem matches Tailwind's default heading bottom margin from preflight */
+  margin-top: 0.5rem;
+}
+
+/* make template-provided headings completely non-selectable so users can't
+   accidentally highlight and delete them */
+.ProseMirror [contenteditable='false'] {
+  user-select: none;
 }
 
 /* ── Inline tag filter highlighting ─────────────────────────────────────── */
@@ -205,7 +247,9 @@
   caret-color: var(--foreground);
 }
 
-.page-editor-content:focus { outline: none; }
+.page-editor-content:focus {
+  outline: none;
+}
 
 /* ── Custom atom nodes — remove Tiptap default selection outline ──────────── */
 .page-editor-content .tiptap-node-selected {
@@ -237,7 +281,8 @@
  * subsequent re-renders.  Scoped to NodeViewWrapper roots only so that
  * lightweight text paragraphs appear instantly (better for typing flow).     */
 .page-editor-content [data-node-view-wrapper] {
-  transition: opacity var(--motion-duration-standard) var(--motion-ease-emphasized),
+  transition:
+    opacity var(--motion-duration-standard) var(--motion-ease-emphasized),
     transform var(--motion-duration-standard) var(--motion-ease-emphasized);
 }
 

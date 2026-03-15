@@ -1,5 +1,5 @@
 /**
- * pageUtils — utilities for analysing and exporting page content.
+ * pageUtils — utilities for analyzing and exporting page content.
  *
  * WHY a separate utility file?
  *   Keeping pure functions (no React, no DOM) in a dedicated `lib/` file makes
@@ -126,7 +126,7 @@ function countWordsInBlock(block: Block): number {
  *   It can be pasted into GitHub, Notion, Obsidian, or a static-site generator
  *   without further conversion.
  *
- * The export is intentionally lossy: some rich-text formatting (e.g. text colour,
+ * The export is intentionally lossy: some rich-text formatting (e.g. text color,
  * font size) does not have a Markdown equivalent. The goal is a useful, readable
  * plain-text representation — not a perfect round-trip.
  *
@@ -257,7 +257,7 @@ function htmlToMarkdown(html: string): string {
   const doc = new DOMParser().parseFromString(partial, 'text/html');
   return (
     (doc.body.textContent ?? '')
-      // Normalise whitespace: collapse 3+ newlines → 2
+      // Normalize whitespace: collapse 3+ newlines → 2
       .replaceAll(/\n{3,}/g, '\n\n')
       .trim()
   );
@@ -281,7 +281,7 @@ export function downloadMarkdown(page: Page): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  // Sanitise the page title for use as a filename
+  // Sanitizes the page title for use as a filename
   anchor.download = `${page.title.replaceAll(/[^a-z0-9\s-]/gi, '').trim() || 'page'}.md`;
   anchor.click();
   // Revoke the object URL after a tick to free memory
@@ -328,5 +328,5 @@ export function extractInlineTagsFromContent(
   }
 
   walk(node);
-  return Array.from(tags).sort();
+  return Array.from(tags).sort((a, b) => a.localeCompare(b));
 }

@@ -1,15 +1,15 @@
 @import 'tailwindcss';
-@import "tw-animate-css";
+@import 'tw-animate-css';
 
 /* Tell Tailwind v4 which files to scan for class names (relative to this file) */
 /* stylelint-disable-next-line at-rule-no-unknown */
-@source "../app/**/*.{ts,tsx,js,jsx}";
+@source '../app/**/*.{ts,tsx,js,jsx}';
 /* stylelint-disable-next-line at-rule-no-unknown */
-@source "../components/**/*.{ts,tsx,js,jsx}";
+@source '../components/**/*.{ts,tsx,js,jsx}';
 /* stylelint-disable-next-line at-rule-no-unknown */
-@source "../lib/**/*.{ts,tsx,js,jsx}";
+@source '../lib/**/*.{ts,tsx,js,jsx}';
 /* stylelint-disable-next-line at-rule-no-unknown */
-@source "../stories/**/*.{ts,tsx,js,jsx}";
+@source '../stories/**/*.{ts,tsx,js,jsx}';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -240,8 +240,8 @@
 
   .motion-interactive {
     transform: translateZ(0);
-    transition-property: color, background-color, border-color, opacity, box-shadow, transform,
-      filter;
+    transition-property:
+      color, background-color, border-color, opacity, box-shadow, transform, filter;
     transition-duration: var(--motion-duration-standard);
     transition-timing-function: var(--motion-ease-standard);
   }
@@ -283,6 +283,24 @@
     will-change: transform, opacity;
   }
 
+  /* Sidebar subtle expand/collapse transition */
+  .sidebar-animate {
+    transition:
+      transform var(--motion-duration-standard) var(--motion-ease-standard),
+      opacity var(--motion-duration-standard) var(--motion-ease-standard);
+    will-change: transform, opacity;
+  }
+
+  .sidebar-collapsed {
+    transform: translateX(-6px) scale(0.996);
+    opacity: 0.86;
+  }
+
+  .sidebar-expanded {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+
   .icon-spin-hover:hover > :where(svg),
   .icon-spin-hover:focus-visible > :where(svg) {
     transform: rotate(180deg) scale(1.13);
@@ -301,29 +319,44 @@
     filter: saturate(1.15);
   }
 
-  :where(button[aria-label*='close' i], button[aria-label*='clear' i], button[aria-label*='remove' i]):not(
+  :where(
+      button[aria-label*='close' i],
+      button[aria-label*='clear' i],
+      button[aria-label*='remove' i]
+    ):not(
       [disabled],
       [aria-disabled='true'],
       [data-no-motion='true'],
       [data-no-icon-motion='true']
-    ):hover > :where(svg),
-  :where(button[aria-label*='close' i], button[aria-label*='clear' i], button[aria-label*='remove' i]):not(
+    ):hover
+    > :where(svg),
+  :where(
+      button[aria-label*='close' i],
+      button[aria-label*='clear' i],
+      button[aria-label*='remove' i]
+    ):not(
       [disabled],
       [aria-disabled='true'],
       [data-no-motion='true'],
       [data-no-icon-motion='true']
-    ):focus-visible > :where(svg) {
+    ):focus-visible
+    > :where(svg) {
     transform: rotate(180deg) scale(1.13);
     filter: saturate(1.18);
   }
 }
 
 @layer base {
-  :where(button, [role='button'], [role='menuitem'], [role='tab'], a[href], input, textarea, select):not(
-      [disabled],
-      [aria-disabled='true'],
-      [data-no-motion='true']
-    ) {
+  :where(
+    button,
+    [role='button'],
+    [role='menuitem'],
+    [role='tab'],
+    a[href],
+    input,
+    textarea,
+    select
+  ):not([disabled], [aria-disabled='true'], [data-no-motion='true']) {
     transition-property: color, background-color, border-color, opacity, box-shadow, transform;
     transition-duration: var(--motion-duration-standard);
     transition-timing-function: var(--motion-ease-standard);
@@ -343,7 +376,8 @@
   }
 
   :where(button, [role='button'], [role='menuitem'], [role='tab'], a[href]) > :where(svg) {
-    transition: transform var(--motion-duration-fast) var(--motion-ease-emphasized),
+    transition:
+      transform var(--motion-duration-fast) var(--motion-ease-emphasized),
       filter var(--motion-duration-fast) var(--motion-ease-standard);
     transform: translateZ(0);
   }
@@ -353,13 +387,15 @@
       [aria-disabled='true'],
       [data-no-motion='true'],
       [data-no-icon-motion='true']
-    ):hover > :where(svg),
+    ):hover
+    > :where(svg),
   :where(button, [role='button'], [role='menuitem'], [role='tab'], a[href]):not(
       [disabled],
       [aria-disabled='true'],
       [data-no-motion='true'],
       [data-no-icon-motion='true']
-    ):focus-visible > :where(svg) {
+    ):focus-visible
+    > :where(svg) {
     transform: translateY(-1px) scale(1.12);
     filter: saturate(1.12);
   }
@@ -387,7 +423,8 @@
 
   :where(button, [role='button'], [role='menuitem'], [role='tab'], a[href]) > :where(svg),
   :where(button, [role='button'], [role='menuitem'], [role='tab'], a[href]):hover > :where(svg),
-  :where(button, [role='button'], [role='menuitem'], [role='tab'], a[href]):focus-visible > :where(svg) {
+  :where(button, [role='button'], [role='menuitem'], [role='tab'], a[href]):focus-visible
+    > :where(svg) {
     transform: none !important;
     filter: none !important;
   }
@@ -424,29 +461,51 @@
   height: 0;
   @apply text-muted-foreground;
 }
-.ProseMirror h1 { @apply text-2xl font-bold mt-4 mb-2; }
-.ProseMirror h2 { @apply text-xl font-semibold mt-3 mb-2; }
-.ProseMirror h3 { @apply text-lg font-semibold mt-2 mb-1; }
-.ProseMirror p  { @apply leading-relaxed; }
-.ProseMirror strong { @apply font-bold; }
-.ProseMirror em { @apply italic; }
-.ProseMirror s { @apply line-through; }
-.ProseMirror ul { @apply list-disc pl-6 my-2; }
-.ProseMirror ol { @apply list-decimal pl-6 my-2; }
-.ProseMirror li { @apply mb-1; }
+.ProseMirror h1 {
+  @apply mt-4 mb-2 text-2xl font-bold;
+}
+.ProseMirror h2 {
+  @apply mt-3 mb-2 text-xl font-semibold;
+}
+.ProseMirror h3 {
+  @apply mt-2 mb-1 text-lg font-semibold;
+}
+.ProseMirror p {
+  @apply leading-relaxed;
+}
+.ProseMirror strong {
+  @apply font-bold;
+}
+.ProseMirror em {
+  @apply italic;
+}
+.ProseMirror s {
+  @apply line-through;
+}
+.ProseMirror ul {
+  @apply my-2 list-disc pl-6;
+}
+.ProseMirror ol {
+  @apply my-2 list-decimal pl-6;
+}
+.ProseMirror li {
+  @apply mb-1;
+}
 .ProseMirror blockquote {
-  @apply border-l-4 border-border pl-4 italic text-muted-foreground my-3;
+  @apply border-border text-muted-foreground my-3 border-l-4 pl-4 italic;
 }
 .ProseMirror code {
-  @apply rounded bg-muted px-1 py-0.5 font-mono text-sm text-foreground;
+  @apply bg-muted text-foreground rounded px-1 py-0.5 font-mono text-sm;
 }
 .ProseMirror pre {
-  @apply rounded-lg bg-muted p-4 font-mono text-sm my-3 overflow-x-auto;
+  @apply bg-muted my-3 overflow-x-auto rounded-lg p-4 font-mono text-sm;
 }
 .ProseMirror pre code {
   @apply bg-transparent p-0;
 }
-.ProseMirror hr { @apply my-4 border-border; }
+.ProseMirror hr {
+  @apply border-border my-4;
+}
 
 /* Links (open in new tab when added via editor) */
 .ProseMirror a {
@@ -459,10 +518,18 @@
 }
 
 /* Text alignment (from TextAlign extension) */
-.ProseMirror [style*="text-align: left"] { text-align: left; }
-.ProseMirror [style*="text-align: center"] { text-align: center; }
-.ProseMirror [style*="text-align: right"] { text-align: right; }
-.ProseMirror [style*="text-align: justify"] { text-align: justify; }
+.ProseMirror [style*='text-align: left'] {
+  text-align: left;
+}
+.ProseMirror [style*='text-align: center'] {
+  text-align: center;
+}
+.ProseMirror [style*='text-align: right'] {
+  text-align: right;
+}
+.ProseMirror [style*='text-align: justify'] {
+  text-align: justify;
+}
 
 /* Inline comments (custom mark; hover shows tooltip elsewhere) */
 .ProseMirror .tiptap-comment,
@@ -472,12 +539,18 @@
 }
 
 /* Task list (checklist) */
-.ProseMirror ul[data-type="taskList"] { @apply list-none pl-0; }
-.ProseMirror ul[data-type="taskList"] li {
-  @apply flex items-start gap-2 mb-1;
+.ProseMirror ul[data-type='taskList'] {
+  @apply list-none pl-0;
 }
-.ProseMirror ul[data-type="taskList"] li > label { @apply mt-1; }
-.ProseMirror ul[data-type="taskList"] li > div { @apply flex-1; }
+.ProseMirror ul[data-type='taskList'] li {
+  @apply mb-1 flex items-start gap-2;
+}
+.ProseMirror ul[data-type='taskList'] li > label {
+  @apply mt-1;
+}
+.ProseMirror ul[data-type='taskList'] li > div {
+  @apply flex-1;
+}
 
 /* Excalidraw ---------------------------------------------------------------- */
 

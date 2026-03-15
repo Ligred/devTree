@@ -5,8 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 
-import { motion, useReducedMotion } from 'motion/react';
 import { BookOpen, Flame } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 
 import { SettingsDialog } from '@/components/features/SettingsDialog/SettingsDialog';
 import { MotivationBanner } from '@/components/features/Statistics/MotivationBanner';
@@ -14,8 +14,8 @@ import type { SummaryData } from '@/components/features/Statistics/types';
 import { ActivityBar } from '@/components/shared/ActivityBar/ActivityBar';
 import { UserMenu } from '@/components/shared/UserMenu/UserMenu';
 import { useGlobalUiSoundDelegation } from '@/lib/hooks/useGlobalUiSoundDelegation';
-import { useStatsStore } from '@/lib/statsStore';
-import { useUIStore } from '@/lib/uiStore';
+import { useStatsStore } from '@/lib/stores/statsStore';
+import { useUIStore } from '@/lib/stores/uiStore';
 
 /** Routes where the ActivityBar (main nav) should NOT appear. */
 const PUBLIC_ROUTES = ['/login', '/register', '/forgot-password'];
@@ -67,7 +67,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
       <motion.header
         key={`app-shell-header-${pathname}`}
         className="alive-surface border-border bg-card flex h-14 shrink-0 items-center justify-between border-b px-4 shadow-sm md:px-6"
-        initial={reducedMotion ? false : { y: -16, opacity: 0 }}
+        initial={reducedMotion ? undefined : { y: -16, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={
           reducedMotion

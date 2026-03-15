@@ -397,27 +397,7 @@ export function isImageBlockContent(
  * guard. The outer `type === 'diagram'` check is the primary discriminant;
  * the content-shape checks are a safety net.
  */
-export function isDiagramBlockContent(
-  content: BlockContent,
-  type: BlockType,
-): content is DiagramBlockContent {
-  return (
-    type === 'diagram' &&
-    typeof content === 'object' &&
-    content !== null &&
-    'code' in content &&
-    !('language' in content)
-  );
-}
-
 /** Video blocks have a URL; provider support is resolved in the component. */
-export function isVideoBlockContent(
-  content: BlockContent,
-  type: BlockType,
-): content is VideoBlockContent {
-  return type === 'video' && typeof content === 'object' && content !== null && 'url' in content;
-}
-
 /** Audio blocks have a URL (external audio source). The type discriminant is the primary check. */
 export function isAudioBlockContent(
   content: BlockContent,

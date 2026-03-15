@@ -21,12 +21,3 @@ export function setLastNotebookPageId(pageId: string): void {
     // Ignore storage failures (private mode, quota, etc.)
   }
 }
-
-export function clearLastNotebookPageId(): void {
-  if (!canUseStorage()) return;
-  try {
-    globalThis.localStorage.removeItem(LAST_NOTEBOOK_PAGE_ID_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
-}

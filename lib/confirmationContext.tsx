@@ -8,6 +8,17 @@
  */
 import React, { useCallback, useMemo, useState } from 'react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/shared/ui/alert-dialog';
+
 export type ConfirmationConfig = Readonly<{
   title: string;
   description?: string;
@@ -180,52 +191,25 @@ function ConfirmationDialog({
 
   // Default modal dialog (centered)
   return (
-    <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/50" onClick={onCancel} aria-hidden="true" />
-
-      {/* Dialog */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div
-          className="border-border bg-card w-full max-w-sm rounded-lg border p-6 shadow-lg"
-          role="alertdialog"
-          aria-modal="true"
-          aria-labelledby="confirmation-title"
-          aria-describedby="confirmation-description"
-        >
-          {/* Title */}
-          <h2 id="confirmation-title" className="text-foreground text-lg font-semibold">
-            {title}
-          </h2>
-
-          {/* Description */}
-          {description && (
-            <p id="confirmation-description" className="text-muted-foreground mt-2 text-sm">
-              {description}
-            </p>
-          )}
-
-          {/* Buttons */}
-          <div className="mt-6 flex gap-2">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="border-border hover:bg-accent flex-1 rounded border px-4 py-2 text-sm font-medium transition-colors"
-            >
-              {cancelText}
-            </button>
-            <button
-              type="button"
-              onClick={onConfirm}
-              className={`flex-1 rounded px-4 py-2 text-sm font-medium text-white transition-colors ${
-                isDestructive ? 'bg-red-600 hover:bg-red-700' : 'bg-primary hover:opacity-90'
-              }`}
-            >
-              {confirmText}
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
+    <AlertDialog open={true}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="confirm-delete-cancel" onClick={onCancel}>
+            {cancelText}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            data-testid="confirm-delete-confirm"
+            onClick={onConfirm}
+            className={isDestructive ? 'bg-red-600 hover:bg-red-700' : undefined}
+          >
+            {confirmText}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

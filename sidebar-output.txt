@@ -1,0 +1,118 @@
+
+> my-app@0.1.0 test /Users/taras/Projects/devTree
+> vitest run "--" "components/shared/Sidebar.test.tsx"
+
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90m/Users/taras/Projects/devTree[39m
+
+ [31m❯[39m [30m[42m unit [49m[39m components/shared/Sidebar.test.tsx [2m([22m[2m2 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 31[2mms[22m[39m
+[31m     [31m×[31m displays children and calls onShow when collapsed overlay is clicked[39m[32m 24[2mms[22m[39m
+[31m     [31m×[31m renders a mobile drawer and backdrop when mobileOverlay.open is true and closes on backdrop click[39m[32m 3[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/editor/EditorToolbar.test.tsx [2m([22m[2m8 tests[22m[2m)[22m[33m 334[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m app/forgot-password/ForgotPasswordPage.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 444[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/MainContent/voice-dictation/VoiceDictationButton.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 251[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/diary/DiaryPageClient.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 296[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Statistics/statistics.test.tsx [2m([22m[2m27 tests[22m[2m)[22m[33m 846[2mms[22m[39m
+     [33m[2m✓[22m[39m dismisses the banner when the × button is clicked [33m 330[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/SettingsDialog/SettingsDialog.test.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 738[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m stories/Page.stories.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1184[2mms[22m[39m
+   [33m[2m✓[22m[39m Logged Out [33m 950[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m stories/Header.stories.ts [2m([22m[2m2 tests[22m[2m)[22m[33m 1145[2mms[22m[39m
+   [33m[2m✓[22m[39m Logged In [33m 925[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m app/__stories__/ForgotPasswordPage.stories.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 1148[2mms[22m[39m
+   [33m[2m✓[22m[39m Request Reset Link [33m 935[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/MainContent/__stories__/PageTitle.stories.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 1469[2mms[22m[39m
+   [33m[2m✓[22m[39m Read Only [33m 1239[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m stories/Button.stories.ts [2m([22m[2m4 tests[22m[2m)[22m[33m 1324[2mms[22m[39m
+   [33m[2m✓[22m[39m Primary [33m 935[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/FileExplorer/__stories__/FileExplorer.stories.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 965[2mms[22m[39m
+   [33m[2m✓[22m[39m Default [33m 837[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/shared/UserMenu/UserMenu.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 311[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/Workspace/__stories__/Workspace.stories.tsx [2m([22m[2m1 test[22m[2m)[22m[33m 598[2mms[22m[39m
+   [33m[2m✓[22m[39m Default [33m 595[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/MainContent/__stories__/MainContent.stories.tsx [2m([22m[2m6 tests[22m[2m)[22m[33m 1411[2mms[22m[39m
+   [33m[2m✓[22m[39m With Page [33m 748[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/shared/__stories__/ConfirmationDialog.stories.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 539[2mms[22m[39m
+   [33m[2m✓[22m[39m Modal [33m 319[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m stories/blocks/VoiceDictationLanguageButton.stories.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 477[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/MainContent/voice-dictation/__stories__/VoiceDictationLanguageButton.stories.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 539[2mms[22m[39m
+   [33m[2m✓[22m[39m Default [33m 306[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/MainContent/voice-dictation/__stories__/VoiceDictationButton.stories.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 442[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/Workspace/__stories__/FolderRenameRow.stories.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 448[2mms[22m[39m
+   [33m[2m✓[22m[39m File Row [33m 308[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/editor/EditorBubbleMenu.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 354[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/FileExplorer/FileExplorer.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 587[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/shared/__stories__/RecordingIndicator.stories.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 259[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/shared/ActivityBar/__stories__/ActivityBar.stories.tsx [2m([22m[2m2 tests[22m[2m)[22m[33m 356[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/Statistics/__stories__/Statistics.stories.tsx [2m([22m[2m33 tests[22m[2m)[22m[33m 4474[2mms[22m[39m
+   [33m[2m✓[22m[39m Populated [33m 756[2mms[22m[39m
+   [33m[2m✓[22m[39m ActivityHeatmap / 90 days of data [33m 459[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m app/__stories__/RegisterPage.stories.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 104[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m stories/blocks/VoiceDictationButton.stories.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 181[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m app/__stories__/LoginPage.stories.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 171[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/shared/UserMenu/__stories__/UserMenu.stories.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 189[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m app/login/LoginPage.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 827[2mms[22m[39m
+     [33m[2m✓[22m[39m submits credentials on form submit [33m 513[2mms[22m[39m
+ [32m✓[39m [30m[45m storybook (chromium) [49m[39m components/features/SettingsDialog/__stories__/SettingsDialog.stories.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 231[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/MainContent/PageTitle.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[33m 313[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m components/features/editor/PageEditor.canvas.test.tsx [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 38[2mms[22m[39m
+[31m     [31m×[31m opens and closes fullscreen overlay from canvas block toggle[39m[32m 36[2mms[22m[39m
+ [31m❯[39m [30m[42m unit [49m[39m components/features/editor/PageEditor.blocks.test.tsx [2m([22m[2m18 tests[22m[2m | [22m[31m18 failed[39m[2m)[22m[32m 63[2mms[22m[39m
+[31m     [31m×[31m renders code block with language control[39m[32m 27[2mms[22m[39m
+[31m     [31m×[31m renders code language badge in read mode[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m allows adding checklist item in edit mode[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m shows checklist progress and toggles checkbox in read mode[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m opens and closes canvas fullscreen overlay[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m shows canvas placeholder text while fullscreen overlay is open[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m renders audio block edit inputs and empty hint[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m renders audio player and caption in read mode[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m renders video iframe in read mode for youtube url[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m shows video empty hint when url is missing[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m renders image and caption in read mode[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m shows image URL input in edit mode[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m renders link card anchor in read mode[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m shows empty link-card state in read mode without url[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m adds a table row in edit mode[39m[32m 4[2mms[22m[39m
+[31m     [31m×[31m adds a table column in edit mode[39m[32m 1[2mms[22m[39m
+[31m     [31m×[31m adds block tag chips via comma separated input[39m[32m 2[2mms[22m[39m
+[31m     [31m×[31m hides non-matching blocks when activeFilterTags is set[39m[32m 1[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/shared/ActivityBar/ActivityBar.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[33m 539[2mms[22m[39m
+     [33m[2m✓[22m[39m opens notebook with last-opened page query when memory exists [33m 341[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/MainContent/TagBar.test.tsx [2m([22m[2m10 tests[22m[2m)[22m[33m 1223[2mms[22m[39m
+     [33m[2m✓[22m[39m calls onTagsChange with new tag when Enter is pressed [33m 303[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m lib/dateUtils.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 68[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/editor/BookmarksPanel.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 213[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Workspace/treeUtils.test.ts [2m([22m[2m54 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Workspace/FolderRenameRow.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 183[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Workspace/Workspace.mobile.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 134[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Workspace/hooks/useSaveLogic.test.tsx [2m([22m[2m7 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m lib/i18n.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 125[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m app/api/user/preferences/route.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m app/api/user/libraries/route.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m app/register/RegisterPage.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m lib/pageUtils.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Workspace/hooks/useTreeOperations.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Workspace/workspaceApi.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Workspace/SearchResults.test.tsx [2m([22m[2m2 tests[22m[2m)[22m[32m 90[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m app/api/folders/[folderId]/route.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/MainContent/voice-dictation/VoiceDictationLanguageButton.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/diary/DiaryLeftPanel.test.tsx [2m([22m[2m3 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m lib/stores/statsStore.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/editor/extensions/BookmarkMark.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m lib/stores/uiSoundEffects.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/editor/extensions/InlineTagMark.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m lib/punctuationService.test.ts [2m([22m[2m10 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/editor/extensions/SlashCommand.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/MainContent/types.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/MainContent/voice-dictation/recordingHelpers.test.tsx [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m lib/stores/recordingStore.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/Workspace/buildTreeData.test.tsx [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m components/features/MainContent/voice-dictation/dictationTextFormatter.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m [30m[42m unit [49m[39m lib/auth/email.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m3 failed[39m[22m[2m | [22m[1m[32m63 passed[39m[22m[90m (66)[39m
+[2m      Tests [22m [1m[31m21 failed[39m[22m[2m | [22m[1m[32m402 passed[39m[22m[90m (423)[39m
+[2m   Start at [22m 10:54:08
+[2m   Duration [22m 17.69s[2m (transform 55.28s, setup 38.32s, import 106.93s, tests 26.23s, environment 27.50s)[22m
+
+ ELIFECYCLE  Test failed. See above for more details.

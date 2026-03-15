@@ -15,8 +15,8 @@ import { Mic } from 'lucide-react';
 
 import { useConfirmation } from '@/lib/confirmationContext';
 import { useI18n } from '@/lib/i18n';
-import { useRecordingStore } from '@/lib/recordingStore';
-import { useSettingsStore } from '@/lib/settingsStore';
+import { useRecordingStore } from '@/lib/stores/recordingStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { cn } from '@/lib/utils';
 
 import { formatInterimDictationTextWithPunctuation } from './dictationTextFormatter';

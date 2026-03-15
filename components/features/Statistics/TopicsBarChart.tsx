@@ -2,14 +2,7 @@
 
 import React from 'react';
 
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from 'recharts';
 
 import {
   Card,
@@ -112,7 +105,11 @@ export function TopicsBarChart({ data, loading }: Readonly<Props>) {
                   layout="vertical"
                   margin={{ top: 4, right: 16, left: 8, bottom: 0 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    horizontal={false}
+                    className="stroke-border"
+                  />
                   <XAxis
                     type="number"
                     tick={{ fontSize: 11 }}

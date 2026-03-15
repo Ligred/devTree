@@ -126,6 +126,17 @@ type SettingsState = {
    */
   dictationFormattingEnabled: boolean;
 
+  /**
+   * Whether diary entry creation may request geolocation to enrich weather/location metadata.
+   * Disable this to avoid location permissions and store no location for new diary entries.
+   */
+  diaryLocationEnabled: boolean;
+
+  /**
+   * Temperature display unit for diary weather in UI.
+   */
+  diaryTemperatureUnit: 'c' | 'f';
+
   // ─── Actions ──────────────────────────────────────────────────────────────
 
   setTagsPerPage: (enabled: boolean) => void;
@@ -138,6 +149,8 @@ type SettingsState = {
   setHoverSoundsVolume: (value: number) => void;
   setTypingSoundsVolume: (value: number) => void;
   setDictationFormatting: (enabled: boolean) => void;
+  setDiaryLocationEnabled: (enabled: boolean) => void;
+  setDiaryTemperatureUnit: (unit: 'c' | 'f') => void;
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -155,6 +168,8 @@ export const useSettingsStore = create<SettingsState>()(
       hoverSoundsVolume: 0.28,
       typingSoundsVolume: 0.2,
       dictationFormattingEnabled: true,
+      diaryLocationEnabled: true,
+      diaryTemperatureUnit: 'c',
 
       setTagsPerPage: (tagsPerPageEnabled) => set({ tagsPerPageEnabled }),
       setTagsPerBlock: (tagsPerBlockEnabled) => set({ tagsPerBlockEnabled }),
@@ -166,6 +181,8 @@ export const useSettingsStore = create<SettingsState>()(
       setHoverSoundsVolume: (hoverSoundsVolume) => set({ hoverSoundsVolume }),
       setTypingSoundsVolume: (typingSoundsVolume) => set({ typingSoundsVolume }),
       setDictationFormatting: (dictationFormattingEnabled) => set({ dictationFormattingEnabled }),
+      setDiaryLocationEnabled: (diaryLocationEnabled) => set({ diaryLocationEnabled }),
+      setDiaryTemperatureUnit: (diaryTemperatureUnit) => set({ diaryTemperatureUnit }),
     }),
     {
       /**

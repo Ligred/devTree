@@ -7,10 +7,10 @@ import { ThemeProvider as NextThemesProvider, useTheme } from 'next-themes';
 
 import { ConfirmationProvider } from '@/lib/confirmationContext';
 import { I18nProvider, type Locale, useI18n } from '@/lib/i18n';
-import { useSettingsStore } from '@/lib/settingsStore';
-import { useStatsStore } from '@/lib/statsStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { useStatsStore } from '@/lib/stores/statsStore';
 import { loadUserPreferences } from '@/lib/userPreferences';
-import { useSessionTracking } from '@/lib/useSessionTracking';
+import { useSessionTracking } from '@/lib/hooks/useSessionTracking';
 
 import { RecordingIndicator } from './RecordingIndicator';
 
@@ -34,6 +34,8 @@ function SyncUserPreferences() {
     setUiSoundsVolume,
     setHoverSoundsVolume,
     setTypingSoundsVolume,
+    setDiaryLocationEnabled,
+    setDiaryTemperatureUnit,
   } = useSettingsStore();
   const {
     setEnabled: setStatsEnabled,
@@ -66,6 +68,11 @@ function SyncUserPreferences() {
         setHoverSoundsVolume(prefs.hoverSoundsVolume);
       if (typeof prefs.typingSoundsVolume === 'number')
         setTypingSoundsVolume(prefs.typingSoundsVolume);
+      if (typeof prefs.diaryLocationEnabled === 'boolean')
+        setDiaryLocationEnabled(prefs.diaryLocationEnabled);
+      if (prefs.diaryTemperatureUnit === 'c' || prefs.diaryTemperatureUnit === 'f') {
+        setDiaryTemperatureUnit(prefs.diaryTemperatureUnit);
+      }
       // Statistics tracking — enabled by default
       setStatsEnabled(prefs.statisticsEnabled ?? true);
       setTrackSessionTime(prefs.trackSessionTime ?? true);
@@ -87,6 +94,8 @@ function SyncUserPreferences() {
     setUiSoundsVolume,
     setHoverSoundsVolume,
     setTypingSoundsVolume,
+    setDiaryLocationEnabled,
+    setDiaryTemperatureUnit,
     setStatsEnabled,
     setTrackSessionTime,
     setTrackPageTime,

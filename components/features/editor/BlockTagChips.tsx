@@ -9,10 +9,10 @@ import { useRef, useState } from 'react';
 
 import { Tag, X } from 'lucide-react';
 
-import { useSettingsStore } from '@/lib/settingsStore';
+import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { cn } from '@/lib/utils';
 
-const TAG_COLOURS = [
+const TAG_COLORS = [
   'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
   'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
   'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
@@ -22,10 +22,10 @@ const TAG_COLOURS = [
   'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
 ];
 
-function tagColour(tag: string): string {
+function tagColor(tag: string): string {
   let hash = 0;
   for (let i = 0; i < tag.length; i++) hash = Math.trunc(hash * 31 + (tag.codePointAt(i) ?? 0));
-  return TAG_COLOURS[Math.abs(hash) % TAG_COLOURS.length];
+  return TAG_COLORS[Math.abs(hash) % TAG_COLORS.length];
 }
 
 type BlockTagChipsProps = {
@@ -36,7 +36,7 @@ type BlockTagChipsProps = {
   showEmpty?: boolean;
 };
 
-export function BlockTagChips({ tags, isEditable, onChange, showEmpty }: BlockTagChipsProps) {
+export function BlockTagChips({ tags, isEditable, onChange, showEmpty }: Readonly<BlockTagChipsProps>) {
   const { tagsPerBlockEnabled } = useSettingsStore();
   const [inputVal, setInputVal] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -69,7 +69,7 @@ export function BlockTagChips({ tags, isEditable, onChange, showEmpty }: BlockTa
           key={tag}
           className={cn(
             'flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium',
-            tagColour(tag),
+            tagColor(tag),
           )}
         >
           {tag}
@@ -92,7 +92,7 @@ export function BlockTagChips({ tags, isEditable, onChange, showEmpty }: BlockTa
           aria-label="Add tag"
           value={inputVal}
           placeholder={tags.length === 0 ? 'Add tag…' : ''}
-          className="text-muted-foreground placeholder:text-muted-foreground/50 min-w-[60px] flex-1 bg-transparent text-xs outline-none"
+          className="text-muted-foreground placeholder:text-muted-foreground/50 min-w-15 flex-1 bg-transparent text-xs outline-none"
           onChange={(e) => setInputVal(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ',') {

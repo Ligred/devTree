@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
+import { normalizeTags } from '@/lib/apiUtils';
 import { requireAuth } from '@/lib/apiAuth';
 import { prisma } from '@/lib/prisma';
 
@@ -48,10 +49,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
     updates.colSpan = body.colSpan;
   }
   if (Array.isArray(body.tags)) {
-    updates.tags = (body.tags as unknown[])
-      .filter((t): t is string => typeof t === 'string')
-      .map((t) => t.toLowerCase().trim())
-      .filter(Boolean);
+    updates.tags = normalizeTags(body.tags as unknown[]);
   }
 
   if (Object.keys(updates).length === 0) {

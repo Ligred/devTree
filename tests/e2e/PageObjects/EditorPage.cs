@@ -184,6 +184,11 @@ public class EditorPage(IPage page)
     {
         var urlInput = _page.GetByPlaceholder("Image URL\u2026").Last;
         await urlInput.FillAsync(url);
+        // Click the editor content area to deselect the atom node — Tiptap sets
+        // visibility:hidden on the selected atom node's DOM element, so we must
+        // deselect before asserting image visibility.
+        var editor = _page.Locator(".page-editor-content").Last;
+        await editor.ClickAsync(new() { Position = new() { X = 10, Y = 10 } });
         await _page.WaitForTimeoutAsync(300);
     }
 
@@ -280,6 +285,22 @@ public class EditorPage(IPage page)
         await btn.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
         await btn.ClickAsync();
         await _page.WaitForTimeoutAsync(150);
+    }
+
+    /// <summary>
+    /// Opens the Heading dropdown in the toolbar and selects the given heading level (1–3).
+    /// The toolbar uses a single "Heading" button that reveals H1/H2/H3 items.
+    /// </summary>
+    public async Task ApplyHeadingAsync(int level)
+    {
+        await ClickToolbarButtonAsync("Heading");
+        var item = _page.GetByRole(AriaRole.Button, new() { Name = $"H{level}", Exact = true }).Last;
+        await item.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 3_000 });
+        // The H{level} buttons use onMouseDown (not onClick) to apply the heading while
+        // keeping editor focus. DispatchEventAsync targets the handler directly, bypassing
+        // the Framer Motion backdrop overlay (fixed inset-0) that intercepts pointer events.
+        await item.DispatchEventAsync("mousedown");
+        await _page.WaitForTimeoutAsync(300);
     }
 
     /// <summary>Returns true when the Bold toolbar button is visible (i.e. the toolbar is rendered).</summary>

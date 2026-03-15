@@ -17,7 +17,7 @@ import type {
   SummaryData,
   TopicData,
 } from '@/components/features/Statistics/types';
-import { useStatsStore } from '@/lib/statsStore';
+import { useStatsStore } from '@/lib/stores/statsStore';
 
 /** Safely decode a fetch Response as JSON, throwing if the response is not OK. */
 async function safeJson<T>(res: Response): Promise<T> {

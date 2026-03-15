@@ -235,9 +235,13 @@ export function MotivationBanner({ data, forceShow = false }: Readonly<Props>) {
   const [dbMessages, setDbMessages] = useState<DbMessage[]>([]);
   useEffect(() => {
     fetch('/api/stats/motivation')
-      .then((r) => r.ok ? r.json() as Promise<DbMessage[]> : Promise.resolve([]))
-      .then((msgs) => { if (msgs.length > 0) setDbMessages(msgs); })
-      .catch(() => { /* fallback to local messages silently */ });
+      .then((r) => (r.ok ? (r.json() as Promise<DbMessage[]>) : Promise.resolve([])))
+      .then((msgs) => {
+        if (msgs.length > 0) setDbMessages(msgs);
+      })
+      .catch(() => {
+        /* fallback to local messages silently */
+      });
   }, []);
 
   // Derive the daily pool — prefer DB, fall back to local array.
@@ -249,9 +253,7 @@ export function MotivationBanner({ data, forceShow = false }: Readonly<Props>) {
   // Resolve text/emoji for an achievement from DB if available.
   const resolveAchievement = React.useCallback(
     (def: AchievementDef) => {
-      const db = dbMessages.find(
-        (m) => m.type === 'achievement' && m.achievementId === def.id,
-      );
+      const db = dbMessages.find((m) => m.type === 'achievement' && m.achievementId === def.id);
       return {
         message: db?.text ?? def.fallbackMessage,
         emoji: db?.emoji ?? def.fallbackEmoji,

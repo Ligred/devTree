@@ -23,27 +23,27 @@ export function parseLocalDate(dateStr: string): Date {
  * Short locale date — suitable for chart axis labels.
  * Examples: "Feb 15", "15 feb.", depending on locale.
  */
-export function formatDateShort(date: Date | string): string {
+export function formatDateShort(date: Date | string, locale?: string): string {
   const d = typeof date === 'string' ? parseLocalDate(date) : date;
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 /**
  * Medium locale date — suitable for cards and tooltips where the year matters.
  * Examples: "Feb 15, 2025", "15 févr. 2025".
  */
-export function formatDateMedium(date: Date | string): string {
+export function formatDateMedium(date: Date | string, locale?: string): string {
   const d = typeof date === 'string' ? parseLocalDate(date) : date;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(locale, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 /**
  * Long locale date — suitable for detailed tooltips and labels.
  * Examples: "February 15, 2025", "15 February 2025".
  */
-export function formatDateLong(date: Date | string): string {
+export function formatDateLong(date: Date | string, locale?: string): string {
   const d = typeof date === 'string' ? parseLocalDate(date) : date;
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  return d.toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 /**
