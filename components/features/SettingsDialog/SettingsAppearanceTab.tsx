@@ -5,7 +5,7 @@ import { useTheme } from 'next-themes';
 import { type Locale, useI18n } from '@/lib/i18n';
 import { saveUserPreferences } from '@/lib/userPreferences';
 
-import { SegmentButton, SectionHeader, SettingRow } from './settingsShared';
+import { SectionHeader, SegmentButton, SettingRow } from './settingsShared';
 
 const THEME_OPTIONS = ['light', 'dark', 'system'] as const;
 type ThemeOption = (typeof THEME_OPTIONS)[number];
@@ -46,10 +46,7 @@ export function SettingsAppearanceTab() {
           </div>
         </SettingRow>
 
-        <SettingRow
-          label={t('settings.language')}
-          description={t('settings.languageDescription')}
-        >
+        <SettingRow label={t('settings.language')} description={t('settings.languageDescription')}>
           <div className="flex gap-1.5">
             {LOCALE_OPTIONS.map(({ id, labelKey }) => (
               <SegmentButton

@@ -65,4 +65,4 @@ You are a refactoring specialist for devTree — a Next.js 16 / React 19 / TypeS
 - Do NOT change test files unless they are the explicit target
 - Always try to use shared (reusable) components
 - If we don't have reusable component, create it
-- Each component should be in own folder with tests and stories 
+- Each component should be in own folder with tests and stories

@@ -328,16 +328,16 @@ E2E tests launch a real browser, navigate the app, and assert visible DOM change
 
 ### Sidebar Tests — `SidebarTests.cs`
 
-| Test                     | Journey                                                                       |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| `App_Title_IsLearningTree` | Sidebar header title should match brand ("Your Notes" or "Learning Tree")   |
-| Create page              | Click "+" → unique default name appears in tree (`Untitled`, `Untitled 2`, …) |
-| Select page              | Click page → editor header shows page title                                   |
-| Rename page              | Double-click → type new name → blur → title updated                           |
-| Duplicate rename blocked | Enter duplicate sibling name → toast + invalid frame + no save                |
-| Delete page              | Delete button → confirm → page gone from tree                                 |
-| Create folder            | "New folder" button → folder appears in tree                                  |
-| Move page into folder    | Drag page onto folder → nested in tree                                        |
+| Test                       | Journey                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `App_Title_IsLearningTree` | Sidebar header title should match brand ("Your Notes" or "Learning Tree")     |
+| Create page                | Click "+" → unique default name appears in tree (`Untitled`, `Untitled 2`, …) |
+| Select page                | Click page → editor header shows page title                                   |
+| Rename page                | Double-click → type new name → blur → title updated                           |
+| Duplicate rename blocked   | Enter duplicate sibling name → toast + invalid frame + no save                |
+| Delete page                | Delete button → confirm → page gone from tree                                 |
+| Create folder              | "New folder" button → folder appears in tree                                  |
+| Move page into folder      | Drag page onto folder → nested in tree                                        |
 
 ### Editor Tests — `EditorTests.cs`
 
@@ -408,12 +408,12 @@ These tests cover the **notebook page content area** in depth: everything the us
 
 | Test                                        | Journey                                                                |
 | ------------------------------------------- | ---------------------------------------------------------------------- |
-| `EditorToolbar_VisibleInEditMode` | Enter edit mode → editor toolbar appears above editor area |
-| `EditorToolbar_HiddenInViewMode` | View mode → toolbar is NOT visible |
-| `EditorToolbar_Bold_WrapsSelectionInStrong` | Type text → select all → click Bold → text rendered inside `<strong>` |
-| `EditorToolbar_Italic_WrapsSelectionInEm` | Type text → select all → click Italic → text rendered inside `<em>` |
-| `EditorToolbar_Heading_AppliesH2` | Click H2 in toolbar → active block renders as `<h2>` |
-| `EditorToolbar_Code_AppliesCodeMark` | Select text → click inline-code button → selection wrapped in `<code>` |
+| `EditorToolbar_VisibleInEditMode`           | Enter edit mode → editor toolbar appears above editor area             |
+| `EditorToolbar_HiddenInViewMode`            | View mode → toolbar is NOT visible                                     |
+| `EditorToolbar_Bold_WrapsSelectionInStrong` | Type text → select all → click Bold → text rendered inside `<strong>`  |
+| `EditorToolbar_Italic_WrapsSelectionInEm`   | Type text → select all → click Italic → text rendered inside `<em>`    |
+| `EditorToolbar_Heading_AppliesH2`           | Click H2 in toolbar → active block renders as `<h2>`                   |
+| `EditorToolbar_Code_AppliesCodeMark`        | Select text → click inline-code button → selection wrapped in `<code>` |
 
 #### Page Statistics Footer
 

@@ -56,18 +56,21 @@ You are a code reviewer for devTree — a Next.js 16 / React 19 / TypeScript 5 /
 Run `gh api` or check CI artifacts if available; otherwise flag patterns known to trigger these tools:
 
 **SonarQube**
+
 - Cognitive complexity hotspots (deeply nested loops/conditionals, functions > ~15 lines)
 - Duplicated code blocks that should be extracted
 - Dead code: unreachable branches, unused exports
 - Bug-risk patterns: `==` instead of `===`, assignments inside conditions, empty catch blocks
 
 **CodeQL**
+
 - Injection sinks: user input flowing into `eval`, `exec`, shell commands, raw SQL, or `dangerouslySetInnerHTML`
 - Prototype pollution: unsafe `Object.assign` / spread from request data
 - Path traversal: unsanitized file paths derived from user input
 - Regex DoS: unbounded quantifiers on user-controlled strings
 
 **Dependabot / supply-chain**
+
 - Direct use of `npm:` or `github:` specifiers pinned to a mutable ref (branch name instead of SHA/tag)
 - Packages with known CVEs imported in the changed files (flag the package name and suggest `pnpm audit`)
 - `postinstall` scripts added by new dependencies (flag for manual review)

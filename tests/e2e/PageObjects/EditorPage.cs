@@ -306,4 +306,34 @@ public class EditorPage(IPage page)
     /// <summary>Returns true when the Bold toolbar button is visible (i.e. the toolbar is rendered).</summary>
     public Task<bool> IsToolbarVisibleAsync() =>
         _page.Locator("button[title='Bold (Ctrl+B)']").First.IsVisibleAsync();
+
+    /// <summary>
+    /// Clicks the Emoji toolbar button to open the emoji picker.
+    /// </summary>
+    public async Task OpenEmojiPickerAsync()
+    {
+        await ClickToolbarButtonAsync("Emoji");
+        // Wait for the picker's search input rather than a fixed sleep
+        var pickerSearch = _page.GetByPlaceholder("Search").Last;
+        await pickerSearch.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
+    }
+
+    /// <summary>
+    /// Inserts an emoji via the inline ":" trigger suggestion.
+    /// Types ":<query>" into the editor then waits for the suggestion list and
+    /// clicks the first matching item.
+    /// </summary>
+    public async Task InsertEmojiViaInlineTriggerAsync(string query)
+    {
+        var editor = _page.Locator(".page-editor-content").Last;
+        await editor.ClickAsync();
+        await editor.PressSequentiallyAsync($":{query}");
+
+        var suggestionList = _page.Locator(".tiptap-emoji-list");
+        await suggestionList.WaitForAsync(new() { State = WaitForSelectorState.Visible, Timeout = 5_000 });
+        var firstItem = suggestionList.Locator("button").First;
+        await firstItem.ClickAsync();
+        // Wait for the popup to disappear as a deterministic commit signal
+        await suggestionList.WaitForAsync(new() { State = WaitForSelectorState.Detached, Timeout = 3_000 });
+    }
 }

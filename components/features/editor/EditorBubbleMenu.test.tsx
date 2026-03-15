@@ -96,7 +96,7 @@ describe('EditorBubbleMenu', () => {
     render(<EditorBubbleMenu editor={editor as never} />);
 
     const boldButton = await screen.findByTitle('Bold');
-    fireEvent.mouseDown(boldButton);
+    fireEvent.click(boldButton);
 
     expect(chainCalls.map((c) => c.name)).toEqual(
       expect.arrayContaining(['chain', 'focus', 'toggleBold', 'run']),
@@ -107,14 +107,14 @@ describe('EditorBubbleMenu', () => {
     const inactive = createEditorMock({ bookmark: false });
     const { unmount } = render(<EditorBubbleMenu editor={inactive.editor as never} />);
     const addButton = await screen.findByTitle('Add bookmark');
-    fireEvent.mouseDown(addButton);
+    fireEvent.click(addButton);
     expect(inactive.chainCalls).toContainEqual({ name: 'setBookmark', args: [expect.any(Object)] });
     unmount();
 
     const active = createEditorMock({ bookmark: true });
     render(<EditorBubbleMenu editor={active.editor as never} />);
     const removeButton = await screen.findByTitle('Remove bookmark');
-    fireEvent.mouseDown(removeButton);
+    fireEvent.click(removeButton);
     expect(active.chainCalls.map((c) => c.name)).toEqual(
       expect.arrayContaining(['unsetBookmark', 'run']),
     );
@@ -136,13 +136,13 @@ describe('EditorBubbleMenu', () => {
     const { editor, chainCalls } = createEditorMock();
     render(<EditorBubbleMenu editor={editor as never} />);
 
-    fireEvent.mouseDown(await screen.findByTitle('Text color'));
+    fireEvent.click(await screen.findByTitle('Text color'));
     const blueOption = await screen.findByRole('button', { name: 'Blue' });
     fireEvent.mouseDown(blueOption);
     expect(chainCalls).toContainEqual({ name: 'setColor', args: ['#2563eb'] });
 
     // custom color
-    fireEvent.mouseDown(await screen.findByTitle('Text color'));
+    fireEvent.click(await screen.findByTitle('Text color'));
     const input = await screen.findByTitle('Custom');
     fireEvent.change(input, { target: { value: '#112233' } });
     expect(chainCalls).toContainEqual({ name: 'setColor', args: ['#112233'] });
@@ -152,12 +152,12 @@ describe('EditorBubbleMenu', () => {
     const { editor, chainCalls } = createEditorMock();
     render(<EditorBubbleMenu editor={editor as never} />);
 
-    fireEvent.mouseDown(await screen.findByTitle('Highlight'));
+    fireEvent.click(await screen.findByTitle('Highlight'));
     const yellowOption = await screen.findByRole('button', { name: 'Yellow' });
     fireEvent.mouseDown(yellowOption);
     expect(chainCalls).toContainEqual({ name: 'setHighlight', args: [{ color: '#fef08a' }] });
 
-    fireEvent.mouseDown(await screen.findByTitle('Highlight'));
+    fireEvent.click(await screen.findByTitle('Highlight'));
     const input = await screen.findByTitle('Custom');
     fireEvent.change(input, { target: { value: '#445566' } });
     expect(chainCalls).toContainEqual({ name: 'setHighlight', args: [{ color: '#445566' }] });

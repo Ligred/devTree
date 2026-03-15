@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server';
 
 import { Prisma } from '@prisma/client';
 
-import { getOwnedPage, normalizeName, normalizeTags } from '@/lib/apiUtils';
 import { requireAuth } from '@/lib/apiAuth';
+import { getOwnedPage, normalizeName, normalizeTags } from '@/lib/apiUtils';
 import { prisma } from '@/lib/prisma';
 
 type Params = { params: Promise<{ pageId: string }> };

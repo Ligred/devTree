@@ -79,10 +79,7 @@ export function SettingsFeaturesTab() {
           />
         </SettingRow>
 
-        <SettingRow
-          label={t('settings.uiSounds')}
-          description={t('settings.uiSoundsDescription')}
-        >
+        <SettingRow label={t('settings.uiSounds')} description={t('settings.uiSoundsDescription')}>
           <Switch
             checked={uiSoundsEnabled}
             onChange={(v) => {

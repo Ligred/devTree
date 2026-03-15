@@ -22,7 +22,7 @@ type SidebarProps = {
   mobileOverlay?: { open: boolean; onClose: () => void };
   /** children render the full sidebar content (header + body) */
   children: React.ReactNode;
-}
+};
 
 export function Sidebar({
   visible,

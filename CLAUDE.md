@@ -89,6 +89,25 @@ Live in `components/features/editor/extensions/`.
 - Register new nodes in `PageEditor.tsx` extensions array
 - Add slash command entry in `SlashCommand.tsx`
 
+### Emoji Support
+
+Two entry points for inserting emojis:
+
+**Inline trigger** (`EmojiSuggestion` extension, `extensions/EmojiSuggestion.tsx`):
+
+- Type `:` to open a suggestion dropdown
+- Continue typing to filter (`:thumbs` → 👍 results)
+- If 2+ chars with no matches, popup hides automatically
+- Uses `emoji-mart` `SearchIndex.search()` (lazy-loaded via `ensureInit()`)
+- Arrow/Enter/Escape keyboard nav; selecting inserts native Unicode emoji
+
+**Toolbar picker** (`EmojiPickerPopover.tsx`):
+
+- Click the 😊 button in `EditorToolbar`
+- Opens full `@emoji-mart/react` Picker in a portal
+- `@emoji-mart/react` and `@emoji-mart/data` are lazy-loaded to avoid bundle impact
+- Theme follows dark/light mode automatically
+
 ### TypeScript
 
 - Strict mode; no `any` without comment
