@@ -78,6 +78,7 @@ const EmojiSuggestionList = forwardRef<EmojiListHandle, EmojiListProps>((props, 
 
   useImperativeHandle(ref, () => ({
     onKeyDown: (event: KeyboardEvent) => {
+      if (props.items.length === 0) return false;
       if (event.key === 'ArrowUp') {
         setSelectedIndex((i) => (i - 1 + props.items.length) % props.items.length);
         return true;

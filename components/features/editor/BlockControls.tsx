@@ -472,7 +472,7 @@ function ActionItem({
     <button
       type="button"
       role="menuitem"
-      className={`block-action-item${danger ? 'block-action-item--danger' : ''}`}
+      className={`block-action-item${danger ? ' block-action-item--danger' : ''}`}
       onPointerDown={(e) => {
         e.preventDefault(); // keep editor focus
         e.stopPropagation(); // don't trigger outside-click listener
