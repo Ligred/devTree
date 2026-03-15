@@ -1,9 +1,7 @@
 import type { JSONContent } from '@tiptap/react';
 
-import { EMPTY_DOC } from '@/lib/tiptapUtils';
 import type { CachedWeatherSummary, DiaryTranslate, WeatherSummary } from './types';
 
-export { EMPTY_DOC };
 const DIARY_WEATHER_CACHE_KEY = 'devtree:diaryWeatherSummary';
 const WEATHER_CACHE_TTL_MS = 30 * 60 * 1000;
 
@@ -391,3 +389,5 @@ export function getHeaderSubtitle(
   if (!locationShort) return t('diary.locationUnavailable');
   return `${t('diary.locationLabel')}: ${locationShort}`;
 }
+
+export {EMPTY_DOC} from '@/lib/tiptapUtils';
