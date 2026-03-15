@@ -25,23 +25,10 @@ function handleDiaryApiError(scope: string, error: unknown, fallbackMessage: str
   return NextResponse.json({ error: fallbackMessage }, { status: 500 });
 }
 
-type DiaryTemplateDelegate = {
-  findUnique: (
-    args: unknown,
-  ) => Promise<{ id: string; journalId: string; journal: { ownerId: string } } | null>;
-  update: (
-    args: unknown,
-  ) => Promise<{ id: string; name: string; body: string; createdAt: Date; updatedAt: Date }>;
-  delete: (args: unknown) => Promise<{ id: string }>;
-};
-
-const diaryTemplateDelegate = (prisma as unknown as { diaryTemplate: DiaryTemplateDelegate })
-  .diaryTemplate;
-
 type Params = { params: Promise<{ journalId: string; templateId: string }> };
 
 async function getOwnedTemplate(templateId: string, userId: string) {
-  const existing = await diaryTemplateDelegate.findUnique({
+  const existing = await prisma.diaryTemplate.findUnique({
     where: { id: templateId },
     select: { id: true, journalId: true, journal: { select: { ownerId: true } } },
   });
@@ -85,7 +72,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    const updated = await diaryTemplateDelegate.update({
+    const updated = await prisma.diaryTemplate.update({
       where: { id: templateId },
       data: { name, body: templateBody },
       select: { id: true, name: true, body: true, createdAt: true, updatedAt: true },
@@ -120,7 +107,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    await diaryTemplateDelegate.delete({ where: { id: templateId } });
+    await prisma.diaryTemplate.delete({ where: { id: templateId } });
     return NextResponse.json({ ok: true });
   } catch (error) {
     return handleDiaryApiError(

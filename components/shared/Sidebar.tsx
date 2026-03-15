@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 
 import { ChevronRight } from 'lucide-react';
@@ -7,7 +9,7 @@ export type SidebarTransition =
   | { duration: number }
   | { duration: number; ease: [number, number, number, number] };
 
-interface SidebarProps {
+type SidebarProps = {
   /** whether the sidebar is currently visible (desktop state) */
   visible: boolean;
   /** called when user wants the sidebar to appear */

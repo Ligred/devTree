@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 
 export function normalizeName(name: string): string {
-  return name.trim().toLocaleLowerCase();
+  return name.trim().toLowerCase();
 }
 
 export function normalizeTags(raw: unknown[]): string[] {

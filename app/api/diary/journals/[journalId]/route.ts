@@ -25,16 +25,6 @@ function handleDiaryApiError(scope: string, error: unknown, fallbackMessage: str
   return NextResponse.json({ error: fallbackMessage }, { status: 500 });
 }
 
-type DiaryJournalDelegate = {
-  findUnique: (args: unknown) => Promise<{ id: string; ownerId: string; name: string } | null>;
-  update: (
-    args: unknown,
-  ) => Promise<{ id: string; name: string; createdAt: Date; updatedAt: Date }>;
-};
-
-const diaryJournalDelegate = (prisma as unknown as { diaryJournal: DiaryJournalDelegate })
-  .diaryJournal;
-
 type Params = { params: Promise<{ journalId: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
@@ -60,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   }
 
   try {
-    const existing = await diaryJournalDelegate.findUnique({
+    const existing = await prisma.diaryJournal.findUnique({
       where: { id: journalId },
       select: { id: true, ownerId: true, name: true },
     });
@@ -69,7 +59,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Journal not found' }, { status: 404 });
     }
 
-    const updated = await diaryJournalDelegate.update({
+    const updated = await prisma.diaryJournal.update({
       where: { id: journalId },
       data: { name },
       select: { id: true, name: true, createdAt: true, updatedAt: true },
