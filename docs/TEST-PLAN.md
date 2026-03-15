@@ -330,6 +330,7 @@ E2E tests launch a real browser, navigate the app, and assert visible DOM change
 
 | Test                     | Journey                                                                       |
 | ------------------------ | ----------------------------------------------------------------------------- |
+| `App_Title_IsLearningTree` | Sidebar header title should match brand ("Your Notes" or "Learning Tree")   |
 | Create page              | Click "+" → unique default name appears in tree (`Untitled`, `Untitled 2`, …) |
 | Select page              | Click page → editor header shows page title                                   |
 | Rename page              | Double-click → type new name → blur → title updated                           |
@@ -405,8 +406,7 @@ These tests cover the **notebook page content area** in depth: everything the us
 
 #### Editor Toolbar
 
-| Test | Journey |  
-| `App_Title_IsLearningTree` | Sidebar header title should match brand ("Your Notes" or "Learning Tree") |
+| Test                                        | Journey                                                                |
 | ------------------------------------------- | ---------------------------------------------------------------------- |
 | `EditorToolbar_VisibleInEditMode` | Enter edit mode → editor toolbar appears above editor area |
 | `EditorToolbar_HiddenInViewMode` | View mode → toolbar is NOT visible |

@@ -27,7 +27,7 @@ export function SettingsDiaryTab({ open }: Props) {
       setLocationPermissionMessage(t('settings.diaryLocationBlockedUnsupported'));
       if (diaryLocationEnabled) {
         setDiaryLocationEnabled(false);
-        saveUserPreferences({ diaryLocationEnabled: false });
+        void saveUserPreferences({ diaryLocationEnabled: false });
       }
       return;
     }

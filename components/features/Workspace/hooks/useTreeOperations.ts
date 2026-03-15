@@ -234,7 +234,7 @@ export function useTreeOperations({
 
   const executeDelete = useCallback(
     (nodeId: string) => {
-      const { root: nextRoot, removed } = removeNode(treeRoot, nodeId);
+      const { root: nextRoot, removed } = removeNode(treeRootRef.current, nodeId);
       if (!removed) return;
       playUiSound('delete');
       const pageIdsToRemove = collectPageIdsInSubtree(removed);
@@ -257,7 +257,7 @@ export function useTreeOperations({
       }
     },
     [
-      treeRoot,
+      treeRootRef,
       setTreeRoot,
       setPages,
       setActivePageId,
@@ -271,7 +271,7 @@ export function useTreeOperations({
 
   const handleDeleteNode = useCallback(
     (nodeId: string) => {
-      const node = findNodeInRoot(treeRoot, nodeId);
+      const node = findNodeInRoot(treeRootRef.current, nodeId);
       if (!node) return;
 
       const isFile = node.pageId != null;
@@ -294,11 +294,13 @@ export function useTreeOperations({
         cancelText: t('delete.cancel'),
         variant: 'destructive',
         tone: 'destructive',
-      }).then((confirmed) => {
-        if (confirmed) executeDelete(nodeId);
-      });
+      })
+        .then((confirmed) => {
+          if (confirmed) executeDelete(nodeId);
+        })
+        .catch((err) => console.error('[handleDeleteNode]', err));
     },
-    [treeRoot, t, confirm, executeDelete],
+    [treeRootRef, t, confirm, executeDelete],
   );
 
   // ── handleDocumentDrag ─────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ export function useDiaryTemplates(activeJournalId: string | null) {
       return;
     }
     setLoadingTemplates(true);
+    setError(null);
     try {
       const res = await fetch(`/api/diary/journals/${activeJournalId}/templates`);
       const body = (await res.json().catch(() => null)) as

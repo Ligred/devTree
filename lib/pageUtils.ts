@@ -281,7 +281,7 @@ export function downloadMarkdown(page: Page): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  // Sanities the page title for use as a filename
+  // Sanitizes the page title for use as a filename
   anchor.download = `${page.title.replaceAll(/[^a-z0-9\s-]/gi, '').trim() || 'page'}.md`;
   anchor.click();
   // Revoke the object URL after a tick to free memory

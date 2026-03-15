@@ -358,8 +358,6 @@ export async function fetchWeatherSnapshotForDate(
               weatherLabel,
               locationName,
               locationShort,
-              locationLat: latitude,
-              locationLon: longitude,
               cachedAt: Date.now(),
               date: dateOnly,
             } satisfies CachedWeatherSummary),

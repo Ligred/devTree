@@ -79,8 +79,14 @@ function hasRenderableContent(content: unknown): boolean {
   if (content == null) return false;
   if (typeof content === 'string') return content.trim().length > 0;
   if (Array.isArray(content)) return content.length > 0;
-  if (typeof content === 'object')
-    return Object.keys(content as Record<string, unknown>).length > 0;
+  if (typeof content === 'object') {
+    const obj = content as Record<string, unknown>;
+    // Tiptap empty doc: { type: 'doc', content: [] } has no renderable content
+    if (obj.type === 'doc') {
+      return Array.isArray(obj.content) && obj.content.length > 0;
+    }
+    return Object.keys(obj).length > 0;
+  }
   return true;
 }
 
